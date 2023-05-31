@@ -12,11 +12,11 @@
 
 ## asv_comunication
 
-This package is included the nodes in charge of communication between the different ships of the fleet through the Zigbee modules.
+This package includes  the nodes in charge of communication between the different ships of the fleet through the Zigbee modules.
 
 ## asv_control
 
-This package are included the nodes in charge of the control, such as the state observers and the trajectory controllers.
+This package includes  the nodes in charge of the control, such as the state observers and the trajectory controllers.
 
 ## asv_interfaces
 
