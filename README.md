@@ -8,7 +8,7 @@
 
 ![](https://www.uloyola.es/templates/v6/images/isologo_loyola_principal.svg)
 
-# H1 Package
+# Package
 
 ## asv_comunication
 
