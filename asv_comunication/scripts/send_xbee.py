@@ -11,8 +11,8 @@ import random
 class SendXbeeNode(Node):
     def __init__(self):
         super().__init__("send_xbee")
-        xbee= XBeeDevice("/dev/ttyUSB0",9600)
-        xbee.open()
+        self.xbee= XBeeDevice("/dev/ttyUSB0",9600)
+        self.xbee.open()
         self.timer_=self.create_timer(0.2, self.send_data)
         self.get_logger().info("Send Xbee Node has been started")
 
@@ -40,11 +40,11 @@ class SendXbeeNode(Node):
 
         self.xbee.send_data_broadcast(byte_array) #Enviamos el dato a todos los nodos de la red 
 
-    def f2bytes(f):
+    def f2bytes(self, f):
         bytes_data = struct.pack('!f', f) #Empaquetamos los datos como bytes
         return bytes_data
 
-    def d2bytes(d):
+    def d2bytes(self, d):
         tiempo_data = struct.pack('d', d) #Empaquetamos los datos como bytes
         return tiempo_data
 
