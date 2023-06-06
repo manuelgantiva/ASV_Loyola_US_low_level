@@ -2,6 +2,8 @@
 import rclpy
 from rclpy.node import Node
 
+from asv_interfaces.msg import AsvXbee
+
 from digi.xbee.devices import XBeeDevice 
 import time
 import struct
@@ -9,9 +11,10 @@ import struct
 class ReceiveXbeeNode(Node):
     def __init__(self):
         super().__init__("receive_node")
-        device2=XBeeDevice("/dev/ttyUSB0",9600)
+        device2=XBeeDevice("/dev/ttyUSB0",115200)
         device2.open() #Abrimos la comunicación
         device2.add_data_received_callback(self.my_data_received_callback)
+        self.publisher_=self.create_publisher(AsvXbee, "asv_neighbor", 10)
         self.get_logger().info("Receive Xbee Node has been started")
 
     def my_data_received_callback(self, xbee_message):
@@ -19,10 +22,22 @@ class ReceiveXbeeNode(Node):
         data_f = [] #Creamos la lista que contendrá los valores en flotante decodificados
         data_f= self.bytes2f(byte_array, data_f) #Ejecutamos la función que decodifica los bytes recogidos y los vuelve a convertir en punto flotante
         data_f= self.bytes2d(byte_array, data_f)
-        data_f.append(time.time()-data_f[7])
-        data_f.append(time.time())
-        print("\033[91mEl dato recibido es:\033[0m")
-        print(data_f)
+        # data_f.append(time.time()-data_f[9])
+        # data_f.append(time.time())
+        info_rcv = AsvXbee()
+        info_rcv.states.px = data_f[0]
+        info_rcv.states.py = data_f[1]
+        info_rcv.states.pz = data_f[2]
+        info_rcv.states.vx = data_f[3]
+        info_rcv.states.vy = data_f[4]
+        info_rcv.states.vz = data_f[5]
+        info_rcv.states.sx = data_f[6]
+        info_rcv.states.sy = data_f[7]
+        info_rcv.states.sz = data_f[8]
+        info_rcv.id = 4
+        info_rcv.time = data_f[9]
+        self.publisher_.publish(info_rcv)
+
 
 
     def bytes2f(self, byte_array, data_f):

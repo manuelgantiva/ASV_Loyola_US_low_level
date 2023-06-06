@@ -10,6 +10,8 @@ find_package(ament_cmake REQUIRED)
 find_package(ament_cmake_python REQUIRED)
 find_package(rclpy REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(std_msgs REQUIRED)
+find_package(asv_interfaces REQUIRED)
 
 add_executable(testnode src/testnode.cpp)
 ament_target_dependencies(testnode rclcpp std_msgs)
@@ -26,6 +28,8 @@ install(PROGRAMS
   scripts/testnode.py 
   scripts/receive_xbee.py 
   scripts/send_xbee.py 
+  scripts/asv_xbee.py 
+  scripts/test_observer.py 
   DESTINATION lib/${PROJECT_NAME}
 )
 

@@ -11,13 +11,16 @@ find_package(rosidl_default_generators REQUIRED)
 find_package(action_msgs REQUIRED)
 # find_package(<dependency> REQUIRED)
 
-#rosidl_generate_interfaces(${PROJECT_NAME}
+rosidl_generate_interfaces(${PROJECT_NAME}
   #"msg/HardwareStatus.msg"
   #"srv/ComputeRectangleArea.srv"
   #"action/CountUntil.action"
-  #DEPENDENCIES
-  #action_msgs
-#)
+  "msg/AsvObservation.msg"
+  "msg/AsvXbee.msg"
+  "srv/SendAsvObservation.srv"
+  DEPENDENCIES
+  action_msgs
+)
 
 
 if(BUILD_TESTING)

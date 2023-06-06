@@ -1,0 +1,5 @@
+# This is a service to send the data computed by the ASV's state observer
+
+AsvXbee data
+---
+bool success
