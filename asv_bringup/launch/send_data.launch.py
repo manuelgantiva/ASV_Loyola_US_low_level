@@ -10,10 +10,6 @@ def generate_launch_description():
         executable="send_xbee.py"
     )
 
-    asv_xbee_node = Node (
-        package= "asv_comunication",
-        executable= "asv_xbee.py",
-    )
 
     test_observer_node = Node (
         package= "asv_comunication",
@@ -22,7 +18,6 @@ def generate_launch_description():
 
     
     ld.add_action(send_xbee_node)
-    ld.add_action(asv_xbee_node)
     ld.add_action(test_observer_node)
 
 
