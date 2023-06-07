@@ -12,8 +12,8 @@ from asv_interfaces.srv import SendAsvObservation
 class SendXbeeNode(Node):
     def __init__(self):
         super().__init__("send_xbee")
-        #self.xbee= XBeeDevice("/dev/ttyUSB0",115200)
-        #self.xbee.open()
+        self.xbee= XBeeDevice("/dev/ttyUSB0",115200)
+        self.xbee.open()
         self.subscriber_ = self.create_subscription(AsvObservation, "asv_hat",self.callback_asv_hat,10)
         self.get_logger().info("Send Xbee Node has been started")
     
