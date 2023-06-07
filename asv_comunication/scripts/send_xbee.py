@@ -4,6 +4,7 @@ from rclpy.node import Node
 
 from digi.xbee.devices import XBeeDevice 
 import struct
+import time
 
 from asv_interfaces.msg import AsvObservation
 from asv_interfaces.srv import SendAsvObservation
@@ -11,19 +12,19 @@ from asv_interfaces.srv import SendAsvObservation
 class SendXbeeNode(Node):
     def __init__(self):
         super().__init__("send_xbee")
-        self.xbee= XBeeDevice("/dev/ttyUSB0",115200)
-        self.xbee.open()
-        self.server_=self.create_service(SendAsvObservation, "send_asv_observation", self.handle_send_asv_observation)
+        #self.xbee= XBeeDevice("/dev/ttyUSB0",115200)
+        #self.xbee.open()
+        self.subscriber_ = self.create_subscription(AsvObservation, "asv_hat",self.callback_asv_hat,10)
         self.get_logger().info("Send Xbee Node has been started")
     
-    def handle_send_asv_observation(self, request, response):
-        data = [request.data.states.px, request.data.states.py, request.data.states.pz, request.data.states.vx, request.data.states.vy, 
-                request.data.states.vz, request.data.states.sx, request.data.states.sy, request.data.states.sz, request.data.time] # The data is packed into an array
+    def callback_asv_hat(self, msg):
+        timenow= float(time.time())
+        data = [msg.px, msg.py, msg.pz, msg.vx, msg.vy, msg.vz, msg.sx, msg.sy, msg.sz, timenow] # The data is packed into an array
         
         byte_array = bytearray() # Create byte array
 
         for numero in data:
-            if numero != request.data.time:
+            if numero != timenow:
                 bytes_data = self.f2bytes(numero) # Convert to a byte array
                 byte_array.extend(bytes_data) # Add to array
             else:
@@ -32,12 +33,9 @@ class SendXbeeNode(Node):
 
         try:
             self.xbee.send_data_broadcast(byte_array) # Send data
-            response.success = True
             self.get_logger().info("Dates was send")
         except Exception as e: 
             self.get_logger().info("Dates was not send") # Catches exception and returns unsuccessful
-            response.success = False
-        return response
 
     def f2bytes(self, f):
         bytes_data = struct.pack('!f', f) # Pack the data as bytes
