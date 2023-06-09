@@ -19,28 +19,36 @@ class SendXbeeNode(Node):
     
     def callback_asv_hat(self, msg):
         timenow= float(time.time())
-        data = [msg.px, msg.py, msg.pz, msg.vx, msg.vy, msg.vz, msg.sx, msg.sy, msg.sz, timenow] # The data is packed into an array
+        id=1
+        data = [msg.px, msg.py, msg.pz, msg.vx, msg.vy, msg.vz, msg.sx, msg.sy, msg.sz, id, timenow] # The data is packed into an array
         
         byte_array = bytearray() # Create byte array
 
         for numero in data:
-            if numero != timenow:
+            if numero != timenow and numero != id:
                 bytes_data = self.f2bytes(numero) # Convert to a byte array
                 byte_array.extend(bytes_data) # Add to array
+            elif numero == id:
+            	id_data = self.i2bytes(numero)
+            	byte_array.extend(id_data)
             else:
                 tiempo_data = self.d2bytes(numero)
                 byte_array.extend(tiempo_data)
 
         try:
             self.xbee.send_data_broadcast(byte_array) # Send data
-            self.get_logger().info("Dates was send")
+            self.get_logger().info("Data was sent")
         except Exception as e: 
-            self.get_logger().info("Dates was not send") # Catches exception and returns unsuccessful
+            self.get_logger().info("Data was not sent") # Catches exception and returns unsuccessful
 
     def f2bytes(self, f):
         bytes_data = struct.pack('!f', f) # Pack the data as bytes
         return bytes_data
 
+    def i2bytes(self,i):
+    	id_data = struct.pack('h',i)
+	return id_data
+	
     def d2bytes(self, d):
         tiempo_data = struct.pack('d', d) # Pack the data as bytes
         return tiempo_data

@@ -2,5 +2,5 @@
 # If you want to embed it in another message.
 
 AsvObservation states
-float32 time
+float64 time
 uint8 id

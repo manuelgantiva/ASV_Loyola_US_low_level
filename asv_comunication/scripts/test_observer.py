@@ -9,7 +9,7 @@ from asv_interfaces.msg import AsvObservation
 class TestObserverNode(Node):
     def __init__(self):
         super().__init__("test_observer")
-        self.timer_=self.create_timer(0.5, self.publish_asv_data)
+        self.timer_=self.create_timer(0.2, self.publish_asv_data)
         self.publisher_=self.create_publisher(AsvObservation, "asv_hat", 10)
         self.get_logger().info("Test Observer Node has been started")
 
