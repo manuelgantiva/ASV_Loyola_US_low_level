@@ -2,7 +2,7 @@
 import rclpy
 from rclpy.node import Node
 
-from digi.xbee.devices import XBeeDevice 
+from digi.xbee.devices import XBeeDevice
 import struct
 import time
 
@@ -16,21 +16,22 @@ class SendXbeeNode(Node):
         self.xbee.open()
         self.subscriber_ = self.create_subscription(AsvObservation, "asv_hat",self.callback_asv_hat,10)
         self.get_logger().info("Send Xbee Node has been started")
-    
+   
     def callback_asv_hat(self, msg):
         timenow= float(time.time())
         id=1
         data = [msg.px, msg.py, msg.pz, msg.vx, msg.vy, msg.vz, msg.sx, msg.sy, msg.sz, id, timenow] # The data is packed into an array
-        
+
         byte_array = bytearray() # Create byte array
 
         for numero in data:
             if numero != timenow and numero != id:
                 bytes_data = self.f2bytes(numero) # Convert to a byte array
                 byte_array.extend(bytes_data) # Add to array
+
             elif numero == id:
-            	id_data = self.i2bytes(numero)
-            	byte_array.extend(id_data)
+                id_data=self.i2bytes(numero)
+                byte_array.extend(id_data)
             else:
                 tiempo_data = self.d2bytes(numero)
                 byte_array.extend(tiempo_data)
@@ -38,21 +39,22 @@ class SendXbeeNode(Node):
         try:
             self.xbee.send_data_broadcast(byte_array) # Send data
             self.get_logger().info("Data was sent")
-        except Exception as e: 
+        except Exception as e:
             self.get_logger().info("Data was not sent") # Catches exception and returns unsuccessful
 
     def f2bytes(self, f):
         bytes_data = struct.pack('!f', f) # Pack the data as bytes
         return bytes_data
-
+   
     def i2bytes(self,i):
-    	id_data = struct.pack('h',i)
-	return id_data
-	
+        id_data = struct.pack('h',i)
+        return id_data
+
     def d2bytes(self, d):
         tiempo_data = struct.pack('d', d) # Pack the data as bytes
         return tiempo_data
 
+#Ejecuta el nodo
 def main(args=None):
     rclpy.init(args=args)
     node = SendXbeeNode()
@@ -62,3 +64,4 @@ def main(args=None):
 
 if __name__ == "__main__":
     main()
+
