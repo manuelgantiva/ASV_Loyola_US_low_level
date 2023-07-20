@@ -11,7 +11,6 @@ find_package(ament_cmake_python REQUIRED)
 find_package(rclpy REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(geometry_msgs REQUIRED)  # msgs and srv to teleop_key
-find_package(turtlesim REQUIRED)      # msgs and srv to teleop_key
 find_package(asv_interfaces REQUIRED)
 find_package(example_interfaces REQUIRED) # msgs and srv to basis comunication
 find_package(std_msgs REQUIRED) # msgs and srv to basis comunication
