@@ -9,15 +9,18 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 find_package(action_msgs REQUIRED)
-# find_package(<dependency> REQUIRED)
+find_package(sensor_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
 
-#rosidl_generate_interfaces(${PROJECT_NAME}
-  #"msg/HardwareStatus.msg"
+
+rosidl_generate_interfaces(${PROJECT_NAME}
+  "msg/PwmValues.msg"
+  "msg/StateObserver.msg"
   #"srv/ComputeRectangleArea.srv"
   #"action/CountUntil.action"
-  #DEPENDENCIES
-  #action_msgs
-#)
+  DEPENDENCIES
+  action_msgs sensor_msgs geometry_msgs
+)
 
 
 if(BUILD_TESTING)
