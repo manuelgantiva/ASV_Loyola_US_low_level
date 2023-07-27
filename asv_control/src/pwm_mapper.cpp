@@ -19,7 +19,7 @@ public:
                                           std::bind(&PwmMapperNode::publishOverridePwm, this));
         server_ = this-> create_service<example_interfaces::srv::SetBool>(
                 "/control/on_off_pwm", std::bind(&PwmMapperNode::callbackOnOffPwm, this, _1, _2));
-        subscriber_ = this-> create_subscription<asv_interfaces::msg::PwmValues>("control/pwm_values",10,
+        subscriber_ = this-> create_subscription<asv_interfaces::msg::PwmValues>("/control/pwm_values",10,
                 std::bind(&PwmMapperNode::callbackPwmValues, this, std::placeholders::_1));
         RCLCPP_INFO(this->get_logger(), "Pwm Mapper Node has been started.");
 

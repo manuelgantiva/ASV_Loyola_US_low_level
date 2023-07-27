@@ -193,7 +193,7 @@ public:
     nh_->declare_parameter("scale_linear", 2.0);
 
     // twist_pub_ = nh_->create_publisher<geometry_msgs::msg::Twist>("turtle1/cmd_vel", 1);
-    pwm_pub_ = nh_->create_publisher<asv_interfaces::msg::PwmValues>("control/pwm_values", 1);
+    pwm_pub_ = nh_->create_publisher<asv_interfaces::msg::PwmValues>("/control/pwm_values", 1);
     }
 
   int keyLoop()

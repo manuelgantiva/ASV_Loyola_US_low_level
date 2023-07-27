@@ -9,15 +9,17 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(ament_cmake_python REQUIRED)
 find_package(rclpy REQUIRED)
+find_package(Eigen3 REQUIRED)
 find_package(rclcpp REQUIRED)
-find_package(geometry_msgs REQUIRED)  # msgs and srv to teleop_key
-find_package(turtlesim REQUIRED)      # msgs and srv to teleop_key
+find_package(geometry_msgs REQUIRED)      # msgs and srv to teleop_key and Local gps
 find_package(asv_interfaces REQUIRED)
 find_package(example_interfaces REQUIRED) # msgs and srv to basis comunication
-find_package(std_msgs REQUIRED) # msgs and srv to basis comunication
+find_package(std_msgs REQUIRED)           # msgs and srv to basis comunication
 find_package(mavros_msgs REQUIRED)        # msgs to comunicate with mavros
 find_package(rcl_interfaces REQUIRED)     # interface to use param with aardupilot and mavors
-find_package(sensor_msgs REQUIRED)     # interface to use navio2's sensors
+find_package(sensor_msgs REQUIRED)        # interface to use navio2's sensors
+
+include_directories(SYSTEM ${EIGEN3_INCLUDE_DIRS})
 
 
 add_executable(testnode src/testnode.cpp)
@@ -36,7 +38,10 @@ add_executable(pwm_key src/pwm_key.cpp)
 ament_target_dependencies(pwm_key rclcpp example_interfaces mavros_msgs asv_interfaces)
 
 add_executable(observer src/observer.cpp)
-ament_target_dependencies(observer rclcpp std_msgs sensor_msgs mavros_msgs asv_interfaces)
+ament_target_dependencies(observer rclcpp std_msgs sensor_msgs mavros_msgs asv_interfaces geometry_msgs)
+
+add_executable(observer_liu src/observer_liu.cpp)
+ament_target_dependencies(observer_liu rclcpp std_msgs sensor_msgs mavros_msgs asv_interfaces geometry_msgs)
 
 # Install Targets
 install(TARGETS
@@ -46,6 +51,7 @@ install(TARGETS
   pwm_mapper
   pwm_key
   observer
+  observer_liu
 DESTINATION lib/${PROJECT_NAME})
 
 # Install Scripts python
