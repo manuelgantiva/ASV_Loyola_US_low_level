@@ -24,6 +24,8 @@ ament_python_install_package(scripts)
 
 install(PROGRAMS
   scripts/testnode.py 
+  scripts/transceiver_xbee.py
+  scripts/test_observer.py 
   DESTINATION lib/${PROJECT_NAME}
 )
 

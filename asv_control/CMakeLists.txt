@@ -43,6 +43,9 @@ ament_target_dependencies(observer rclcpp std_msgs sensor_msgs mavros_msgs asv_i
 add_executable(observer_liu src/observer_liu.cpp)
 ament_target_dependencies(observer_liu rclcpp std_msgs sensor_msgs mavros_msgs asv_interfaces geometry_msgs)
 
+add_executable(observer_zono src/observer_zono.cpp)
+ament_target_dependencies(observer_zono rclcpp std_msgs sensor_msgs mavros_msgs asv_interfaces geometry_msgs)
+
 # Install Targets
 install(TARGETS
   testnode
@@ -52,6 +55,7 @@ install(TARGETS
   pwm_key
   observer
   observer_liu
+  observer_zono
 DESTINATION lib/${PROJECT_NAME})
 
 # Install Scripts python

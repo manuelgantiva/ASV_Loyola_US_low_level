@@ -43,12 +43,18 @@ public:
         std::vector<double> PpWpc1_par = this->get_parameter("PpWp_c1").as_double_array();
         std::vector<double> PpWpc2_par = this->get_parameter("PpWp_c2").as_double_array();
 
+        M << m-Xu, 0.0, 0.0,
+             0.0, m-Yv, m*xg,
+             0.0, m*xg, Iz-Nr;  
+
+        M_1 = M.inverse();  
+
         Apsi << 0.0, 1.0, 0.0,
                 0.0, 0.0, 1.0,
                 0.0, 0.0, 0.0;     
 
         Bpsi << 0.0, 0.0, 0.0,
-                0.0, m*xg, Iz-Nr,
+                M_1(2,0), M_1(2,1), M_1(2,2),
                 0.0, 0.0, 0.0;
 
         Cpsi << 1.0, 0.0, 0.0;
@@ -62,8 +68,8 @@ public:
 
         Bp << 0.0, 0.0, 0.0,
               0.0, 0.0, 0.0,
-              m-Xu, 0.0, 0.0,
-              0.0, m-Yv, m*xg,
+              M_1(0,0), M_1(0,1), M_1(0,2),
+              M_1(1,0), M_1(1,1), M_1(1,2),
               0.0, 0.0, 0.0,
               0.0, 0.0, 0.0;
 
@@ -113,9 +119,10 @@ public:
                 rclcpp::SensorDataQoS(), std::bind(&ObserverNode::callbackCompassData, this, std::placeholders::_1));
         subscriber_rcout = this-> create_subscription<mavros_msgs::msg::RCOut>("/mavros/rc/out",1,
                 std::bind(&ObserverNode::callbackRcoutData, this, std::placeholders::_1));
-         subscriber_state = this-> create_subscription<mavros_msgs::msg::State>("/mavros/state",1,
+        subscriber_state = this-> create_subscription<mavros_msgs::msg::State>("/mavros/state",1,
                 std::bind(&ObserverNode::callbackStateData, this, std::placeholders::_1));
-        publisher_state = this-> create_publisher<asv_interfaces::msg::StateObserver>("/control/state_observer",1);
+        publisher_state = this-> create_publisher<asv_interfaces::msg::StateObserver>("/control/state_observer",
+                rclcpp::SensorDataQoS());
         timer_ = this -> create_wall_timer(std::chrono::milliseconds(int(Ts)),
                                           std::bind(&ObserverNode::calculateState, this));
         RCLCPP_INFO(this->get_logger(), "Observer Node has been started.");
@@ -136,18 +143,18 @@ private:
             R2T.setZero();
             Yp.setZero();
             Lp.setZero();
-
+            tao.setZero(); 
         }else{
             auto start = std::chrono::high_resolution_clock::now();
 
             float cospsi= cos(psi);
             float senpsi= sin(psi);
-            R2T << cospsi, -senpsi,
-                   senpsi, cospsi;
+            R2T << cospsi, senpsi,
+                   -senpsi, cospsi;
 
             Tp(0,0)=cospsi;
-            Tp(0,1)=-senpsi;
-            Tp(1,0)=senpsi;
+            Tp(0,1)=senpsi;
+            Tp(1,0)=-senpsi;
             Tp(1,1)=cospsi;
 
             Lp=Tp.inverse()*PpWp*R2T;
@@ -161,6 +168,9 @@ private:
             Xpsi_hat_dot = Apsi*Xpsi_hat + Bpsi*tao + Lpsi*(psi - Cpsi*Xpsi_hat);
 
             //std::cout << "Matriz Xphd \n" << Xp_hat_ant << std::endl; 
+
+            msg.header.stamp = this->now();
+            msg.header.frame_id = "map"; 
 
             msg.point.x=Xp_hat(0,0);
             msg.point.y=Xp_hat(1,0);
@@ -249,20 +259,20 @@ private:
         float Tr=0;
         float Tl=0;
         if(pwm_left>1550){
-            Tl=(0.3125*pwm_left)/2;
-        }else if (pwm_left<1460)
+            Tl=((0.3125*pwm_left)-481.5)/2;
+        }else if (pwm_left<1450)
         {
-            Tl=(0.3125*pwm_left)/2;
+            Tl=((0.3125*pwm_left)-456.25)/2;
         }
         if(pwm_right>1550){
-            Tr=(0.3125*pwm_right)/2;
-        }else if (pwm_right<1460)
+            Tr=((0.3125*pwm_right)-481.5)/2;
+        }else if (pwm_right<1450)
         {
-            Tr=(0.3125*pwm_right)/2;
+            Tr=((0.3125*pwm_right)-456.25)/2;
         }
         tao << Tr + Tl,
                0.0,
-               (Tr - Tl)*0.68/2;
+               (Tl - Tr)*0.68/2;
         // RCLCPP_INFO(this->get_logger(), "PWM left: %d and PWM right:%d", pwm_left, pwm_right);
     }
 
@@ -279,6 +289,7 @@ private:
     //------Params-------//
     float m, Xu, Yv, Nr, xg, Iz, Ts;  
 
+    Matrix <float, 3,3> M, M_1;
     Matrix <float, 3,3> Apsi; 
     Matrix <float, 3,3> Bpsi; 
     Matrix <float, 1,3> Cpsi; 

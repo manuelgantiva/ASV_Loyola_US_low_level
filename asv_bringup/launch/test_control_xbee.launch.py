@@ -61,7 +61,7 @@ def generate_launch_description():
     #ld.add_action(change_mode_node)
     ld.add_action(observer_node)
     #ld.add_action(pwm_mapper_node)
-    #ld.add_action(transceiver_xbee_node)
+    ld.add_action(transceiver_xbee_node)
 
 
     return ld
