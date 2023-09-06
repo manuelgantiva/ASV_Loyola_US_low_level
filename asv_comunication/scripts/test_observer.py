@@ -10,7 +10,7 @@ from asv_interfaces.msg import StateObserver
 class TestObserverNode(Node):
     def __init__(self):
         super().__init__("test_observer")
-        self.timer_=self.create_timer(0.2, self.publish_asv_data)
+        self.timer_=self.create_timer(0.1, self.publish_asv_data)
         self.publisher_=self.create_publisher(StateObserver, "/control/state_observer", qos_profile_sensor_data)
         self.get_logger().info("Test Observer Node has been started")
 

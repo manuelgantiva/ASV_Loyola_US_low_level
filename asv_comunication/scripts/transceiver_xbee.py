@@ -39,7 +39,7 @@ class TransceiverXbeeNode(Node):
 
         byte_array = bytearray()  # Create byte array
 
-        byte_array = struct.pack('!f f f f f f f f f i i 3s',
+        byte_array = struct.pack('!f f f f f f f f f i i 4s',
                              msg.point.x, msg.point.y, msg.point.z,
                              msg.velocity.x, msg.velocity.y, msg.velocity.z,
                              msg.disturbances.x, msg.disturbances.y, msg.disturbances.z,
@@ -55,7 +55,7 @@ class TransceiverXbeeNode(Node):
     def callback_received_data(self, xbee_message):
         byte_array = xbee_message.data  # Extraemos el dato del mensaje
         data_f = []  # Creamos la lista que contendrá los valores decodificados
-        data_f = list(struct.unpack('!f f f f f f f f f i i 3s', byte_array))
+        data_f = list(struct.unpack('!f f f f f f f f f i i 4s', byte_array))
 
         info_rcv = StateObserver()
         info_rcv.point.x = data_f[0]
