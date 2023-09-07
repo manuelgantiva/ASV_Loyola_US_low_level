@@ -156,6 +156,11 @@ private:
             Tp(1,0)=-senpsi;
             Tp(1,1)=cospsi;
 
+            Ap(0,2)=cospsi;
+            Ap(0,3)=-senpsi;
+            Ap(1,2)=senpsi;
+            Ap(1,3)=cospsi;
+
             Lp=Tp.inverse()*PpWp*R2T;
 
             Xp_hat = Xp_hat_ant + Xp_hat_dot*(Ts/1000);
@@ -173,13 +178,13 @@ private:
             
             msg.point.x=Xp_hat(0,0);
             msg.point.y=Xp_hat(1,0);
-            msg.point.z=Xpsi_hat(0,0);
+            msg.point.z=-Xpsi_hat(0,0);
             msg.velocity.x=Xp_hat(2,0);
             msg.velocity.y=Xp_hat(3,0);
-            msg.velocity.z=Xpsi_hat(1,0);
+            msg.velocity.z=-Xpsi_hat(1,0);
             msg.disturbances.x=Xp_hat(4,0);
             msg.disturbances.y=Xp_hat(5,0);
-            msg.disturbances.z=Xpsi_hat(2,0);
+            msg.disturbances.z=-Xpsi_hat(2,0);
 
             auto end = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> elapsed = end - start;
