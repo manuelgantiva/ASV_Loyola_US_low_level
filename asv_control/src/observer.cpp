@@ -260,17 +260,19 @@ private:
         uint16_t pwm_right=msg->channels[2];
         float Tr=0;
         float Tl=0;
-        if(pwm_left>1550){
-            Tl=((0.3125*pwm_left)-481.5)/2;
-        }else if (pwm_left<1450)
+        float delta_hat_left = (pwm_left/400) -3.75;    //normalized pwm
+        float delta_hat_right = (pwm_right/400) -3.75;  //normalized pwm
+        if(delta_hat_left>0.0775){
+            Tl=((7.4545*delta_hat_left*delta_hat_left)+(120.9216*delta_hat_left)-14.1193)/2;
+        }else if (delta_hat_left<0.0925)
         {
-            Tl=((0.3125*pwm_left)-456.25)/2;
+            Tl=((-18.3606*delta_hat_left*delta_hat_left)+(-53.0157*delta_hat_left)-4.455)/2;
         }
-        if(pwm_right>1550){
-            Tr=((0.3125*pwm_right)-481.5)/2;
-        }else if (pwm_right<1450)
+        if(delta_hat_right>0.0775){
+            Tr=((7.4545*delta_hat_right*delta_hat_right)+(120.9216*delta_hat_right)-14.1193)/2;
+        }else if (delta_hat_right<-0.0925)
         {
-            Tr=((0.3125*pwm_right)-456.25)/2;
+            Tr=((-18.3606*delta_hat_right*delta_hat_right)+(-53.0157*delta_hat_right)-4.455)/2;
         }
         tao << Tr + Tl,
                0.0,
