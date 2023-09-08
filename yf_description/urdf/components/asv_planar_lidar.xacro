@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+  <xacro:macro name="asv_multibeam_laser">
+    <link
+      name="lidar_link">
+      <inertial>
+        <origin
+          xyz="0 0 0.035003035"
+          rpy="0 0 0" />
+        <mass
+          value="0.13" />
+        <inertia
+          ixx="8.018737945431742e-05"
+          ixy="0.0"
+          ixz="0.0"
+          iyy="8.018737945431742e-05"
+          iyz="0.0"
+          izz="5.418967911032867e-05" />
+      </inertial>
+      <visual>
+        <origin
+          xyz="0 0 0"
+          rpy="0 0 1.5707" />
+        <geometry>
+          <mesh filename="package://asv_description/models/Lidar_2d_v1/meshes/lidar_2d_v1.dae"/>
+        </geometry>
+      </visual>
+      <collision name="collision_base">
+        <origin
+          xyz="0 0 0.0175015175"
+          rpy="0 0 0" />
+        <geometry>
+          <box size="0.05001062 0.05001062 0.035003035" />
+        </geometry>
+      </collision>
+      <collision name="collision_top">
+        <origin
+          xyz="0 0 0.0525045525"
+          rpy="0 0 0" />
+        <geometry>
+          <cylinder length="0.035003035" radius="0.02" />
+        </geometry>
+      </collision>
+    </link>
+    <joint name="lidar_joint" type="fixed">
+      <origin xyz="0 0 0.2" rpy="0 0 0" />
+      <parent link="base_link" />
+      <child link="lidar_link" />
+    </joint>
+
+    <gazebo reference="lidar_link">
+      <sensor type="gpu_ray" name="lidar_link">
+        <topic>scan</topic>
+        <gz_frame_id>lidar_link</gz_frame_id>
+        <update_rate>${update_rate}</update_rate>
+        <ray>
+          <scan>
+            <horizontal>
+              <samples>256</samples>
+              <resolution>1</resolution>
+              <min_angle>-1.0472</min_angle>
+              <max_angle>1.0472</max_angle>
+            </horizontal>
+          </scan>
+          <range>
+            <!-- Minimum distance of the beam -->
+            <min>0.2</min>
+            <!-- Maximum distance of the beam -->
+            <max>10</max>
+            <!-- Linear resolution of the beam -->
+            <resolution>0.02</resolution>
+          </range>
+          <noise>
+            <type>gaussian</type>
+            <mean>0.0</mean>
+            <stddev>0.001</stddev>
+          </noise>
+        </ray>
+        <always_on>0</always_on>
+        <visualize>true</visualize>
+      </sensor>
+    </gazebo>
+  </xacro:macro>
+</robot>
+
+
