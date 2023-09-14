@@ -18,6 +18,8 @@ find_package(std_msgs REQUIRED)           # msgs and srv to basis comunication
 find_package(mavros_msgs REQUIRED)        # msgs to comunicate with mavros
 find_package(rcl_interfaces REQUIRED)     # interface to use param with aardupilot and mavors
 find_package(sensor_msgs REQUIRED)        # interface to use navio2's sensors
+find_package(tf2 REQUIRED)        # interface to use navio2's sensors
+find_package(tf2_ros REQUIRED)        # interface to use navio2's sensors
 
 include_directories(SYSTEM ${EIGEN3_INCLUDE_DIRS})
 
@@ -38,13 +40,16 @@ add_executable(pwm_key src/pwm_key.cpp)
 ament_target_dependencies(pwm_key rclcpp example_interfaces mavros_msgs asv_interfaces)
 
 add_executable(observer src/observer.cpp)
-ament_target_dependencies(observer rclcpp std_msgs sensor_msgs mavros_msgs asv_interfaces geometry_msgs)
+ament_target_dependencies(observer rclcpp std_msgs sensor_msgs mavros_msgs asv_interfaces tf2 tf2_ros geometry_msgs)
 
 add_executable(observer_liu src/observer_liu.cpp)
-ament_target_dependencies(observer_liu rclcpp std_msgs sensor_msgs mavros_msgs asv_interfaces geometry_msgs)
+ament_target_dependencies(observer_liu rclcpp std_msgs sensor_msgs mavros_msgs asv_interfaces tf2 tf2_ros geometry_msgs)
 
 add_executable(observer_zono src/observer_zono.cpp)
 ament_target_dependencies(observer_zono rclcpp std_msgs sensor_msgs mavros_msgs asv_interfaces geometry_msgs)
+
+add_executable(asv_tf2_broadcaster src/asv_tf2_broadcaster.cpp)
+ament_target_dependencies(asv_tf2_broadcaster rclcpp tf2 tf2_ros geometry_msgs)
 
 # Install Targets
 install(TARGETS
@@ -56,6 +61,7 @@ install(TARGETS
   observer
   observer_liu
   observer_zono
+  asv_tf2_broadcaster
 DESTINATION lib/${PROJECT_NAME})
 
 # Install Scripts python
