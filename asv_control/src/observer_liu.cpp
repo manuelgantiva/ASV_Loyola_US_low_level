@@ -153,7 +153,7 @@ private:
             Lp.setZero();
             tao.setZero(); 
         }else{
-            auto start = std::chrono::high_resolution_clock::now();
+            // auto start = std::chrono::high_resolution_clock::now();
 
             float cospsi= cos(psi);
             float senpsi= sin(psi);
@@ -179,8 +179,6 @@ private:
             Xpsi_hat = Xpsi_hat_ant + Xpsi_hat_dot*(Ts/1000);
             Xpsi_hat_ant = Xpsi_hat;
             Xpsi_hat_dot = Apsi*Xpsi_hat + Bpsi*tao + Lpsi*(psi - Cpsi*Xpsi_hat);
-
-            //std::cout << "Matriz Xphd \n" << Xp_hat_ant << std::endl; 
 
             msg.header.stamp = this->now();
             msg.header.frame_id = my_frame;
@@ -212,10 +210,10 @@ private:
             msg_obs.pose.orientation.w = q.w();
             publisher_obs->publish(msg_obs); 
 
-            auto end = std::chrono::high_resolution_clock::now();
-            std::chrono::duration<double> elapsed = end - start;
-            double miliseconds = elapsed.count()*1000;
-            RCLCPP_INFO(this->get_logger(), "Exec time: %f", miliseconds);
+            // auto end = std::chrono::high_resolution_clock::now();
+            // std::chrono::duration<double> elapsed = end - start;
+            // double miliseconds = elapsed.count()*1000;
+            // RCLCPP_INFO(this->get_logger(), "Exec time: %f", miliseconds);
         }
     
 
@@ -230,69 +228,73 @@ private:
 
     void callbackGpsGlobalData(const sensor_msgs::msg::NavSatFix::SharedPtr msg)
     {
-        status_gps=msg->status.status;
-        if (status_gps!=-1){
-            lat=msg->latitude;
-            lon=msg->longitude;
-            alt=msg->altitude;
-            //RCLCPP_INFO(this->get_logger(), "gps lat is: %f, lon is: %f y alt is: %f", lat, lon, alt);
+        if(armed==true){
+            status_gps=msg->status.status;
+            if (status_gps!=-1){
+                lat=msg->latitude;
+                lon=msg->longitude;
+                alt=msg->altitude;
+                //RCLCPP_INFO(this->get_logger(), "gps lat is: %f, lon is: %f y alt is: %f", lat, lon, alt);
+            }
+            // RCLCPP_INFO(this->get_logger(), "Satus gps is: %d", int(status_gps));
         }
-        // RCLCPP_INFO(this->get_logger(), "Satus gps is: %d", int(status_gps));
     }
 
     void callbackGpsLocalData(const geometry_msgs::msg::PoseStamped::SharedPtr msg)
     {
-        if (status_gps!=-1){
-            geometry_msgs::msg::TransformStamped t;
-            std::string fromFrameRel = "base_link";
-            std::string toFrameRel = "map_ned";
-            // Look up for the transformation between map_ned and base_link frames
-            try {
-                rclcpp::Time now = this->get_clock()->now();
-                t = tf_buffer_->lookupTransform(
-                toFrameRel, fromFrameRel,
-                tf2::TimePointZero);
-            } catch (const tf2::TransformException & ex) {
-            RCLCPP_INFO(
-                this->get_logger(), "Could not transform %s to %s: %s",
-                toFrameRel.c_str(), fromFrameRel.c_str(), ex.what());
-            return ;
-            }
-            float x = msg->pose.position.x;
-            x = t.transform.translation.x;
-            float y = t.transform.translation.y;
-            Yp << x,
-                  y;
-
-            float psi_rad = quat2EulerAngles_XYZ(t.transform.rotation.w, t.transform.rotation.x,
-                                                t.transform.rotation.y, t.transform.rotation.z);
-            if (psi_rad<0){
-                psi_rad=(2*M_PI)+psi_rad;
-            }
-
-            if(armed==false){
-                psi_0 = psi_rad;
-                psi_ant = psi_0;
-                laps = 0.0;
-                psi = psi_rad;
-            }else{
-                psi_act = psi_rad;
-                psi_act = psi_act - psi_0;
-
-                if((psi_act - psi_ant) > PI){
-                    laps = laps - 1;
-                }else if((psi_act - psi_ant) < -PI){
-                    laps = laps + 1;
+        if(armed==true){
+            if (status_gps!=-1){
+                geometry_msgs::msg::TransformStamped t;
+                std::string fromFrameRel = "base_link";
+                std::string toFrameRel = "map_ned";
+                // Look up for the transformation between map_ned and base_link frames
+                try {
+                    rclcpp::Time now = this->get_clock()->now();
+                    t = tf_buffer_->lookupTransform(
+                    toFrameRel, fromFrameRel,
+                    tf2::TimePointZero);
+                } catch (const tf2::TransformException & ex) {
+                RCLCPP_INFO(
+                    this->get_logger(), "Could not transform %s to %s: %s",
+                    toFrameRel.c_str(), fromFrameRel.c_str(), ex.what());
+                return ;
                 }
-                psi = psi_act + 2*PI*laps;
-                psi_ant=psi_act;
-            }
+                float x = msg->pose.position.x;
+                x = t.transform.translation.x;
+                float y = t.transform.translation.y;
+                Yp << x,
+                    y;
 
-            //RCLCPP_INFO(this->get_logger(), "n is: %d", int(laps));
-            //RCLCPP_INFO(this->get_logger(), "Heading is: %f", psi);
-            //RCLCPP_INFO(this->get_logger(), "gps x is: %f, y is: %f", x, y);
+                float psi_rad = quat2EulerAngles_XYZ(t.transform.rotation.w, t.transform.rotation.x,
+                                                    t.transform.rotation.y, t.transform.rotation.z);
+                if (psi_rad<0){
+                    psi_rad=(2*M_PI)+psi_rad;
+                }
+
+                if(armed==false){
+                    psi_0 = psi_rad;
+                    psi_ant = psi_0;
+                    laps = 0.0;
+                    psi = psi_rad;
+                }else{
+                    psi_act = psi_rad;
+                    psi_act = psi_act - psi_0;
+
+                    if((psi_act - psi_ant) > PI){
+                        laps = laps - 1;
+                    }else if((psi_act - psi_ant) < -PI){
+                        laps = laps + 1;
+                    }
+                    psi = psi_act + 2*PI*laps;
+                    psi_ant=psi_act;
+                }
+
+                //RCLCPP_INFO(this->get_logger(), "n is: %d", int(laps));
+                //RCLCPP_INFO(this->get_logger(), "Heading is: %f", psi);
+                //RCLCPP_INFO(this->get_logger(), "gps x is: %f, y is: %f", x, y);
+            }
+            // RCLCPP_INFO(this->get_logger(), "Satus gps is: %d", int(status_gps));
         }
-        // RCLCPP_INFO(this->get_logger(), "Satus gps is: %d", int(status_gps));
     }
 
     float quat2EulerAngles_XYZ(float q0, float q1, float q2,float q3)
@@ -311,26 +313,28 @@ private:
 
     void callbackRcoutData(const mavros_msgs::msg::RCOut::SharedPtr msg)
     {
-        uint16_t pwm_left=msg->channels[0];
-        uint16_t pwm_right=msg->channels[2];
-        float Tr=0;
-        float Tl=0;
-        if(pwm_left>1550){
-            Tl=((0.3125*pwm_left)-481.5)/2;
-        }else if (pwm_left<1450)
-        {
-            Tl=((0.3125*pwm_left)-456.25)/2;
+        if(armed==true){
+            uint16_t pwm_left=msg->channels[0];
+            uint16_t pwm_right=msg->channels[2];
+            float Tr=0;
+            float Tl=0;
+            if(pwm_left>1550){
+                Tl=((0.3125*pwm_left)-481.5)/2;
+            }else if (pwm_left<1450)
+            {
+                Tl=((0.3125*pwm_left)-456.25)/2;
+            }
+            if(pwm_right>1550){
+                Tr=((0.3125*pwm_right)-481.5)/2;
+            }else if (pwm_right<1450)
+            {
+                Tr=((0.3125*pwm_right)-456.25)/2;
+            }
+            tao << Tr + Tl,
+                0.0,
+                (Tl - Tr)*0.68/2;
+            // RCLCPP_INFO(this->get_logger(), "PWM left: %d and PWM right:%d", pwm_left, pwm_right);
         }
-        if(pwm_right>1550){
-            Tr=((0.3125*pwm_right)-481.5)/2;
-        }else if (pwm_right<1450)
-        {
-            Tr=((0.3125*pwm_right)-456.25)/2;
-        }
-        tao << Tr + Tl,
-               0.0,
-               (Tl - Tr)*0.68/2;
-        // RCLCPP_INFO(this->get_logger(), "PWM left: %d and PWM right:%d", pwm_left, pwm_right);
     }
 
     void callbackStateData(const mavros_msgs::msg::State::SharedPtr msg)

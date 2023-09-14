@@ -81,7 +81,6 @@ private:
             }
         }
         channel6_pre= msg->channels[5];
-        RCLCPP_INFO(this->get_logger(), "%d", int(channel6_pre));
     }
 
     void callbackMavrosState(const mavros_msgs::msg::State::SharedPtr msg)
