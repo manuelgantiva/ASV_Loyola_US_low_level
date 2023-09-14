@@ -9,8 +9,15 @@ from launch.substitutions import Command
 import os
 from ament_index_python.packages import get_package_share_directory
 
+from launch.actions import ExecuteProcess
+
 def generate_launch_description():
     ld= LaunchDescription()
+
+    record = ExecuteProcess(
+        cmd=['ros2', 'bag', 'record', '--all'],
+        output='screen'
+    )
 
     config = os.path.join(
         get_package_share_directory('asv_bringup'),
@@ -107,6 +114,7 @@ def generate_launch_description():
     ld.add_action(observer_guille)
     ld.add_action(observer_liu)
     ld.add_action(pwm_mapper_node)
+    ld.add_action(record)
     #ld.add_action(transceiver_xbee_node)
 
 
