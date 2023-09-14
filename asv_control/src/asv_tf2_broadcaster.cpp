@@ -30,8 +30,6 @@ private:
     void callbackGpsLocalData(const geometry_msgs::msg::PoseStamped::SharedPtr msg)
     {
         if (status_gps!=-1){
-            float x=msg->pose.position.x;
-            float y=msg->pose.position.y;
             geometry_msgs::msg::TransformStamped t;
             tf2::Quaternion q;
 
