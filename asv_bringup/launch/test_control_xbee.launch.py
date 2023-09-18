@@ -9,8 +9,11 @@ from launch.substitutions import Command
 import os
 from ament_index_python.packages import get_package_share_directory
 
+# Exec other Launch
+from launch.actions import IncludeLaunchDescription
+from launch_xml.launch_description_sources import XMLLaunchDescriptionSource
+
 from launch.actions import ExecuteProcess
-from launch.actions import TimerAction
 
 def generate_launch_description():
     ld= LaunchDescription()
@@ -36,14 +39,20 @@ def generate_launch_description():
         parameters=[{'robot_description': robot_description},
                     {'publish_frequency': 10.0}]
     )
-
     
-    mavros_node = Node(
-        package="mavros",
-        executable="mavros_node",
-        parameters=[
-            {"fcu_url": "udp://:14550@"},
-        ]
+    # mavros_node = Node(
+    #     package="mavros",
+    #     executable="mavros_node",
+    #     parameters=[
+    #         {"fcu_url": "udp://:14550@"},
+    #     ]
+    # )
+
+    mavros_launch = IncludeLaunchDescription(
+        XMLLaunchDescriptionSource(
+            os.path.join(get_package_share_directory('asv_bringup'),
+                         'launch/apm.launch.xml')
+        )
     )
 
     asv_tf_broadcast_node = Node (
@@ -108,7 +117,7 @@ def generate_launch_description():
         namespace= 'comunication'
     )
 
-    ld.add_action(mavros_node)
+    ld.add_action(mavros_launch)
     ld.add_action(robot_state_publisher_node)
     ld.add_action(asv_tf_broadcast_node)
     ld.add_action(listner_rc_node)
