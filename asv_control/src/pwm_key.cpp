@@ -244,14 +244,14 @@ public:
       case KEYCODE_UP:
         RCLCPP_DEBUG(nh_->get_logger(), "UP");
         linear = 1.0;
-        left = 1600;
-        right = 1600;
+        left = 1550;
+        right = 1550;
         break;
       case KEYCODE_DOWN:
         RCLCPP_DEBUG(nh_->get_logger(), "DOWN");
         linear = -1.0;
-        left = 1400;
-        right = 1400;
+        left = 1450;
+        right = 1450;
         break;
       case KEYCODE_G:
         RCLCPP_DEBUG(nh_->get_logger(), "G");

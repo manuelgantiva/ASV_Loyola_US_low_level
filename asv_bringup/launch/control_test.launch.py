@@ -18,10 +18,12 @@ from launch.actions import ExecuteProcess
 def generate_launch_description():
     ld= LaunchDescription()
 
-    record = ExecuteProcess(
-        cmd=['ros2', 'bag', 'record', '--all'],
-        output='screen'
+    record = Node(
+        package="asv_comunication",
+        executable="bag_record",
+        namespace= 'comunication'
     )
+    
 
     config = os.path.join(
         get_package_share_directory('asv_bringup'),

@@ -125,11 +125,11 @@ public:
                 std::bind(&ObserverNode::callbackRcoutData, this, std::placeholders::_1));
         subscriber_state = this-> create_subscription<mavros_msgs::msg::State>("/mavros/state",1,
                 std::bind(&ObserverNode::callbackStateData, this, std::placeholders::_1));
-        publisher_state = this-> create_publisher<asv_interfaces::msg::StateObserver>("state_observer",
+        publisher_state = this-> create_publisher<asv_interfaces::msg::StateObserver>("state_observer_guille",
                 rclcpp::SensorDataQoS());
         publisher_pose = this-> create_publisher<geometry_msgs::msg::PoseStamped>("pose",
                 rclcpp::SensorDataQoS());
-        publisher_obs = this-> create_publisher<geometry_msgs::msg::PoseStamped>("pose_observer",
+        publisher_obs = this-> create_publisher<geometry_msgs::msg::PoseStamped>("pose_guille",
                 rclcpp::SensorDataQoS());
         timer_ = this -> create_wall_timer(std::chrono::milliseconds(int(Ts)),
                                           std::bind(&ObserverNode::calculateState, this));

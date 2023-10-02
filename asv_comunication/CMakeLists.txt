@@ -10,13 +10,21 @@ find_package(ament_cmake REQUIRED)
 find_package(ament_cmake_python REQUIRED)
 find_package(rclpy REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(sensor_msgs REQUIRED)
+find_package(mavros_msgs REQUIRED)
+find_package(rosbag2_cpp REQUIRED)
+find_package(asv_interfaces REQUIRED)
 
 add_executable(testnode src/testnode.cpp)
 ament_target_dependencies(testnode rclcpp std_msgs)
 
+add_executable(bag_record src/bag_record.cpp)
+ament_target_dependencies(bag_record rclcpp rosbag2_cpp sensor_msgs mavros_msgs asv_interfaces)
+
 # Install Targets
 install(TARGETS
   testnode
+  bag_record
 DESTINATION lib/${PROJECT_NAME})
 
 # Install Scripts python
