@@ -63,9 +63,9 @@ class TransceiverXbeeNode(Node):
         info_rcv.velocity.x = data_f[3]
         info_rcv.velocity.y = data_f[4]
         info_rcv.velocity.z = data_f[5]
-        info_rcv.disturbances.x = 0
-        info_rcv.disturbances.y = 0
-        info_rcv.disturbances.z = 0
+        info_rcv.disturbances.x = 0.0
+        info_rcv.disturbances.y = 0.0
+        info_rcv.disturbances.z = 0.0
         info_rcv.header.stamp.sec = data_f [6]
         info_rcv.header.stamp.nanosec = data_f[7]
         info_rcv.header.frame_id = data_f[8].decode('utf-8')
