@@ -39,10 +39,9 @@ class TransceiverXbeeNode(Node):
 
         byte_array = bytearray()  # Create byte array
 
-        byte_array = struct.pack('!f f f f f f f f f i i 4s',
+        byte_array = struct.pack('!f f f f f f i i 4s',
                              msg.point.x, msg.point.y, msg.point.z,
                              msg.velocity.x, msg.velocity.y, msg.velocity.z,
-                             msg.disturbances.x, msg.disturbances.y, msg.disturbances.z,
                              msg.header.stamp.sec, msg.header.stamp.nanosec, msg.header.frame_id.encode('utf-8')) # The data is packed into an array
 
         try:
@@ -64,9 +63,9 @@ class TransceiverXbeeNode(Node):
         info_rcv.velocity.x = data_f[3]
         info_rcv.velocity.y = data_f[4]
         info_rcv.velocity.z = data_f[5]
-        info_rcv.disturbances.x = data_f[6]
-        info_rcv.disturbances.y = data_f[7]
-        info_rcv.disturbances.z = data_f[8]
+        info_rcv.disturbances.x = 0
+        info_rcv.disturbances.y = 0
+        info_rcv.disturbances.z = 0
         info_rcv.header.stamp.sec = data_f [9]
         info_rcv.header.stamp.nanosec = data_f[10]
         info_rcv.header.frame_id = data_f[11].decode('utf-8')
