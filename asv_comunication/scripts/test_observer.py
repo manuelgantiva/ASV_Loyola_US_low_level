@@ -18,7 +18,7 @@ class TestObserverNode(Node):
         msg = StateObserver()
 
         msg.header.stamp = self.get_clock().now().to_msg()
-        msg.header.frame_id = "map"; 
+        msg.header.frame_id = "1"; 
         msg.point.x = round(random.uniform(-100,100),4)
         msg.point.y = round(random.uniform(-100,100),4)
         msg.point.z = round(random.uniform(-100,100),4)
