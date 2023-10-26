@@ -39,14 +39,13 @@ class TransceiverXbeeNode(Node):
 
         byte_array = bytearray()  # Create byte array
 
-        byte_array = struct.pack('!f f f f f f i 4s',
+        byte_array = struct.pack('!e e e e e e 1s',
                              msg.point.x, msg.point.y, msg.point.z,
                              msg.velocity.x, msg.velocity.y, msg.velocity.z,
-                             msg.header.stamp.nanosec, msg.header.frame_id.encode('utf-8')) # The data is packed into an array
+                             msg.header.frame_id.encode('utf-8')) # The data is packed into an array
 
         try:
             self.xbee.send_data_broadcast(byte_array)  # Send data
-            self.get_logger().info("Data was sent")
         except Exception as e:
             self.get_logger().info("Data was not sent")  # Catches exception and returns unsuccessful
 
@@ -54,7 +53,7 @@ class TransceiverXbeeNode(Node):
     def callback_received_data(self, xbee_message):
         byte_array = xbee_message.data  # Extraemos el dato del mensaje
         data_f = []  # Creamos la lista que contendrá los valores decodificados
-        data_f = list(struct.unpack('!f f f f f f i 4s', byte_array))
+        data_f = list(struct.unpack('!e e e e e e 1s', byte_array))
 
         info_rcv = StateObserver()
         info_rcv.point.x = data_f[0]
@@ -67,8 +66,8 @@ class TransceiverXbeeNode(Node):
         info_rcv.disturbances.y = 0.0
         info_rcv.disturbances.z = 0.0
         info_rcv.header.stamp.sec = 0
-        info_rcv.header.stamp.nanosec = data_f[6]
-        info_rcv.header.frame_id = data_f[7].decode('utf-8')
+        info_rcv.header.stamp.nanosec = 0
+        info_rcv.header.frame_id = data_f[6].decode('utf-8')
         self.states.append(info_rcv)
         self.count_=self.count_+1
 
