@@ -13,15 +13,28 @@ from ament_index_python.packages import get_package_share_directory
 from launch.actions import IncludeLaunchDescription
 from launch_xml.launch_description_sources import XMLLaunchDescriptionSource
 
+# Add Arguments Launch
+from launch.actions import DeclareLaunchArgument
+from launch.substitutions import LaunchConfiguration
+
 from launch.actions import ExecuteProcess
 
 def generate_launch_description():
     ld= LaunchDescription()
 
+    arg_Id=DeclareLaunchArgument(
+        'my_id',
+        default_value="0",
+        description='Vehicle ID, is a single character string'
+    )
+
     record = Node(
         package="asv_comunication",
         executable="bag_record",
-        namespace= 'comunication'
+        namespace= 'comunication',
+        parameters = [
+            {'my_id': LaunchConfiguration('my_id')}
+        ]
     )
 
     config = os.path.join(
@@ -82,11 +95,8 @@ def generate_launch_description():
         executable= "observer",
         name= "observer_guille",
         namespace= 'control',
-        remappings=[
-            ("/control/state_observer", "state_observe_guille")
-        ],
         parameters = [
-            {"my_frame": "asv1"},
+            {'my_id': LaunchConfiguration('my_id')},
             config
         ]
     )
@@ -97,10 +107,10 @@ def generate_launch_description():
         name= "observer_liu",
         namespace= 'control',
         remappings=[
-            ("/control/state_observer", "state_observe_liu")
+            ("/control/state_observer", "/control/state_observe_liu")
         ],
         parameters = [
-            {"my_frame": "asv1"},
+            {'my_id': LaunchConfiguration('my_id')},
             config
         ]
     )

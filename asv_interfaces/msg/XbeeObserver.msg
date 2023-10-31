@@ -2,4 +2,4 @@
 # If you want to embed it in another message.
 
 uint8 counter
-StateObserver[] states
+StateNeighbor[] states

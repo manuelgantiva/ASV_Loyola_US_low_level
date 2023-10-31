@@ -21,9 +21,9 @@ using namespace Eigen;
 class ObserverNode : public rclcpp::Node
 {
 public:
-    ObserverNode() : Node("observer")
+    ObserverNode() : Node("observer_guille")
     {     
-        this-> declare_parameter("my_frame", "asv0");
+        this-> declare_parameter("my_id", 0);
         //---------Parámetros del ASV-------------------//
         this-> declare_parameter("Ts", 100.0);
         this-> declare_parameter("m", 24.39);
@@ -36,7 +36,7 @@ public:
         this-> declare_parameter("PpWp_c2", std::vector<float>{0.0, 6.567173587771372, 0.0, 12.050184632655867, 0.0, 6.992727395821881});
         this-> declare_parameter("Lpsi", std::vector<float>{10.370372264461590, 42.762463429973230, 76.008320148412050});
 
-        my_frame = this->get_parameter("my_frame").as_string();
+        my_id = std::to_string(this->get_parameter("my_id").as_int());
         Ts = this->get_parameter("Ts").as_double();
         m = this->get_parameter("m").as_double();
         Xu = this->get_parameter("Xu").as_double();
@@ -125,7 +125,7 @@ public:
                 std::bind(&ObserverNode::callbackRcoutData, this, std::placeholders::_1));
         subscriber_state = this-> create_subscription<mavros_msgs::msg::State>("/mavros/state",1,
                 std::bind(&ObserverNode::callbackStateData, this, std::placeholders::_1));
-        publisher_state = this-> create_publisher<asv_interfaces::msg::StateObserver>("state_observer_guille",
+        publisher_state = this-> create_publisher<asv_interfaces::msg::StateObserver>("/control/state_observer",
                 rclcpp::SensorDataQoS());
         publisher_pose = this-> create_publisher<geometry_msgs::msg::PoseStamped>("pose",
                 rclcpp::SensorDataQoS());
@@ -186,7 +186,7 @@ private:
             Xpsi_hat_dot = Apsi*Xpsi_hat + Bpsi*tao + Lpsi*(psi - Cpsi*Xpsi_hat);
 
             msg.header.stamp = this->now();
-            msg.header.frame_id = my_frame; 
+            msg.header.frame_id = my_id; 
 
             msg.point.x=Xp_hat(0,0);
             msg.point.y=Xp_hat(1,0);
@@ -368,7 +368,7 @@ private:
     bool armed = false;
 
     //------Params-------//
-    std::string my_frame;
+    std::string my_id;
     float m, Xu, Yv, Nr, xg, Iz, Ts;  
 
     Matrix <float, 3,3> M, M_1;

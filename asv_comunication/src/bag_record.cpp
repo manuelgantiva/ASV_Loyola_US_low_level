@@ -21,11 +21,13 @@ public:
     BagRecordNode() : Node("bag_record") 
     {
         // Obtener la fecha y hora actual
+        this-> declare_parameter("my_id", 0);
+        my_id = std::to_string(this->get_parameter("my_id").as_int());
         std::time_t now = std::time(0);
         std::tm *local_time = std::localtime(&now);
         int day = local_time->tm_mday;   // Día del mes (1-31)
         int month = local_time->tm_mon + 1;  // Mes (0-11, agregamos 1 para obtener el mes real)
-        prefix = std::to_string(day) + "-" + std::to_string(month) + "-bag" + "-";
+        prefix = "ASV" + my_id + "-" + std::to_string(day) + "-" + std::to_string(month) + "-bag" + "-";
         RCLCPP_INFO(this->get_logger(), "Current day: %s", prefix.c_str());
 
         subscriber_state = this-> create_subscription<mavros_msgs::msg::State>("/mavros/state",10,
@@ -38,7 +40,7 @@ public:
                 rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackGpsLocalData, this, std::placeholders::_1));
         subscriber_rcout = this-> create_subscription<mavros_msgs::msg::RCOut>("/mavros/rc/out",1,
                 std::bind(&BagRecordNode::callbackRcoutData, this, std::placeholders::_1));
-        subscriber_state_guille= this-> create_subscription<asv_interfaces::msg::StateObserver>("/control/state_observe_guille",
+        subscriber_state_guille= this-> create_subscription<asv_interfaces::msg::StateObserver>("/control/state_observer",
                 rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackStateGuilleData, this, std::placeholders::_1));
         subscriber_state_liu= this-> create_subscription<asv_interfaces::msg::StateObserver>("/control/state_observe_liu",
                 rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackStateLiulData, this, std::placeholders::_1));
@@ -50,9 +52,9 @@ public:
                 rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackPoseLiuData, this, std::placeholders::_1));
         subscriber_compass= this-> create_subscription<std_msgs::msg::Float64>("/mavros/global_position/compass_hdg",
                 rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackCompassData, this, std::placeholders::_1));
-        subscriber_vel_body= this-> create_subscription<geometry_msgs::msg::TwistStamped>("mavros/local_position/velocity_body",
+        subscriber_vel_body= this-> create_subscription<geometry_msgs::msg::TwistStamped>("/mavros/local_position/velocity_body",
                 rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackVelocityBodyData, this, std::placeholders::_1));
-        subscriber_vel_local= this-> create_subscription<geometry_msgs::msg::TwistStamped>("mavros/local_position/velocity_local",
+        subscriber_vel_local= this-> create_subscription<geometry_msgs::msg::TwistStamped>("/mavros/local_position/velocity_local",
                 rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackVelocityLocalData, this, std::placeholders::_1));
         subscriber_xbee= this-> create_subscription<asv_interfaces::msg::XbeeObserver>("/comunication/xbee_observer",1,
                 std::bind(&BagRecordNode::callbackXbeeData, this, std::placeholders::_1));
@@ -196,6 +198,7 @@ private:
         armed= msg->armed;
     }
 
+    std::string my_id;
     std::string name_bag;
     bool armed = false;
     std::string prefix;

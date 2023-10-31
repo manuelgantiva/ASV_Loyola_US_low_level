@@ -16,6 +16,7 @@ find_package(geometry_msgs REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/PwmValues.msg"
+  "msg/StateNeighbor.msg"
   "msg/StateObserver.msg"
   "msg/XbeeObserver.msg"
   #"srv/ComputeRectangleArea.srv"

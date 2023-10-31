@@ -8,7 +8,7 @@ from digi.xbee.devices import XBeeDevice
 import struct
 import time
 
-from asv_interfaces.msg import StateObserver, XbeeObserver
+from asv_interfaces.msg import StateObserver, XbeeObserver, StateNeighbor
 
 class TransceiverXbeeNode(Node):
     def __init__(self):
@@ -35,7 +35,6 @@ class TransceiverXbeeNode(Node):
 
     def callback_state_observer(self, msg):
         timenow = float(time.time())
-        id = 1
 
         byte_array = bytearray()  # Create byte array
 
@@ -55,19 +54,14 @@ class TransceiverXbeeNode(Node):
         data_f = []  # Creamos la lista que contendrá los valores decodificados
         data_f = list(struct.unpack('!e e e e e e 1s', byte_array))
 
-        info_rcv = StateObserver()
+        info_rcv = StateNeighbor()
         info_rcv.point.x = data_f[0]
         info_rcv.point.y = data_f[1]
         info_rcv.point.z = data_f[2]
         info_rcv.velocity.x = data_f[3]
         info_rcv.velocity.y = data_f[4]
         info_rcv.velocity.z = data_f[5]
-        info_rcv.disturbances.x = 0.0
-        info_rcv.disturbances.y = 0.0
-        info_rcv.disturbances.z = 0.0
-        info_rcv.header.stamp.sec = 0
-        info_rcv.header.stamp.nanosec = 0
-        info_rcv.header.frame_id = data_f[6].decode('utf-8')
+        info_rcv.id = data_f[6].decode('utf-8')
         self.states.append(info_rcv)
         self.count_=self.count_+1
 
