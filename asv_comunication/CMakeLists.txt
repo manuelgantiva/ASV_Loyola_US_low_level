@@ -34,6 +34,7 @@ install(PROGRAMS
   scripts/testnode.py 
   scripts/transceiver_xbee.py
   scripts/test_observer.py 
+  scripts/test_xbee.py 
   DESTINATION lib/${PROJECT_NAME}
 )
 

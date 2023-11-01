@@ -1,13 +1,23 @@
 <?xml version="1.0"?>
 <robot name="asv_loyola" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:arg name="id" default="0" />
+  <xacro:arg name="own" default="false"/>
   <!-- Include dynamics macros -->
   <xacro:include filename="$(find yf_description)/urdf/components/asv_gps.xacro"/>
   <xacro:include filename="$(find yf_description)/urdf/components/asv_camera.xacro"/>
   <xacro:include filename="$(find yf_description)/urdf/components/asv_imu.xacro"/>
-  
-  <xacro:include filename="base_asv.xacro" />
-  <xacro:asv_camera/>
-  <xacro:asv_gps/>
-  <xacro:asv_imu/>
+  <xacro:include filename="base_asv.xacro"/>
+  <xacro:include filename="base_neighbor.xacro"/>
+
+  <xacro:if value="$(arg own)">
+    <xacro:base_asv/>
+    <xacro:asv_camera/>
+    <xacro:asv_gps/>
+    <xacro:asv_imu/>
+  </xacro:if>
+
+  <xacro:unless value="$(arg own)">
+    <xacro:base_asv_neighbor name="ASV$(arg id)"/>
+  </xacro:unless> 
 
 </robot>

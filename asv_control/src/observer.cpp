@@ -206,7 +206,7 @@ private:
             msg_obs.header.frame_id = "map_ned";
             msg_obs.pose.position.x= Xp_hat(0,0);
             msg_obs.pose.position.y= Xp_hat(1,0);
-            msg_obs.pose.position.z= 0.4;
+            msg_obs.pose.position.z= 0.0;
             tf2::Quaternion q;
             q.setRPY(0, 0, Xpsi_hat(0,0));
             msg_obs.pose.orientation.x = q.x();
@@ -276,7 +276,7 @@ private:
                 msg_pose.header.frame_id = "map_ned";
                 msg_pose.pose.position.x= x;
                 msg_pose.pose.position.y= y;
-                msg_pose.pose.position.z= 0.4;
+                msg_pose.pose.position.z= 0.0;
                 tf2::Quaternion q;
                 q.setRPY(0, 0, psi_rad);
                 msg_pose.pose.orientation.x = q.x();

@@ -36,23 +36,41 @@ def generate_launch_description():
             {'my_id': LaunchConfiguration('my_id')}
         ]
     )
-    
 
     config = os.path.join(
         get_package_share_directory('asv_bringup'),
         'config',
         'params.yaml'
         )
-    
+        
     yf_pkg = get_package_share_directory("yf_description")
     urdf_path = os.path.join(yf_pkg, 'urdf', 'asv_loyola.urdf.xacro')
-    robot_description = ParameterValue(Command(['xacro ', urdf_path]), value_type=str)
+    own_description = ParameterValue(Command(['xacro ', urdf_path, ' id:=1', ' own:=true']), 
+                                            value_type=str)
 
-    robot_state_publisher_node = Node(
+    own_robot_state_publisher_node = Node(
         package="robot_state_publisher",
         executable="robot_state_publisher",
-        parameters=[{'robot_description': robot_description},
-                    {'publish_frequency': 10.0}]
+        name="own_robot_state_publisher",
+        parameters=[{'robot_description': own_description},
+                    {'publish_frequency': 10.0}],
+        remappings=[
+            ("/robot_description", "/own_description")
+        ]
+    )
+
+    neighbor_description = ParameterValue(Command(['xacro ', urdf_path, ' id:=0', ' own:=false']), 
+                                            value_type=str)
+
+    neighbor_robot_state_publisher_node = Node(
+        package="robot_state_publisher",
+        executable="robot_state_publisher",
+        name="neighbor_robot_state_publisher",
+        parameters=[{'robot_description': neighbor_description},
+                    {'publish_frequency': 10.0}],
+        remappings=[
+            ("/robot_description", "/neighbor_description")
+        ]
     )
 
     # mavros_node = Node(
@@ -129,8 +147,9 @@ def generate_launch_description():
         namespace= 'comunication'
     )
 
-    ld.add_action(Mavros_launch)
-    ld.add_action(robot_state_publisher_node)
+    # ld.add_action(Mavros_launch)
+    ld.add_action(own_robot_state_publisher_node)
+    ld.add_action(neighbor_robot_state_publisher_node)
     ld.add_action(asv_tf_broadcast_node)
     ld.add_action(listner_rc_node)
     ld.add_action(change_mode_node)

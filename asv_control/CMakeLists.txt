@@ -49,7 +49,7 @@ add_executable(observer_zono src/observer_zono.cpp)
 ament_target_dependencies(observer_zono rclcpp std_msgs sensor_msgs mavros_msgs asv_interfaces geometry_msgs)
 
 add_executable(asv_tf2_broadcaster src/asv_tf2_broadcaster.cpp)
-ament_target_dependencies(asv_tf2_broadcaster rclcpp tf2 tf2_ros geometry_msgs)
+ament_target_dependencies(asv_tf2_broadcaster rclcpp tf2 tf2_ros geometry_msgs asv_interfaces)
 
 # Install Targets
 install(TARGETS
