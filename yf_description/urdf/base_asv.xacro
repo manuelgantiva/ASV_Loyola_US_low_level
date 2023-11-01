@@ -8,7 +8,7 @@
         rpy="0 0 ${pi/2}" />
       <geometry>
         <mesh
-          filename="package://asv_description/meshes/base_link.STL" />
+          filename="package://yf_description/meshes/base_link.STL" />
       </geometry>
       <material
         name="">
@@ -55,7 +55,7 @@
         rpy="0 0 ${pi/2}" />
       <geometry>
         <mesh
-          filename="package://asv_description/meshes/base_link.STL" />
+          filename="package://yf_description/meshes/base_link.STL" />
       </geometry>
     </collision>
   </link>
@@ -68,7 +68,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://asv_description/meshes/Motor_izquierda_link.STL" />
+          filename="package://yf_description/meshes/Motor_izquierda_link.STL" />
       </geometry>
       <material
         name="">
@@ -82,7 +82,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://asv_description/meshes/Motor_izquierda_link.STL" />
+          filename="package://yf_description/meshes/Motor_izquierda_link.STL" />
       </geometry>
     </collision>
   </link>
@@ -94,7 +94,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://asv_description/meshes/Motor_derecha_link.STL" />
+          filename="package://yf_description/meshes/Motor_derecha_link.STL" />
       </geometry>
       <material
         name="">
@@ -108,7 +108,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://asv_description/meshes/Motor_derecha_link.STL" />
+          filename="package://yf_description/meshes/Motor_derecha_link.STL" />
       </geometry>
     </collision>
   </link>

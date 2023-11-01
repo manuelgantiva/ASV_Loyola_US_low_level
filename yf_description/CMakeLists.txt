@@ -13,7 +13,7 @@ find_package(ament_cmake REQUIRED)
 
 # Install directories
 install(
-  DIRECTORY rviz config
+  DIRECTORY rviz config meshes
   DESTINATION share/${PROJECT_NAME}/)
 
 # Install xacro files / macros
