@@ -79,7 +79,7 @@ private:
             t.transform.translation.z = 0.0;
 
             tf2::Quaternion q;
-            q.setRPY(0, 0, msg->states[0].point.z);
+            q.setRPY(3.14159, 0, -(msg->states[0].point.z));
 
             t.transform.rotation.x = q.x();
             t.transform.rotation.y = q.y();

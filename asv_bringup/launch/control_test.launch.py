@@ -151,12 +151,12 @@ def generate_launch_description():
     ld.add_action(own_robot_state_publisher_node)
     ld.add_action(neighbor_robot_state_publisher_node)
     ld.add_action(asv_tf_broadcast_node)
-    ld.add_action(listner_rc_node)
-    ld.add_action(change_mode_node)
-    ld.add_action(observer_guille)
-    ld.add_action(observer_liu)
-    ld.add_action(pwm_mapper_node)
-    ld.add_action(record)
+    # ld.add_action(listner_rc_node)
+    # ld.add_action(change_mode_node)
+    # ld.add_action(observer_guille)
+    # ld.add_action(observer_liu)
+    # ld.add_action(pwm_mapper_node)
+    # ld.add_action(record)
     #ld.add_action(transceiver_xbee_node)
 
 
