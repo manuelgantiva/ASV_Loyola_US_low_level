@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+  <xacro:macro name="asv_camera">
+    <link
+      name="asv_camera">
+      <visual>
+        <origin
+          xyz="0 0 0"
+          rpy="0 0 0" />
+        <geometry>
+          <box size="0.037 0.0175 0.027"/>
+        </geometry>
+      </visual>
+      <collision>
+        <origin
+          xyz="0.0 0.0 0.0"
+          rpy="0 0 0"/>
+        <geometry>
+          <box size="0.037 0.0175 0.027"/>
+        </geometry>
+      </collision>
+    </link>
+    <joint
+      name="camera_joint"
+      type="fixed">
+      <origin
+        xyz="-0.24 0.0 0.44"
+        rpy="0.0 0.0 0.0" />
+      <parent
+        link="base_link" />
+      <child
+        link="asv_camera"/>
+    </joint>
+
+    <link name="camera_link_optical">
+    </link>
+
+    <joint name="camera_optical_joint" type="fixed">
+        <!-- these values have to be these values otherwise the gazebo camera
+            image won't be aligned properly with the frame it is supposedly
+            originating from -->
+        <origin xyz="0 0 0" rpy="${pi/2} ${pi} ${pi/2}"/>
+        <parent link="asv_camera"/>
+        <child link="camera_link_optical"/>
+    </joint>
+
+  </xacro:macro>
+</robot>
