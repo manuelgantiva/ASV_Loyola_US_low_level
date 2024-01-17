@@ -12,7 +12,7 @@
 #include "tf2_ros/buffer.h"
 
 #include <cmath>
-#include <iostream>
+#include <thread>
 #include <Eigen/Dense>
 
 using namespace Eigen;
@@ -26,42 +26,47 @@ public:
         this-> declare_parameter("my_id", 0);
           //---------Parámetros del ASV-------------------//
         this-> declare_parameter("Ts", 100.0);
-        this-> declare_parameter("m", 24.39);
-        this-> declare_parameter("Xu", -1.0);
-        this-> declare_parameter("Yv", -10.92);
-        this-> declare_parameter("Nr", -3.95);
-        this-> declare_parameter("xg", 0.0196);
-        this-> declare_parameter("Iz", 1.81);
+        
+        this-> declare_parameter("Xu6", -0.003148);
+        this-> declare_parameter("Xu7", 0.0810014);
+        this-> declare_parameter("Xv10", -0.00394830);
+        this-> declare_parameter("Xv11", -0.0183636);
+        this-> declare_parameter("Xv12", 0.0);
+        this-> declare_parameter("Xv13", -0.0200932);
+        this-> declare_parameter("Xr10", -0.0129643);
+        this-> declare_parameter("Xr11", -0.0110386);
+        this-> declare_parameter("Xr12", 0.0);
+        this-> declare_parameter("Xr13", 0.1717909);
+
         this-> declare_parameter("PpWp_c1", std::vector<float>{6.567173587771372, 0.0, 12.050184632655890, 0.0, 6.992727395821864, 0.0});
         this-> declare_parameter("PpWp_c2", std::vector<float>{0.0, 6.567173587771372, 0.0, 12.050184632655867, 0.0, 6.992727395821881});
         this-> declare_parameter("Lpsi", std::vector<float>{10.370372264461590, 42.762463429973230, 76.008320148412050});
 
         my_id = std::to_string(this->get_parameter("my_id").as_int());
         Ts = this->get_parameter("Ts").as_double();
-        m = this->get_parameter("m").as_double();
-        Xu = this->get_parameter("Xu").as_double();
-        Yv = this->get_parameter("Yv").as_double();
-        Nr = this->get_parameter("Nr").as_double();
-        xg = this->get_parameter("xg").as_double();
-        Iz = this->get_parameter("Iz").as_double();
+        
+        Xu6 = this->get_parameter("Xu6").as_double();
+        Xu7 = this->get_parameter("Xu7").as_double();
+        Xv10 = this->get_parameter("Xv10").as_double();
+        Xv11 = this->get_parameter("Xv11").as_double();
+        Xv12 = this->get_parameter("Xv12").as_double();
+        Xv13 = this->get_parameter("Xv13").as_double();
+        Xr10 = this->get_parameter("Xr10").as_double();
+        Xr11 = this->get_parameter("Xr11").as_double();
+        Xr12 = this->get_parameter("Xr12").as_double();
+        Xr13 = this->get_parameter("Xr13").as_double();
 
         std::vector<double> Lpsi_par= this->get_parameter("Lpsi").as_double_array();
         std::vector<double> PpWpc1_par = this->get_parameter("PpWp_c1").as_double_array();
         std::vector<double> PpWpc2_par = this->get_parameter("PpWp_c2").as_double_array();
 
-        M << m-Xu, 0.0, 0.0,
-             0.0, m-Yv, m*xg,
-             0.0, m*xg, Iz-Nr;  
-
-        M_1 = M.inverse();  
-
         Apsi << 0.0, 1.0, 0.0,
                 0.0, 0.0, 1.0,
                 0.0, 0.0, 0.0;     
 
-        Bpsi << 0.0, 0.0, 0.0,
-                M_1(2,0), M_1(2,1), M_1(2,2),
-                0.0, 0.0, 0.0;
+        IGpsi << 0.0,
+                0.0,
+                0.0;
 
         Cpsi << 1.0, 0.0, 0.0;
 
@@ -72,12 +77,12 @@ public:
               0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
               0.0, 0.0, 0.0, 0.0, 0.0, 0.0;
 
-        Bp << 0.0, 0.0, 0.0,
-              0.0, 0.0, 0.0,
-              M_1(0,0), M_1(0,1), M_1(0,2),
-              M_1(1,0), M_1(1,1), M_1(1,2),
-              0.0, 0.0, 0.0,
-              0.0, 0.0, 0.0;
+        IGp << 0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0;
 
         Cp << 1.0, 0.0, 0.0, 0.0, 0.0, 0.0,
               0.0, 1.0, 0.0, 0.0, 0.0, 0.0;
@@ -98,7 +103,6 @@ public:
         Xpsi_hat.setZero(); 
         Xpsi_hat_dot.setZero(); 
         Xpsi_hat_ant.setZero(); 
-        tao.setZero(); 
 
         PpWp << PpWpc1_par[0], PpWpc2_par[0],
                 PpWpc1_par[1], PpWpc2_par[1],
@@ -111,21 +115,25 @@ public:
                 Lpsi_par[1],
                 Lpsi_par[2];
 
-    
+        cb_group_sensors_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+        cb_group_obs_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+        auto options_sensors_ = rclcpp::SubscriptionOptions();
+        options_sensors_.callback_group=cb_group_sensors_;
+
         subscriber_imu = this-> create_subscription<sensor_msgs::msg::Imu>("/mavros/imu/data",rclcpp::SensorDataQoS(),
-                std::bind(&ObserverLiuNode::callbackImuData, this, std::placeholders::_1));
+                std::bind(&ObserverLiuNode::callbackImuData, this, std::placeholders::_1), options_sensors_);
         subscriber_gps_global = this-> create_subscription<sensor_msgs::msg::NavSatFix>("/mavros/global_position/global",
-                rclcpp::SensorDataQoS(), std::bind(&ObserverLiuNode::callbackGpsGlobalData, this, std::placeholders::_1));
+                rclcpp::SensorDataQoS(), std::bind(&ObserverLiuNode::callbackGpsGlobalData, this, std::placeholders::_1), options_sensors_);
         subscriber_gps_local= this-> create_subscription<geometry_msgs::msg::PoseStamped>("/mavros/local_position/pose",
-                rclcpp::SensorDataQoS(), std::bind(&ObserverLiuNode::callbackGpsLocalData, this, std::placeholders::_1));
+                rclcpp::SensorDataQoS(), std::bind(&ObserverLiuNode::callbackGpsLocalData, this, std::placeholders::_1), options_sensors_);
         subscriber_rcout = this-> create_subscription<mavros_msgs::msg::RCOut>("/mavros/rc/out",1,
-                std::bind(&ObserverLiuNode::callbackRcoutData, this, std::placeholders::_1));
-         subscriber_state = this-> create_subscription<mavros_msgs::msg::State>("/mavros/state",1,
-                std::bind(&ObserverLiuNode::callbackStateData, this, std::placeholders::_1));
-        publisher_state = this-> create_publisher<asv_interfaces::msg::StateObserver>("/control/state_observer",
+                std::bind(&ObserverLiuNode::callbackRcoutData, this, std::placeholders::_1), options_sensors_);
+        subscriber_state = this-> create_subscription<mavros_msgs::msg::State>("/mavros/state",1,
+                std::bind(&ObserverLiuNode::callbackStateData, this, std::placeholders::_1), options_sensors_);
+        publisher_state = this-> create_publisher<asv_interfaces::msg::StateObserver>("/control/state_observer_liu",
                 rclcpp::SensorDataQoS());
         timer_ = this -> create_wall_timer(std::chrono::milliseconds(int(Ts)),
-                                          std::bind(&ObserverLiuNode::calculateState, this));
+                                          std::bind(&ObserverLiuNode::calculateState, this), cb_group_obs_);
         publisher_obs = this-> create_publisher<geometry_msgs::msg::PoseStamped>("pose_liu",
                 rclcpp::SensorDataQoS());
                                         
@@ -149,14 +157,30 @@ private:
             Xpsi_hat_dot.setZero(); 
             Xpsi_hat_ant.setZero(); 
             R2T.setZero();
-            Yp.setZero();
             Lp.setZero();
-            tao.setZero(); 
+            {
+                std::lock_guard<std::mutex> lock(mutex_);
+                Yp.setZero();
+            }
         }else{
             // auto start = std::chrono::high_resolution_clock::now();
+            float psi_i;
+            Matrix <float, 2,1> Yp_i;
+            float delta_diff_i;
+            float delta_mean_i;
+            int beta_i;
+            {
+                std::lock_guard<std::mutex> lock(mutex_);
+                psi_i = psi;
+                Yp_i = Yp;
+                delta_diff_i = delta_diff;
+                delta_mean_i = delta_mean;
+                beta_i=beta;
+            }
 
-            float cospsi= cos(psi);
-            float senpsi= sin(psi);
+            float cospsi= cos(psi_i);
+            float senpsi= sin(psi_i);
+            
             R2T << cospsi, senpsi,
                    -senpsi, cospsi;
 
@@ -170,28 +194,36 @@ private:
             Ap(1,2)=senpsi;
             Ap(1,3)=cospsi;
 
+            float delta_mean_i_2 = delta_mean_i*delta_mean_i;
+            float delta_diff_i_2 = delta_diff_i*delta_diff_i;
+            float sum_1 = (delta_mean_i_2+(delta_diff_i_2/4.0));
+            
+            IGp(2,0) = (Xu6*sum_1)+(Xu7*delta_mean_i);
+            IGp(3,0) = (Xv10*sum_1*(1-beta_i))+(Xv11*delta_mean_i*delta_diff_i)+(Xv12*delta_mean_i*(1-beta_i))+(Xv13*delta_diff_i/2.0);
+            IGpsi(1,0)=(Xr10*sum_1*(1-beta_i))+(Xr11*delta_mean_i*delta_diff_i)+(Xr12*delta_mean_i*(1-beta_i))+(Xr13*delta_diff_i/2.0);
+
             Lp=Tp.inverse()*PpWp*R2T;
 
-            Xp_hat = Xp_hat_ant + Xp_hat_dot*(Ts/1000);
+            Xp_hat = Xp_hat_ant + Xp_hat_dot*(Ts/1000.0);
             Xp_hat_ant = Xp_hat;
-            Xp_hat_dot = Ap*Xp_hat + Bp*tao + Lp*(Yp - Cp*Xp_hat);
+            Xp_hat_dot = Ap*Xp_hat + IGp + Lp*(Yp_i - Cp*Xp_hat);
 
-            Xpsi_hat = Xpsi_hat_ant + Xpsi_hat_dot*(Ts/1000);
+            Xpsi_hat = Xpsi_hat_ant + Xpsi_hat_dot*(Ts/1000.0);
             Xpsi_hat_ant = Xpsi_hat;
-            Xpsi_hat_dot = Apsi*Xpsi_hat + Bpsi*tao + Lpsi*(psi - Cpsi*Xpsi_hat);
+            Xpsi_hat_dot = Apsi*Xpsi_hat + IGpsi + Lpsi*(psi_i - Cpsi*Xpsi_hat);
 
             msg.header.stamp = this->now();
             msg.header.frame_id = my_id;
             
             msg.point.x=Xp_hat(0,0);
             msg.point.y=Xp_hat(1,0);
-            msg.point.z=-Xpsi_hat(0,0);
+            msg.point.z=Xpsi_hat(0,0);
             msg.velocity.x=Xp_hat(2,0);
             msg.velocity.y=Xp_hat(3,0);
-            msg.velocity.z=-Xpsi_hat(1,0);
+            msg.velocity.z=Xpsi_hat(1,0);
             msg.disturbances.x=Xp_hat(4,0);
             msg.disturbances.y=Xp_hat(5,0);
-            msg.disturbances.z=-Xpsi_hat(2,0);
+            msg.disturbances.z=Xpsi_hat(2,0);
 
             publisher_state->publish(msg);
 
@@ -262,9 +294,11 @@ private:
                 float x = msg->pose.position.x;
                 x = t.transform.translation.x;
                 float y = t.transform.translation.y;
-                Yp << x,
-                    y;
-
+                {
+                    std::lock_guard<std::mutex> lock(mutex_);
+                    Yp << x,
+                        y;
+                }
                 float psi_rad = quat2EulerAngles_XYZ(t.transform.rotation.w, t.transform.rotation.x,
                                                     t.transform.rotation.y, t.transform.rotation.z);
                 if (psi_rad<0){
@@ -275,7 +309,10 @@ private:
                     psi_0 = psi_rad;
                     psi_ant = psi_0;
                     laps = 0.0;
-                    psi = psi_rad;
+                    {
+                        std::lock_guard<std::mutex> lock(mutex_);
+                        psi = psi_rad;
+                    }
                 }else{
                     psi_act = psi_rad;
                     psi_act = psi_act - psi_0;
@@ -285,7 +322,10 @@ private:
                     }else if((psi_act - psi_ant) < -PI){
                         laps = laps + 1;
                     }
-                    psi = psi_act + 2*PI*laps;
+                    {
+                        std::lock_guard<std::mutex> lock(mutex_);
+                        psi = psi_act + 2*PI*laps;
+                    }
                     psi_ant=psi_act;
                 }
 
@@ -314,25 +354,22 @@ private:
     void callbackRcoutData(const mavros_msgs::msg::RCOut::SharedPtr msg)
     {
         if(armed==true){
-            uint16_t pwm_left=msg->channels[0];
-            uint16_t pwm_right=msg->channels[2];
-            float Tr=0;
-            float Tl=0;
-            if(pwm_left>1550){
-                Tl=((0.3125*pwm_left)-481.5)/2;
-            }else if (pwm_left<1450)
-            {
-                Tl=((0.3125*pwm_left)-456.25)/2;
+            uint16_t pwm_left=msg->channels[2];
+            uint16_t pwm_right=msg->channels[0];
+            int beta_a = 0;
+            if(pwm_left>=1500 && pwm_right>=1500){
+                beta_a=1;
+            }else{
+                beta_a=0;
             }
-            if(pwm_right>1550){
-                Tr=((0.3125*pwm_right)-481.5)/2;
-            }else if (pwm_right<1450)
+            float delta_left = -1*((pwm_left/400.0) -3.75);    //normalized pwm
+            float delta_right = -1*((pwm_right/400.0) -3.75);  //normalized pwm
             {
-                Tr=((0.3125*pwm_right)-456.25)/2;
+                std::lock_guard<std::mutex> lock(mutex_);
+                delta_diff = delta_left-delta_right;
+                delta_mean = (delta_left+delta_right)/2.0;
+                beta=beta_a;
             }
-            tao << Tr + Tl,
-                0.0,
-                (Tl - Tr)*0.68/2;
             // RCLCPP_INFO(this->get_logger(), "PWM left: %d and PWM right:%d", pwm_left, pwm_right);
         }
     }
@@ -344,19 +381,22 @@ private:
     }
 
     float yaw, lat, lon, alt, psi_act = 0.0, psi_ant = 0.0, psi_0 = 0.0, psi = 0.0, x_centro, y_centro;
-    int status_gps, laps;
+    int status_gps, laps=0;
     bool armed = false;
 
     //------Params-------//
     std::string my_id;
-    float m, Xu, Yv, Nr, xg, Iz, Ts;  
+    float Ts, Xu6, Xu7, Xv10, Xv11, Xv12, Xv13, Xr10, Xr11 ,Xr12, Xr13;   
 
-    Matrix <float, 3,3> M, M_1;
+    float delta_diff;
+    float delta_mean;
+    int beta; 
+
     Matrix <float, 3,3> Apsi; 
-    Matrix <float, 3,3> Bpsi; 
+    Matrix <float, 3,1> IGpsi; 
     Matrix <float, 1,3> Cpsi; 
     Matrix <float, 6,6> Ap;
-    Matrix <float, 6,3> Bp;
+    Matrix <float, 6,1> IGp;
     Matrix <float, 2,6> Cp;  
     Matrix <float, 6,6> Tp;  
     Matrix <float, 6,2> Lp; 
@@ -383,13 +423,20 @@ private:
 
     std::shared_ptr<tf2_ros::TransformListener> tf_listener_{nullptr};
     std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
+    
+    // mutex callback group: 
+    std::mutex mutex_;
+    rclcpp::CallbackGroup::SharedPtr cb_group_sensors_;
+    rclcpp::CallbackGroup::SharedPtr cb_group_obs_;
 };
 
 int main(int argc, char **argv)
 {
     rclcpp::init(argc, argv);
     auto node = std::make_shared<ObserverLiuNode>();
-    rclcpp::spin(node);
+    rclcpp::executors::MultiThreadedExecutor executor;
+    executor.add_node(node);
+    executor.spin();
     rclcpp::shutdown();
     return 0;
 }

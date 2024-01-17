@@ -19,7 +19,7 @@ public:
                                           std::bind(&PwmMapperNode::publishOverridePwm, this));
         server_ = this-> create_service<example_interfaces::srv::SetBool>(
                 "/control/on_off_pwm", std::bind(&PwmMapperNode::callbackOnOffPwm, this, _1, _2));
-        subscriber_ = this-> create_subscription<asv_interfaces::msg::PwmValues>("/control/pwm_values",10,
+        subscriber_ = this-> create_subscription<asv_interfaces::msg::PwmValues>("/control/pwm_values",1,
                 std::bind(&PwmMapperNode::callbackPwmValues, this, std::placeholders::_1));
         RCLCPP_INFO(this->get_logger(), "Pwm Mapper Node has been started.");
 
@@ -31,7 +31,7 @@ private:
         count_pwm=0;
         t_left=msg->t_left;
         t_right=msg->t_righ;
-        RCLCPP_INFO(this->get_logger(), "New value pwm");
+        //RCLCPP_INFO(this->get_logger(), "New value pwm");
     }
 
     void callbackOnOffPwm(const example_interfaces::srv::SetBool::Request::SharedPtr request,
@@ -51,15 +51,9 @@ private:
 
     void publishOverridePwm()
     {
-        if(count_pwm==25){
-            t_left=1500;
-            t_right=1500;
-        }else{
-            count_pwm+=1;
-        }
         auto msg = mavros_msgs::msg::OverrideRCIn();
         if(this->on_off_pwm){
-            msg.channels =  std::array<uint16_t, 18>{0, 0, t_left, t_right, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+            msg.channels =  std::array<uint16_t, 18>{0, 0, 0, 0, 0, 0, 0, 0, 0, t_left, t_right, 0, 0, 0, 0, 0, 0, 0};
         }else{
             msg.channels =  std::array<uint16_t, 18>{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
         }

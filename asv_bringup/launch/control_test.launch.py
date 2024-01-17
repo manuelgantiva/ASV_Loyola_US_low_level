@@ -95,23 +95,51 @@ def generate_launch_description():
         parameters = [config]
     )
 
-    listner_rc_node = Node (
+    rc_handler_node = Node (
         package= "asv_control",
-        executable= "listener_rc",
+        executable= "rc_handler",
         namespace= 'control',
         parameters = [config]
     )
 
-    change_mode_node = Node (
+    reference_vel_node = Node (
         package= "asv_control",
-        executable= "change_mode",
+        executable= "reference_vel",
+        namespace= 'control',
+        parameters = [config]
+    )
+
+    apm_llc_node = Node (
+        package= "asv_control",
+        executable= "apm_llc",
+        namespace= 'control',
+        parameters = [config]
+    )
+
+    ifac_llc_node = Node (
+        package= "asv_control",
+        executable= "ifac_llc",
+        namespace= 'control',
+        parameters = [config]
+    )
+
+    mux_llc_node = Node (
+        package= "asv_control",
+        executable= "mux_llc",
+        namespace= 'control',
+        parameters = [config]
+    )
+
+    mux_obs_node = Node (
+        package= "asv_control",
+        executable= "mux_obs",
         namespace= 'control',
         parameters = [config]
     )
 
     observer_guille = Node (
         package= "asv_control",
-        executable= "observer",
+        executable= "observer_guille",
         name= "observer_guille",
         namespace= 'control',
         parameters = [
@@ -125,9 +153,6 @@ def generate_launch_description():
         executable= "observer_liu",
         name= "observer_liu",
         namespace= 'control',
-        remappings=[
-            ("/control/state_observer", "/control/state_observe_liu")
-        ],
         parameters = [
             {'my_id': LaunchConfiguration('my_id')},
             config
@@ -147,17 +172,20 @@ def generate_launch_description():
         namespace= 'comunication'
     )
 
-    # ld.add_action(Mavros_launch)
+    ld.add_action(Mavros_launch)
     ld.add_action(own_robot_state_publisher_node)
-    ld.add_action(neighbor_robot_state_publisher_node)
+    # ld.add_action(neighbor_robot_state_publisher_node)
     ld.add_action(asv_tf_broadcast_node)
-    # ld.add_action(listner_rc_node)
-    # ld.add_action(change_mode_node)
-    # ld.add_action(observer_guille)
-    # ld.add_action(observer_liu)
-    # ld.add_action(pwm_mapper_node)
-    # ld.add_action(record)
-    #ld.add_action(transceiver_xbee_node)
-
+    ld.add_action(rc_handler_node)
+    ld.add_action(reference_vel_node)
+    ld.add_action(mux_llc_node)
+    ld.add_action(mux_obs_node)
+    ld.add_action(observer_guille)
+    ld.add_action(observer_liu)
+    ld.add_action(pwm_mapper_node)
+    ld.add_action(apm_llc_node)
+    ld.add_action(ifac_llc_node)
+    ld.add_action(record)
+    # ld.add_action(transceiver_xbee_node)
 
     return ld

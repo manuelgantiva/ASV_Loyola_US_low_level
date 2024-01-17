@@ -28,7 +28,7 @@ public:
         subscriber_xbee = this-> create_subscription<asv_interfaces::msg::XbeeObserver>(
             "/comunication/xbee_observer",1, 
             std::bind(&FramePublisher::callbackXbeeData, this, std::placeholders::_1));
-        publisher_pose_neighbor = this-> create_publisher<geometry_msgs::msg::PoseStamped>("pose_neighbor",
+        publisher_pose_neighbor = this-> create_publisher<geometry_msgs::msg::PoseStamped>("/control/pose_neighbor",
                 rclcpp::SensorDataQoS());
     	RCLCPP_INFO(this->get_logger(), "Frame Publisher Node has been started.");
 
