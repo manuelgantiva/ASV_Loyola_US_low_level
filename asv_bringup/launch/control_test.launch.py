@@ -186,6 +186,6 @@ def generate_launch_description():
     ld.add_action(apm_llc_node)
     ld.add_action(ifac_llc_node)
     ld.add_action(record)
-    # ld.add_action(transceiver_xbee_node)
+    ld.add_action(transceiver_xbee_node)
 
     return ld
