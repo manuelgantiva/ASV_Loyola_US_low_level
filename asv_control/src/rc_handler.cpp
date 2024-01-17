@@ -129,9 +129,10 @@ private:
         auto request = std::make_shared<mavros_msgs::srv::CommandHome::Request>();
         request->current_gps = false;
         request->yaw = 0.0;
-        request->latitude= 37.4188489;
-        request->longitude= -5.9985233;
-        request->altitude = 63.69740891842041;
+        request->latitude= 37.3076703;
+        request->longitude= -5.9402279;
+        request->altitude = 89.95863749032833
+;
 
         client_set_home->async_send_request(request,std::bind(&RcHandlerNode::callbackResponseSetHome, this, _1));
     }
