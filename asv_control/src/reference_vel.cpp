@@ -43,8 +43,8 @@ private:
                 msg->channels[0] = 1500;
             }
 
-            u_ref=0.5*((msg->channels[2]*0.0025)-3.75);
-            r_ref=0.5*((-msg->channels[0]*0.0025)+3.75);
+            u_ref = 0.5*((msg->channels[2]*0.0025)-3.75);
+            r_ref = 0.5*((-msg->channels[0]*0.0025)+3.75);
 
             auto ref = geometry_msgs::msg::Vector3();
             if(u_ref>1.0){
@@ -59,6 +59,8 @@ private:
             {
                 r_ref = -1.0;
             }
+            
+            r_ref=-1*r_ref;
 
             if(reference_mode_ == true){
                 ref.x = u_ref;

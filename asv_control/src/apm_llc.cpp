@@ -33,12 +33,9 @@ private:
     
     void callbackVelReference(const geometry_msgs::msg::Vector3::SharedPtr msg)
     {
-        u_ref = msg->x;
-        r_ref = msg->y;
-        psi_ref = msg->z;
         auto cmd_vel = geometry_msgs::msg::Twist();
         cmd_vel.linear.x = msg->x;
-        cmd_vel.angular.z = msg->y;
+        cmd_vel.angular.z = -1*msg->y;
         publisher_cmd_vel_ ->publish(cmd_vel);
     }
 
@@ -50,7 +47,6 @@ private:
     }
 
     bool armed = false;
-    float u_ref, psi_ref, r_ref;
 
     //------Params-------//
     float Ts;  

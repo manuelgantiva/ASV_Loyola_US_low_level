@@ -150,6 +150,7 @@ private:
     {
         auto msg = asv_interfaces::msg::StateObserver();
         if(armed==false){
+            laps=0;
             Xp_hat.setZero();
             Xp_hat_dot.setZero(); 
             Xp_hat_ant.setZero(); 

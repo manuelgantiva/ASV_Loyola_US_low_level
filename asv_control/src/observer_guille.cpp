@@ -152,6 +152,7 @@ private:
     {
         auto msg = asv_interfaces::msg::StateObserver();
         if(armed==false){
+            laps=0;
             Xp_hat.setZero();
             Xp_hat_dot.setZero(); 
             Xp_hat_ant.setZero(); 
@@ -395,7 +396,7 @@ private:
         // RCLCPP_INFO(this->get_logger(), "PWM left: %d and PWM right:%d", pwm_left, pwm_right);
     }
 
-    float yaw, lat, lon, alt, psi_act = 0.0, psi_ant = 0.0, psi_0 = 0.0, psi = 0.0, x_centro, y_centro;
+    float yaw, lat, lon, alt, psi_act = 0.0, psi_ant = 0.0, psi_0 = 0.0, psi = 0.0;
     int status_gps, laps=0;
     bool armed = false;
 

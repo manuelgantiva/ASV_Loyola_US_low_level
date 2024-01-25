@@ -129,10 +129,9 @@ private:
         auto request = std::make_shared<mavros_msgs::srv::CommandHome::Request>();
         request->current_gps = false;
         request->yaw = 0.0;
-        request->latitude= 37.3076703;
-        request->longitude= -5.9402279;
-        request->altitude = 89.95863749032833
-;
+        request->latitude= 37.30769;
+        request->longitude= -5.94021;
+        request->altitude = 89.95863749032833;
 
         client_set_home->async_send_request(request,std::bind(&RcHandlerNode::callbackResponseSetHome, this, _1));
     }
@@ -256,7 +255,6 @@ private:
                     break;
                 case AUTO:
                     RCLCPP_INFO(this->get_logger(), "Ardupilot control mode");
-                    
                     threads_.push_back(std::thread(std::bind(&RcHandlerNode::callParamSetServoOut, this,
                                         "SERVO1_FUNCTION", 74)));
                     threads_.push_back(std::thread(std::bind(&RcHandlerNode::callParamSetServoOut, this, 
@@ -267,11 +265,11 @@ private:
                     break;
                 case ROS:
                     RCLCPP_INFO(this->get_logger(), "ROS2 control mode");
-                    threads_.push_back(std::thread(std::bind(&RcHandlerNode::callArming, this, true)));
                     if(sel_con<1400){
                         threads_.push_back(std::thread(std::bind(&RcHandlerNode::callSetModeMavros, this, "GUIDED")));
                         threads_.push_back(std::thread(std::bind(&RcHandlerNode::callSetLowController, this, 
                                             asv_interfaces::srv::SetLlc::Request::LLC_APM)));
+                        threads_.push_back(std::thread(std::bind(&RcHandlerNode::callArming, this, true)));
                     }else if(sel_con>1600){
                         threads_.push_back(std::thread(std::bind(&RcHandlerNode::callParamSetServoOut, this, 
                                             "SERVO1_FUNCTION", 61)));
@@ -280,6 +278,7 @@ private:
                         threads_.push_back(std::thread(std::bind(&RcHandlerNode::callOnOffPwm, this, true)));
                         threads_.push_back(std::thread(std::bind(&RcHandlerNode::callSetLowController, this, 
                                             asv_interfaces::srv::SetLlc::Request::LLC_IFAC)));
+                        threads_.push_back(std::thread(std::bind(&RcHandlerNode::callArming, this, true)));
                     }else{
                         threads_.push_back(std::thread(std::bind(&RcHandlerNode::callParamSetServoOut, this, 
                                             "SERVO1_FUNCTION", 61)));
@@ -288,6 +287,7 @@ private:
                         threads_.push_back(std::thread(std::bind(&RcHandlerNode::callOnOffPwm, this, true)));
                         threads_.push_back(std::thread(std::bind(&RcHandlerNode::callSetLowController, this, 
                                             asv_interfaces::srv::SetLlc::Request::LLC_MPC)));
+                        threads_.push_back(std::thread(std::bind(&RcHandlerNode::callArming, this, true)));
                     }
                     if(sel_obs<1400){
                         threads_.push_back(std::thread(std::bind(&RcHandlerNode::callSetStateObserver, this, 
