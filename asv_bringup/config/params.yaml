@@ -38,8 +38,8 @@ control:
     ros__parameters:
       Ts: 100.0         #ms
       sm_gain_ku: 2.0
-      sm_gain_kpsi: 2.0
-      sm_gain_kr: 2.0
+      sm_gain_kpsi: 1.0
+      sm_gain_kr: 4.0
       taud: 350
       Xu6: -0.0166263484863104
       Xu7:  0.0592216770505099

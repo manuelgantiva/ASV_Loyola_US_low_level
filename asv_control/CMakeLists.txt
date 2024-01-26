@@ -45,6 +45,9 @@ ament_target_dependencies(mux_obs rclcpp example_interfaces mavros_msgs asv_inte
 add_executable(reference_vel src/reference_vel.cpp)
 ament_target_dependencies(reference_vel rclcpp std_msgs mavros_msgs geometry_msgs)
 
+add_executable(ref_mlc src/ref_mlc.cpp)
+ament_target_dependencies(ref_mlc rclcpp std_msgs mavros_msgs)
+
 add_executable(observer_guille src/observer_guille.cpp)
 ament_target_dependencies(observer_guille rclcpp std_msgs sensor_msgs mavros_msgs asv_interfaces tf2 tf2_ros geometry_msgs)
 
@@ -72,6 +75,7 @@ install(TARGETS
   mux_llc
   mux_obs
   reference_vel
+  ref_mlc
   observer_guille
   observer_liu
   observer_zono
