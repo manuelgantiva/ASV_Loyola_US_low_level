@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Site BuildName="(empty)"
+	BuildStamp="20240129-0819-Experimental"
+	Name="rosmanuel"
+	Generator="ctest-3.22.1"
+	CompilerName="/usr/bin/g++"
+	CompilerVersion="11.4.0"
+	OSName="Linux"
+	Hostname="rosmanuel"
+	OSRelease="6.5.0-14-generic"
+	OSVersion="#14~22.04.1-Ubuntu SMP PREEMPT_DYNAMIC Mon Nov 20 18:15:30 UTC 2"
+	OSPlatform="x86_64"
+	Is64Bits="1"
+	VendorString="GenuineIntel"
+	VendorID="Intel Corporation"
+	FamilyID="6"
+	ModelID="94"
+	ProcessorCacheSize="6144"
+	NumberOfLogicalCPU="4"
+	NumberOfPhysicalCPU="4"
+	TotalVirtualMemory="2047"
+	TotalPhysicalMemory="15881"
+	LogicalProcessorsPerPhysical="1"
+	ProcessorClockFrequency="900.013"
+	>
+	<Testing>
+		<StartDateTime>Jan 29 09:19 CET</StartDateTime>
+		<StartTestTime>1706516363</StartTestTime>
+		<TestList/>
+		<EndDateTime>Jan 29 09:19 CET</EndDateTime>
+		<EndTestTime>1706516363</EndTestTime>
+		<ElapsedMinutes>0</ElapsedMinutes>
+	</Testing>
+</Site>
