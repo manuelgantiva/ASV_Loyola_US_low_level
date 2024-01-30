@@ -96,7 +96,7 @@ private:
             c_ref=0;
             memory_u.assign(4, 0.0);
             memory_r.assign(4, 0.0);
-            
+            count=0;
         }else{
             //auto start = std::chrono::high_resolution_clock::now();
             auto msg = asv_interfaces::msg::PwmValues();
@@ -199,6 +199,11 @@ private:
                     msg.t_righ=1900;
                 }
                 
+            }
+            if(count < 5){
+                msg.t_left= 1500;
+                msg.t_righ= 1500; 
+                count=count+1;
             }
             publisher_pwm->publish(msg);
             // auto end = std::chrono::high_resolution_clock::now();
@@ -327,7 +332,7 @@ private:
     bool armed = false;
     float u_hat, psi_hat, r_hat, sig_u, sig_r, u_ref, psi_ref, r_ref, u_dot_ref, r_dot_ref;
     float c_ref;
-
+    int count=0;
     //------Params-------//
     float Ts;  
     /*Parámetros del controlador Sliding Modes*/
