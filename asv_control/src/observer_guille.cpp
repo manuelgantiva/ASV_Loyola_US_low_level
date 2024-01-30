@@ -152,6 +152,7 @@ private:
     {
         auto msg = asv_interfaces::msg::StateObserver();
         if(armed==false){
+            count=0;
             laps=0;
             Xp_hat.setZero();
             Xp_hat_dot.setZero(); 
@@ -207,6 +208,21 @@ private:
 
             Lp=Tp.inverse()*PpWp*R2T;
 
+            if(count < 5){
+                Xp_hat_ant << Yp_i(0,0),
+                            Yp_i(1,0),
+                            0.0,
+                            0.0,
+                            0.0,
+                            0.0;
+                Xp_hat_dot.setZero(); 
+
+                Xpsi_hat_ant << psi_i,
+                            0.0,
+                            0.0;
+                Xpsi_hat_dot.setZero(); 
+                count=count+1;
+            }
             Xp_hat = Xp_hat_ant + Xp_hat_dot*(Ts/1000.0);
             Xp_hat_ant = Xp_hat;
             Xp_hat_dot = Ap*Xp_hat + IGp + Lp*(Yp_i - Cp*Xp_hat);
@@ -406,7 +422,7 @@ private:
 
     float delta_diff;
     float delta_mean;
-    int beta;
+    int beta, count=0;
 
     Matrix <float, 3,3> Apsi; 
     Matrix <float, 3,1> IGpsi; 

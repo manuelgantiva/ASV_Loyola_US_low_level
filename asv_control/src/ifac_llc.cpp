@@ -14,6 +14,8 @@
 using namespace std;
 using namespace Eigen;
 
+using std::placeholders::_1;
+
 // Declaración de contantes
 const int PWMMAX = 1900;
 const int PWMMIN = 1900;
@@ -67,6 +69,8 @@ public:
         cb_group_obs_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
         auto options_sensors_ = rclcpp::SubscriptionOptions();
         options_sensors_.callback_group=cb_group_sensors_;
+
+        params_callback_handle_ = this->add_on_set_parameters_callback(std::bind(&IfacLlcNode::param_callback, this, _1));
 
         subscriber_states_obs_ = this-> create_subscription<asv_interfaces::msg::StateObserver>(
             "/control/state_observer",rclcpp::SensorDataQoS(), std::bind(&IfacLlcNode::callbackStates,
@@ -278,6 +282,48 @@ private:
         // RCLCPP_INFO(this->get_logger(), "PWM left: %d and PWM right:%d", pwm_left, pwm_right);
     }
 
+    rcl_interfaces::msg::SetParametersResult param_callback(const std::vector<rclcpp::Parameter> &params){
+        rcl_interfaces::msg::SetParametersResult result;
+        for (const auto &param: params){
+            if (param.get_name() == "sm_gain_ku"){
+                if(param.as_double() >= 0.0 and param.as_double() < 100.0){
+                    RCLCPP_INFO(this->get_logger(), "changed param value");
+                    sm_gain_ku = param.as_double();
+                }else{
+                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-100");
+                    result.successful = false;
+                    result.reason = "Value out of range";
+                    return result;
+                }
+            }
+            if (param.get_name() == "sm_gain_kpsi"){
+                if(param.as_double() >= 0.0 and param.as_double() < 100.0){
+                    RCLCPP_INFO(this->get_logger(), "changed param value");
+                    sm_gain_kpsi = param.as_double();
+                }else{
+                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-100");
+                    result.successful = false;
+                    result.reason = "Value out of range";
+                    return result;
+                }
+            }
+            if (param.get_name() == "sm_gain_kr"){
+                if(param.as_double() >= 0.0 and param.as_double() < 100.0){
+                    RCLCPP_INFO(this->get_logger(), "changed param value");
+                    sm_gain_kr = param.as_double();
+                }else{
+                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-100");
+                    result.successful = false;
+                    result.reason = "Value out of range";
+                    return result;
+                }
+            }
+        }
+        result.successful = true;
+        result.reason = "Success";
+        return result;
+    }
+
     bool armed = false;
     float u_hat, psi_hat, r_hat, sig_u, sig_r, u_ref, psi_ref, r_ref, u_dot_ref, r_dot_ref;
     float c_ref;
@@ -307,6 +353,8 @@ private:
     std::mutex mutex_;
     rclcpp::CallbackGroup::SharedPtr cb_group_sensors_;
     rclcpp::CallbackGroup::SharedPtr cb_group_obs_;
+
+    OnSetParametersCallbackHandle::SharedPtr params_callback_handle_;
 };
 
 int main(int argc, char **argv)
