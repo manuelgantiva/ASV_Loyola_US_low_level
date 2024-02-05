@@ -18,6 +18,8 @@
 using namespace Eigen;
 #define PI 3.141592
 
+using std::placeholders::_1;
+
 class ObserverGuilleNode : public rclcpp::Node
 {
 public:
@@ -119,6 +121,8 @@ public:
         cb_group_obs_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
         auto options_sensors_ = rclcpp::SubscriptionOptions();
         options_sensors_.callback_group=cb_group_sensors_;
+
+        params_callback_handle_ = this->add_on_set_parameters_callback(std::bind(&ObserverGuilleNode::param_callback, this, _1));
 
         subscriber_imu = this-> create_subscription<sensor_msgs::msg::Imu>("/mavros/imu/data",rclcpp::SensorDataQoS(),
                 std::bind(&ObserverGuilleNode::callbackImuData, this, std::placeholders::_1), options_sensors_);
@@ -412,6 +416,63 @@ private:
         // RCLCPP_INFO(this->get_logger(), "PWM left: %d and PWM right:%d", pwm_left, pwm_right);
     }
 
+    rcl_interfaces::msg::SetParametersResult param_callback(const std::vector<rclcpp::Parameter> &params){
+        rcl_interfaces::msg::SetParametersResult result;
+        for (const auto &param: params){
+            if (param.get_name() == "Lpsi"){
+                if(param.as_double_array().size() == 3){
+                    RCLCPP_INFO(this->get_logger(), "changed param value");
+                    std::vector<double> Lpsi_par = param.as_double_array();
+                    Lpsi << Lpsi_par[0],
+                            Lpsi_par[1],
+                            Lpsi_par[2];
+                }else{
+                    RCLCPP_INFO(this->get_logger(), "could not change parameter value, array size must be 3");
+                    result.successful = false;
+                    result.reason = "array out of range";
+                    return result;
+                }
+            }
+            if (param.get_name() == "PpWp_c1"){
+                if(param.as_double_array().size() == 6){
+                    RCLCPP_INFO(this->get_logger(), "changed param value");
+                    std::vector<double> PpWpc1_par = param.as_double_array();
+                    PpWp(0,0)=PpWpc1_par[0];
+                    PpWp(1,0)=PpWpc1_par[1];
+                    PpWp(2,0)=PpWpc1_par[2];
+                    PpWp(3,0)=PpWpc1_par[3];
+                    PpWp(4,0)=PpWpc1_par[4];
+                    PpWp(5,0)=PpWpc1_par[5];
+                }else{
+                    RCLCPP_INFO(this->get_logger(), "could not change parameter value, array size must be 6");
+                    result.successful = false;
+                    result.reason = "Value out of range";
+                    return result;
+                }
+            }
+            if (param.get_name() == "PpWp_c2"){
+                if(param.as_double_array().size() == 6){
+                    RCLCPP_INFO(this->get_logger(), "changed param value");
+                    std::vector<double> PpWpc2_par = param.as_double_array();
+                    PpWp(0,1)=PpWpc2_par[0];
+                    PpWp(1,1)=PpWpc2_par[1];
+                    PpWp(2,1)=PpWpc2_par[2];
+                    PpWp(3,1)=PpWpc2_par[3];
+                    PpWp(4,1)=PpWpc2_par[4];
+                    PpWp(5,1)=PpWpc2_par[5];
+                }else{
+                    RCLCPP_INFO(this->get_logger(), "could not change parameter value, array size must be 6");
+                    result.successful = false;
+                    result.reason = "Value out of range";
+                    return result;
+                }
+            }
+        }
+        result.successful = true;
+        result.reason = "Success";
+        return result;
+    }
+
     float yaw, lat, lon, alt, psi_act = 0.0, psi_ant = 0.0, psi_0 = 0.0, psi = 0.0;
     int status_gps, laps=0;
     bool armed = false;
@@ -461,6 +522,8 @@ private:
     std::mutex mutex_;
     rclcpp::CallbackGroup::SharedPtr cb_group_sensors_;
     rclcpp::CallbackGroup::SharedPtr cb_group_obs_;
+
+    OnSetParametersCallbackHandle::SharedPtr params_callback_handle_;
 };
 
 int main(int argc, char **argv)

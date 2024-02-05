@@ -188,13 +188,13 @@ private:
                 // Publish pwms
                 msg.t_left=400 * L + 1500;
                 msg.t_righ=400 * R + 1500;
-                if(msg.t_left<1100){
-                    msg.t_left=1100;
+                if(msg.t_left<1500){
+                    msg.t_left=1500;
                 }else if (msg.t_left > 1900) {
                     msg.t_left=1900;
                 }
-                if(msg.t_righ<1100){
-                    msg.t_righ=1100;
+                if(msg.t_righ<1500){
+                    msg.t_righ=1500;
                 }else if (msg.t_righ > 1900) {
                     msg.t_righ=1900;
                 }
@@ -316,6 +316,19 @@ private:
                 if(param.as_double() >= 0.0 and param.as_double() < 100.0){
                     RCLCPP_INFO(this->get_logger(), "changed param value");
                     sm_gain_kr = param.as_double();
+                }else{
+                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-100");
+                    result.successful = false;
+                    result.reason = "Value out of range";
+                    return result;
+                }
+            }
+            if (param.get_name() == "taud"){
+                if(param.as_int() >= 0 and param.as_int() < 100){
+                    RCLCPP_INFO(this->get_logger(), "changed param value");
+                    taud = param.as_int();
+                    a=(taud*Ts)/(taud*Ts+Ts);
+                    b=1/(taud*Ts+Ts);
                 }else{
                     RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-100");
                     result.successful = false;
