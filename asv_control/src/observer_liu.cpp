@@ -126,8 +126,6 @@ public:
 
         subscriber_imu = this-> create_subscription<sensor_msgs::msg::Imu>("/mavros/imu/data",rclcpp::SensorDataQoS(),
                 std::bind(&ObserverLiuNode::callbackImuData, this, std::placeholders::_1), options_sensors_);
-        subscriber_gps_global = this-> create_subscription<sensor_msgs::msg::NavSatFix>("/mavros/global_position/global",
-                rclcpp::SensorDataQoS(), std::bind(&ObserverLiuNode::callbackGpsGlobalData, this, std::placeholders::_1), options_sensors_);
         subscriber_gps_local= this-> create_subscription<geometry_msgs::msg::PoseStamped>("/mavros/local_position/pose",
                 rclcpp::SensorDataQoS(), std::bind(&ObserverLiuNode::callbackGpsLocalData, this, std::placeholders::_1), options_sensors_);
         subscriber_rcout = this-> create_subscription<mavros_msgs::msg::RCOut>("/mavros/rc/out",1,
@@ -145,7 +143,7 @@ public:
         tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
         tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
-        RCLCPP_INFO(this->get_logger(), "Observer LIu Node has been started.");
+        RCLCPP_INFO(this->get_logger(), "Observer Liu Node has been started.");
     	
     }
 
@@ -169,7 +167,7 @@ private:
                 Yp.setZero();
             }
         }else{
-            // auto start = std::chrono::high_resolution_clock::now();
+            //auto start = std::chrono::high_resolution_clock::now();
             float psi_i;
             Matrix <float, 2,1> Yp_i;
             float delta_diff_i;
@@ -183,10 +181,9 @@ private:
                 delta_mean_i = delta_mean;
                 beta_i=beta;
             }
-
             float cospsi= cos(psi_i);
             float senpsi= sin(psi_i);
-            
+
             R2T << cospsi, senpsi,
                    -senpsi, cospsi;
 
@@ -208,7 +205,7 @@ private:
             IGp(3,0) = (Xv10*sum_1*(1-beta_i))+(Xv11*delta_mean_i*delta_diff_i)+(Xv12*delta_mean_i*(1-beta_i))+(Xv13*delta_diff_i/2.0);
             IGpsi(1,0)=(Xr10*sum_1*(1-beta_i))+(Xr11*delta_mean_i*delta_diff_i)+(Xr12*delta_mean_i*(1-beta_i))+(Xr13*delta_diff_i/2.0);
 
-            Lp=Tp.inverse()*PpWp*R2T;
+            Lp=Tp.inverse()*PpWp*R2T; 
 
             if(count < 5){
                 Xp_hat_ant << Yp_i(0,0),
@@ -225,7 +222,6 @@ private:
                 Xpsi_hat_dot.setZero(); 
                 count=count+1;
             }
-
             Xp_hat = Xp_hat_ant + Xp_hat_dot*(Ts/1000.0);
             Xp_hat_ant = Xp_hat;
             Xp_hat_dot = Ap*Xp_hat + IGp + Lp*(Yp_i - Cp*Xp_hat);
@@ -235,8 +231,8 @@ private:
             Xpsi_hat_dot = Apsi*Xpsi_hat + IGpsi + Lpsi*(psi_i - Cpsi*Xpsi_hat);
 
             msg.header.stamp = this->now();
-            msg.header.frame_id = my_id;
-            
+            msg.header.frame_id = my_id; 
+
             msg.point.x=Xp_hat(0,0);
             msg.point.y=Xp_hat(1,0);
             msg.point.z=Xpsi_hat(0,0);
@@ -252,7 +248,7 @@ private:
             auto msg_obs = geometry_msgs::msg::PoseStamped();
 
             msg_obs.header.stamp = this->now();
-            msg_obs.header.frame_id = "map_ned";
+            msg_obs.header.frame_id = "map";
             msg_obs.pose.position.x= Xp_hat(0,0);
             msg_obs.pose.position.y= Xp_hat(1,0);
             msg_obs.pose.position.z= 0.0;
@@ -268,10 +264,7 @@ private:
             // std::chrono::duration<double> elapsed = end - start;
             // double miliseconds = elapsed.count()*1000;
             // RCLCPP_INFO(this->get_logger(), "Exec time: %f", miliseconds);
-        }
-    
-
-        
+        }        
     }
 
     void callbackImuData(const sensor_msgs::msg::Imu::SharedPtr msg)
@@ -280,57 +273,34 @@ private:
         //RCLCPP_INFO(this->get_logger(), "yaw: %f", yaw);
     }
 
-    void callbackGpsGlobalData(const sensor_msgs::msg::NavSatFix::SharedPtr msg)
-    {
-        if(armed==true){
-            status_gps=msg->status.status;
-            if (status_gps!=-1){
-                lat=msg->latitude;
-                lon=msg->longitude;
-                alt=msg->altitude;
-                //RCLCPP_INFO(this->get_logger(), "gps lat is: %f, lon is: %f y alt is: %f", lat, lon, alt);
-            }
-            // RCLCPP_INFO(this->get_logger(), "Satus gps is: %d", int(status_gps));
-        }
-    }
-
     void callbackGpsLocalData(const geometry_msgs::msg::PoseStamped::SharedPtr msg)
     {
         if(armed==true){
             if (status_gps!=-1){
-                geometry_msgs::msg::TransformStamped t;
-                std::string fromFrameRel = "base_link";
-                std::string toFrameRel = "map_ned";
-                // Look up for the transformation between map_ned and base_link frames
-                try {
-                    rclcpp::Time now = this->get_clock()->now();
-                    t = tf_buffer_->lookupTransform(
-                    toFrameRel, fromFrameRel,
-                    tf2::TimePointZero);
-                } catch (const tf2::TransformException & ex) {
-                RCLCPP_INFO(
-                    this->get_logger(), "Could not transform %s to %s: %s",
-                    toFrameRel.c_str(), fromFrameRel.c_str(), ex.what());
-                return ;
-                }
                 float x = msg->pose.position.x;
-                x = t.transform.translation.x;
-                float y = t.transform.translation.y;
+                float y = msg->pose.position.y;
+                float psi_rad = quat2EulerAngles_XYZ(msg->pose.orientation.w, msg->pose.orientation.x,
+                                                    msg->pose.orientation.y, msg->pose.orientation.z);
+
+                float dx = 0.2750;            //distancia de la antena del GPS al navio coordenada x
+                float dy = 0.2625;           //distancia de la antena del GPS al navio coordenada y
+                // 1) Xp = Xo + R(psi)*OP
+                x = x + cos(psi_rad)*dx - sin(psi_rad)*dy;
+                y = y + sin(psi_rad)*dx + cos(psi_rad)*dy;
                 {
                     std::lock_guard<std::mutex> lock(mutex_);
                     Yp << x,
                         y;
                 }
-                float psi_rad = quat2EulerAngles_XYZ(t.transform.rotation.w, t.transform.rotation.x,
-                                                    t.transform.rotation.y, t.transform.rotation.z);
+                
                 if (psi_rad<0){
                     psi_rad=(2*M_PI)+psi_rad;
                 }
-
+                
                 if(armed==false){
                     psi_0 = psi_rad;
                     psi_ant = psi_0;
-                    laps = 0.0;
+                    laps = 0;
                     {
                         std::lock_guard<std::mutex> lock(mutex_);
                         psi = psi_rad;
@@ -350,7 +320,6 @@ private:
                     }
                     psi_ant=psi_act;
                 }
-
                 //RCLCPP_INFO(this->get_logger(), "n is: %d", int(laps));
                 //RCLCPP_INFO(this->get_logger(), "Heading is: %f", psi);
                 //RCLCPP_INFO(this->get_logger(), "gps x is: %f, y is: %f", x, y);
@@ -401,7 +370,7 @@ private:
         armed= msg->armed;
         // RCLCPP_INFO(this->get_logger(), "PWM left: %d and PWM right:%d", pwm_left, pwm_right);
     }
-
+    
     rcl_interfaces::msg::SetParametersResult param_callback(const std::vector<rclcpp::Parameter> &params){
         rcl_interfaces::msg::SetParametersResult result;
         for (const auto &param: params){
@@ -493,10 +462,10 @@ private:
     Matrix <float, 3,1> Xpsi_hat_ant; 
 
     rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr subscriber_imu;
-    rclcpp::Subscription<sensor_msgs::msg::NavSatFix>::SharedPtr subscriber_gps_global;
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr subscriber_gps_local;
     rclcpp::Subscription<mavros_msgs::msg::RCOut>::SharedPtr subscriber_rcout;
     rclcpp::Subscription<mavros_msgs::msg::State>::SharedPtr subscriber_state;
+
     rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr publisher_obs;
     rclcpp::Publisher<asv_interfaces::msg::StateObserver>::SharedPtr publisher_state;
     rclcpp::TimerBase::SharedPtr timer_;

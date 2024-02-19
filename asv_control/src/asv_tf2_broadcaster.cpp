@@ -30,11 +30,14 @@ public:
             std::bind(&FramePublisher::callbackXbeeData, this, std::placeholders::_1));
         publisher_pose_neighbor = this-> create_publisher<geometry_msgs::msg::PoseStamped>("/control/pose_neighbor",
                 rclcpp::SensorDataQoS());
+        publisher_pose = this-> create_publisher<geometry_msgs::msg::PoseStamped>("pose",
+                rclcpp::SensorDataQoS());
     	RCLCPP_INFO(this->get_logger(), "Frame Publisher Node has been started.");
 
     }
 
 private:
+    
     void callbackGpsLocalData(const geometry_msgs::msg::PoseStamped::SharedPtr msg)
     {
         if (status_gps!=-1){
@@ -58,6 +61,33 @@ private:
 
             // Send the transformation
             tf_broadcaster_->sendTransform(t);
+
+            // Send the pose base_link
+            float x = msg->pose.position.x;
+            float y = msg->pose.position.y;
+            float psi_rad = quat2EulerAngles_XYZ(msg->pose.orientation.w, msg->pose.orientation.x,
+                                                msg->pose.orientation.y, msg->pose.orientation.z);
+
+            float dx = 0.2750;            //distancia de la antena del GPS al navio coordenada x
+            float dy = 0.2625;           //distancia de la antena del GPS al navio coordenada y
+            // 1) Xp = Xo + R(psi)*OP
+            x = x + cos(psi_rad)*dx - sin(psi_rad)*dy;
+            y = y + sin(psi_rad)*dx + cos(psi_rad)*dy;
+
+            auto msg_pose = geometry_msgs::msg::PoseStamped();
+            msg_pose.header.stamp = this->now();
+            msg_pose.header.frame_id = "map";
+            msg_pose.pose.position.x= x;
+            msg_pose.pose.position.y= y;
+            msg_pose.pose.position.z= 0.0;
+            tf2::Quaternion q;
+            q.setRPY(0, 0, psi_rad);
+            msg_pose.pose.orientation.x = q.x();
+            msg_pose.pose.orientation.y = q.y();
+            msg_pose.pose.orientation.z = q.z();
+            msg_pose.pose.orientation.w = q.w();
+            publisher_pose->publish(msg_pose); 
+
         }
         // RCLCPP_INFO(this->get_logger(), "Satus gps is: %d", int(status_gps));
     }
@@ -107,11 +137,27 @@ private:
         // RCLCPP_INFO(this->get_logger(), "Satus gps is: %d", int(status_gps));
     }
 
+    float quat2EulerAngles_XYZ(float q0, float q1, float q2,float q3)
+    {
+        const double q0_2 = q0 * q0;
+        const double q1_2 = q1 * q1;
+        const double q2_2 = q2 * q2;
+        const double q3_2 = q3 * q3;
+        const double x2q1q2 = 2.0 * q1 * q2;
+        const double x2q0q3 = 2.0 * q0 * q3;
+        const double m11 = q0_2 + q1_2 - q2_2 - q3_2;
+        const double m12 = x2q1q2 + x2q0q3;
+        const double psi = atan2(m12, m11);
+        return static_cast<float>(psi);
+    }
+
+
     int status_gps;
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr subscriber_gps_local;
     rclcpp::Subscription<asv_interfaces::msg::XbeeObserver>::SharedPtr subscriber_xbee;
 
     rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr publisher_pose_neighbor;
+    rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr publisher_pose;
 
     std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
     std::string asv_id_;
