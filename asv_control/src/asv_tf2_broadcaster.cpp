@@ -30,7 +30,7 @@ public:
             std::bind(&FramePublisher::callbackXbeeData, this, std::placeholders::_1));
         publisher_pose_neighbor = this-> create_publisher<geometry_msgs::msg::PoseStamped>("/control/pose_neighbor",
                 rclcpp::SensorDataQoS());
-        publisher_pose = this-> create_publisher<geometry_msgs::msg::PoseStamped>("pose",
+        publisher_pose = this-> create_publisher<geometry_msgs::msg::PoseStamped>("/control/pose",
                 rclcpp::SensorDataQoS());
     	RCLCPP_INFO(this->get_logger(), "Frame Publisher Node has been started.");
 
@@ -63,20 +63,20 @@ private:
             tf_broadcaster_->sendTransform(t);
 
             // Send the pose base_link
-            float x = msg->pose.position.x;
-            float y = msg->pose.position.y;
+            float y = msg->pose.position.x;
+            float x = msg->pose.position.y;
             float psi_rad = quat2EulerAngles_XYZ(msg->pose.orientation.w, msg->pose.orientation.x,
                                                 msg->pose.orientation.y, msg->pose.orientation.z);
-
-            float dx = 0.2750;            //distancia de la antena del GPS al navio coordenada x
-            float dy = 0.2625;           //distancia de la antena del GPS al navio coordenada y
+            psi_rad=-psi_rad+1.5708;
+            float dy = -0.2750;            //distancia de la antena del GPS al navio coordenada x
+            float dx = 0.2625;           //distancia de la antena del GPS al navio coordenada y
             // 1) Xp = Xo + R(psi)*OP
             x = x + cos(psi_rad)*dx - sin(psi_rad)*dy;
             y = y + sin(psi_rad)*dx + cos(psi_rad)*dy;
 
             auto msg_pose = geometry_msgs::msg::PoseStamped();
             msg_pose.header.stamp = this->now();
-            msg_pose.header.frame_id = "map";
+            msg_pose.header.frame_id = "map_ned";
             msg_pose.pose.position.x= x;
             msg_pose.pose.position.y= y;
             msg_pose.pose.position.z= 0.0;
@@ -109,7 +109,7 @@ private:
             t.transform.translation.z = 0.0;
 
             tf2::Quaternion q;
-            q.setRPY(3.14159, 0, -(msg->states[0].point.z));
+            q.setRPY(0, 0, msg->states[0].point.z);
 
             t.transform.rotation.x = q.x();
             t.transform.rotation.y = q.y();

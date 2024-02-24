@@ -102,9 +102,9 @@ def generate_launch_description():
         parameters = [config]
     )
 
-    reference_vel_node = Node (
+    ref_llc_node = Node (
         package= "asv_control",
-        executable= "reference_vel",
+        executable= "ref_llc",
         namespace= 'control',
         parameters = [config]
     )
@@ -177,11 +177,11 @@ def generate_launch_description():
     # ld.add_action(neighbor_robot_state_publisher_node)
     ld.add_action(asv_tf_broadcast_node)
     # ld.add_action(rc_handler_node)
-    # ld.add_action(reference_vel_node)
+    ld.add_action(ref_llc_node)
     # ld.add_action(mux_llc_node)
     # ld.add_action(mux_obs_node)
     ld.add_action(observer_guille)
-    # ld.add_action(observer_liu)
+    ld.add_action(observer_liu)
     # ld.add_action(pwm_mapper_node)
     # ld.add_action(apm_llc_node)
     # ld.add_action(ifac_llc_node)

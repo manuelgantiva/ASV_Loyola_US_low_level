@@ -38,6 +38,7 @@ public:
         this-> declare_parameter("sm_gain_kpsi", 1.0);
         this-> declare_parameter("sm_gain_kr", 4.0);
         this-> declare_parameter("taud", 350); // Taud = #*Ts Est es #
+        this-> declare_parameter("IGr_en", 1.0);
 
         this-> declare_parameter("Xu6", -0.0166263484863104);
         this-> declare_parameter("Xu7", 0.0592216770505099);
@@ -50,6 +51,7 @@ public:
         sm_gain_kpsi = this->get_parameter("sm_gain_kpsi").as_double();
         sm_gain_kr = this->get_parameter("sm_gain_kr").as_double();
         taud = this->get_parameter("taud").as_int();
+        IGr_en = this->get_parameter("IGr_en").as_double();
 
         Xu6 = this->get_parameter("Xu6").as_double();
         Xu7 = this->get_parameter("Xu7").as_double();
@@ -129,7 +131,7 @@ private:
             float c_ref=r_ref_i-sm_gain_kpsi*(psi_hat_i-psi_ref_i);
 
             float IG_u = Ts*(u_dot_ref_i-sm_gain_ku*(u_hat_i-u_ref_i)-sig_u_i);
-            float IG_r = Ts*(r_dot_ref_i-sm_gain_kr*(r_hat_i-c_ref)-sm_gain_kpsi*(r_hat_i-r_ref_i)-sig_r_i);
+            float IG_r = IGr_en*Ts*(r_dot_ref_i-sm_gain_kr*(r_hat_i-c_ref)-sm_gain_kpsi*(r_hat_i-r_ref_i)-sig_r_i);
 
             if(IG_u==0 && IG_r==0){
                 msg.t_left=1500;
@@ -172,14 +174,14 @@ private:
 
                 double L, R;
                 L = ((2 * yf + xf) / 2);
-                if (L >= 0) {
+                if (L > 0) {
                     L = L + 0.0775;
                 } else {
                     L = L - 0.0925;
                 }
 
                 R = ((2 * yf - xf) / 2);
-                if (R >= 0) {
+                if (R > 0) {
                     R = R + 0.0775;
                 } else {
                     R = R - 0.0925;
@@ -324,13 +326,24 @@ private:
                 }
             }
             if (param.get_name() == "taud"){
-                if(param.as_int() >= 0 and param.as_int() < 100){
+                if(param.as_int() >= 0 and param.as_int() < 500){
                     RCLCPP_INFO(this->get_logger(), "changed param value");
                     taud = param.as_int();
                     a=(taud*Ts)/(taud*Ts+Ts);
                     b=1/(taud*Ts+Ts);
                 }else{
                     RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-100");
+                    result.successful = false;
+                    result.reason = "Value out of range";
+                    return result;
+                }
+            }
+            if (param.get_name() == "IGr_en"){
+                if(param.as_double() == 0.0 or param.as_double() == 1.0){
+                    RCLCPP_INFO(this->get_logger(), "changed param value");
+                    IGr_en = param.as_double();
+                }else{
+                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be 0.0 or 1.0");
                     result.successful = false;
                     result.reason = "Value out of range";
                     return result;
@@ -355,6 +368,7 @@ private:
     
     float taud; /*Constante tau del filtro derivativo*/
     float a ,b; /*Constantes del filtro derivativo*/
+    float IGr_en; /*Constantes del filtro derivativo*/
 
     float Xu6, Xu7, Xr11 , Xr13;  
 

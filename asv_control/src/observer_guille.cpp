@@ -153,7 +153,6 @@ private:
         auto msg = asv_interfaces::msg::StateObserver();
         if(armed==false){
             count=0;
-            laps=0;
             Xp_hat.setZero();
             Xp_hat_dot.setZero(); 
             Xp_hat_ant.setZero(); 
@@ -165,105 +164,114 @@ private:
             {
                 std::lock_guard<std::mutex> lock(mutex_);
                 Yp.setZero();
+                delta_diff=0;
+                delta_mean=0;
+                beta=0;
             }
         }else{
-            //auto start = std::chrono::high_resolution_clock::now();
-            float psi_i;
-            Matrix <float, 2,1> Yp_i;
-            float delta_diff_i;
-            float delta_mean_i;
-            int beta_i;
-            {
-                std::lock_guard<std::mutex> lock(mutex_);
-                psi_i = psi;
-                Yp_i = Yp;
-                delta_diff_i = delta_diff;
-                delta_mean_i = delta_mean;
-                beta_i=beta;
-            }
-            float cospsi= cos(psi_i);
-            float senpsi= sin(psi_i);
+            if(count > 5){
+                //auto start = std::chrono::high_resolution_clock::now();
+                float psi_i;
+                Matrix <float, 2,1> Yp_i;
+                float delta_diff_i;
+                float delta_mean_i;
+                int beta_i;
+                {
+                    std::lock_guard<std::mutex> lock(mutex_);
+                    psi_i = psi;
+                    Yp_i = Yp;
+                    delta_diff_i = delta_diff;
+                    delta_mean_i = delta_mean;
+                    beta_i=beta;
+                }
+                float cospsi= cos(psi_i);
+                float senpsi= sin(psi_i);
 
-            R2T << cospsi, senpsi,
-                   -senpsi, cospsi;
+                R2T << cospsi, senpsi,
+                    -senpsi, cospsi;
 
-            Tp(0,0)=cospsi;
-            Tp(0,1)=senpsi;
-            Tp(1,0)=-senpsi;
-            Tp(1,1)=cospsi;
+                Tp(0,0)=cospsi;
+                Tp(0,1)=senpsi;
+                Tp(1,0)=-senpsi;
+                Tp(1,1)=cospsi;
 
-            Ap(0,2)=cospsi;
-            Ap(0,3)=-senpsi;
-            Ap(1,2)=senpsi;
-            Ap(1,3)=cospsi;
+                Ap(0,2)=cospsi;
+                Ap(0,3)=-senpsi;
+                Ap(1,2)=senpsi;
+                Ap(1,3)=cospsi;
 
-            float delta_mean_i_2 = delta_mean_i*delta_mean_i;
-            float delta_diff_i_2 = delta_diff_i*delta_diff_i;
-            float sum_1 = (delta_mean_i_2+(delta_diff_i_2/4.0));
-            
-            IGp(2,0) = (Xu6*sum_1)+(Xu7*delta_mean_i);
-            IGp(3,0) = (Xv10*sum_1*(1-beta_i))+(Xv11*delta_mean_i*delta_diff_i)+(Xv12*delta_mean_i*(1-beta_i))+(Xv13*delta_diff_i/2.0);
-            IGpsi(1,0)=(Xr10*sum_1*(1-beta_i))+(Xr11*delta_mean_i*delta_diff_i)+(Xr12*delta_mean_i*(1-beta_i))+(Xr13*delta_diff_i/2.0);
+                float delta_mean_i_2 = delta_mean_i*delta_mean_i;
+                float delta_diff_i_2 = delta_diff_i*delta_diff_i;
+                float sum_1 = (delta_mean_i_2+(delta_diff_i_2/4.0));
+                
+                IGp(2,0) = (Xu6*sum_1)+(Xu7*delta_mean_i);
+                IGp(3,0) = (Xv10*sum_1*(1-beta_i))+(Xv11*delta_mean_i*delta_diff_i)+(Xv12*delta_mean_i*(1-beta_i))+(Xv13*delta_diff_i/2.0);
+                IGpsi(1,0)=(Xr10*sum_1*(1-beta_i))+(Xr11*delta_mean_i*delta_diff_i)+(Xr12*delta_mean_i*(1-beta_i))+(Xr13*delta_diff_i/2.0);
 
-            Lp=Tp.inverse()*PpWp*R2T; 
+                Lp=Tp.inverse()*PpWp*R2T; 
 
-            if(count < 5){
-                Xp_hat_ant << Yp_i(0,0),
-                            Yp_i(1,0),
-                            0.0,
-                            0.0,
-                            0.0,
-                            0.0;
-                Xp_hat_dot.setZero(); 
+                if(count==6){
+                    Xp_hat_ant << Yp_i(0,0),
+                                Yp_i(1,0),
+                                0.0,
+                                0.0,
+                                0.0,
+                                0.0;
+                    Xp_hat_dot.setZero(); 
 
-                Xpsi_hat_ant << psi_i,
-                            0.0,
-                            0.0;
-                Xpsi_hat_dot.setZero(); 
+                    Xpsi_hat_ant << psi_i,
+                                0.0,
+                                0.0;
+                    Xpsi_hat_dot.setZero(); 
+                    count=count+1;
+                }
+
+                Xp_hat = Xp_hat_ant + Xp_hat_dot*(Ts/1000.0);
+                Xp_hat_ant = Xp_hat;
+                Xp_hat_dot = Ap*Xp_hat + IGp + Lp*(Yp_i - Cp*Xp_hat);
+
+                Xpsi_hat = Xpsi_hat_ant + Xpsi_hat_dot*(Ts/1000.0);
+                Xpsi_hat_ant = Xpsi_hat;
+                Xpsi_hat_dot = Apsi*Xpsi_hat + IGpsi + Lpsi*(psi_i - Cpsi*Xpsi_hat);
+
+                msg.header.stamp = this->now();
+                msg.header.frame_id = my_id; 
+
+                msg.point.x=Xp_hat(0,0);
+                msg.point.y=Xp_hat(1,0);
+                msg.point.z=Xpsi_hat(0,0);
+                msg.velocity.x=Xp_hat(2,0);
+                msg.velocity.y=Xp_hat(3,0);
+                msg.velocity.z=Xpsi_hat(1,0);
+                msg.disturbances.x=Xp_hat(4,0);
+                msg.disturbances.y=Xp_hat(5,0);
+                msg.disturbances.z=Xpsi_hat(2,0);
+
+                publisher_state->publish(msg);
+
+                auto msg_obs = geometry_msgs::msg::PoseStamped();
+
+                msg_obs.header.stamp = this->now();
+                msg_obs.header.frame_id = "map_ned";
+                msg_obs.pose.position.x= Xp_hat(0,0);
+                msg_obs.pose.position.y= Xp_hat(1,0);
+                msg_obs.pose.position.z= 0.0;
+                tf2::Quaternion q;
+                //q.setRPY(3.1415, 0, -Xpsi_hat(0,0)+1.5708);
+                q.setRPY(0, 0, Xpsi_hat(0,0));
+                msg_obs.pose.orientation.x = q.x();
+                msg_obs.pose.orientation.y = q.y();
+                msg_obs.pose.orientation.z = q.z();
+                msg_obs.pose.orientation.w = q.w();
+                publisher_obs->publish(msg_obs); 
+
+                // auto end = std::chrono::high_resolution_clock::now();
+                // std::chrono::duration<double> elapsed = end - start;
+                // double miliseconds = elapsed.count()*1000;
+                // RCLCPP_INFO(this->get_logger(), "Exec time: %f", miliseconds);
+            }else{
                 count=count+1;
             }
-            Xp_hat = Xp_hat_ant + Xp_hat_dot*(Ts/1000.0);
-            Xp_hat_ant = Xp_hat;
-            Xp_hat_dot = Ap*Xp_hat + IGp + Lp*(Yp_i - Cp*Xp_hat);
-
-            Xpsi_hat = Xpsi_hat_ant + Xpsi_hat_dot*(Ts/1000.0);
-            Xpsi_hat_ant = Xpsi_hat;
-            Xpsi_hat_dot = Apsi*Xpsi_hat + IGpsi + Lpsi*(psi_i - Cpsi*Xpsi_hat);
-
-            msg.header.stamp = this->now();
-            msg.header.frame_id = my_id; 
-
-            msg.point.x=Xp_hat(0,0);
-            msg.point.y=Xp_hat(1,0);
-            msg.point.z=Xpsi_hat(0,0);
-            msg.velocity.x=Xp_hat(2,0);
-            msg.velocity.y=Xp_hat(3,0);
-            msg.velocity.z=Xpsi_hat(1,0);
-            msg.disturbances.x=Xp_hat(4,0);
-            msg.disturbances.y=Xp_hat(5,0);
-            msg.disturbances.z=Xpsi_hat(2,0);
-
-            publisher_state->publish(msg);
-
-            auto msg_obs = geometry_msgs::msg::PoseStamped();
-
-            msg_obs.header.stamp = this->now();
-            msg_obs.header.frame_id = "map";
-            msg_obs.pose.position.x= Xp_hat(0,0);
-            msg_obs.pose.position.y= Xp_hat(1,0);
-            msg_obs.pose.position.z= 0.0;
-            tf2::Quaternion q;
-            q.setRPY(0, 0, Xpsi_hat(0,0));
-            msg_obs.pose.orientation.x = q.x();
-            msg_obs.pose.orientation.y = q.y();
-            msg_obs.pose.orientation.z = q.z();
-            msg_obs.pose.orientation.w = q.w();
-            publisher_obs->publish(msg_obs); 
-
-            // auto end = std::chrono::high_resolution_clock::now();
-            // std::chrono::duration<double> elapsed = end - start;
-            // double miliseconds = elapsed.count()*1000;
-            // RCLCPP_INFO(this->get_logger(), "Exec time: %f", miliseconds);
         }        
     }
 
@@ -277,13 +285,17 @@ private:
     {
         if(armed==true){
             if (status_gps!=-1){
-                float x = msg->pose.position.x;
-                float y = msg->pose.position.y;
+                float y = msg->pose.position.x;
+                float x = msg->pose.position.y;
                 float psi_rad = quat2EulerAngles_XYZ(msg->pose.orientation.w, msg->pose.orientation.x,
                                                     msg->pose.orientation.y, msg->pose.orientation.z);
+                psi_rad=-psi_rad+1.5708;
+                if (psi_rad<0){
+                    psi_rad=psi_rad+(2*M_PI);
+                }
 
-                float dx = 0.2750;            //distancia de la antena del GPS al navio coordenada x
-                float dy = 0.2625;           //distancia de la antena del GPS al navio coordenada y
+                float dy = -0.2750;            //distancia de la antena del GPS al navio coordenada x
+                float dx = 0.2625;           //distancia de la antena del GPS al navio coordenada y
                 // 1) Xp = Xo + R(psi)*OP
                 x = x + cos(psi_rad)*dx - sin(psi_rad)*dy;
                 y = y + sin(psi_rad)*dx + cos(psi_rad)*dy;
@@ -292,14 +304,8 @@ private:
                     Yp << x,
                         y;
                 }
-                
-                if (psi_rad<0){
-                    psi_rad=(2*M_PI)+psi_rad;
-                }
-                
-                if(armed==false){
-                    psi_0 = psi_rad;
-                    psi_ant = psi_0;
+                if(armed_act==false){
+                    psi_ant = psi_rad;
                     laps = 0;
                     {
                         std::lock_guard<std::mutex> lock(mutex_);
@@ -307,8 +313,6 @@ private:
                     }
                 }else{
                     psi_act = psi_rad;
-                    psi_act = psi_act - psi_0;
-
                     if((psi_act - psi_ant) > PI){
                         laps = laps - 1;
                     }else if((psi_act - psi_ant) < -PI){
@@ -325,7 +329,11 @@ private:
                 //RCLCPP_INFO(this->get_logger(), "gps x is: %f, y is: %f", x, y);
             }
             // RCLCPP_INFO(this->get_logger(), "Satus gps is: %d", int(status_gps));
+        }else{
+            psi_ant=0;
+            laps=0;
         }
+        armed_act=armed;
     }
 
     float quat2EulerAngles_XYZ(float q0, float q1, float q2,float q3)
@@ -353,8 +361,12 @@ private:
             }else{
                 beta_a=0;
             }
-            float delta_left = -1*((pwm_left/400.0) -3.75);    //normalized pwm
-            float delta_right = -1*((pwm_right/400.0) -3.75);  //normalized pwm
+            float delta_left =  ((pwm_left/400.0) -3.75);    //normalized pwm
+            float delta_right = ((pwm_right/400.0) -3.75);  //normalized pwm
+
+            delta_left = deleteDeadZone(delta_left);
+            delta_right = deleteDeadZone(delta_right);
+
             {
                 std::lock_guard<std::mutex> lock(mutex_);
                 delta_diff = delta_left-delta_right;
@@ -363,6 +375,18 @@ private:
             }
             // RCLCPP_INFO(this->get_logger(), "PWM left: %d and PWM right:%d", pwm_left, pwm_right);
         }
+    }
+
+    float deleteDeadZone(float delta)
+    {
+        if(delta>-0.08 && delta<0.075){
+            delta = 0;
+        }else if(delta <= -0.08){
+            delta = delta+0.08;
+        }else if(delta >= 0.075){
+            delta = delta-0.075;
+        }
+        return delta;
     }
 
     void callbackStateData(const mavros_msgs::msg::State::SharedPtr msg)
@@ -430,7 +454,7 @@ private:
 
     float yaw, lat, lon, alt, psi_act = 0.0, psi_ant = 0.0, psi_0 = 0.0, psi = 0.0;
     int status_gps, laps=0;
-    bool armed = false;
+    bool armed = false, armed_act = false;
 
     //------Params-------//
     std::string my_id;

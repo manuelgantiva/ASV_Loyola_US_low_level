@@ -22,6 +22,12 @@ class RcHandlerNode : public rclcpp::Node
 public:
     RcHandlerNode() : Node("rc_handler") 
     {
+        this-> declare_parameter("origin", std::vector<float>{37.30769, -5.94021, 89.95863749032833});
+
+        origin= this->get_parameter("origin").as_double_array();
+
+        params_callback_handle_ = this->add_on_set_parameters_callback(std::bind(&RcHandlerNode::param_callback, this, _1));
+
         this->client_set_mode_ = this->create_client<mavros_msgs::srv::SetMode>("/mavros/set_mode");
         this->client_set_llc_ = this->create_client<asv_interfaces::srv::SetLlc>("/control/set_llc");
         this->client_set_obs_ = this->create_client<asv_interfaces::srv::SetObs>("/control/set_obs");
@@ -129,9 +135,9 @@ private:
         auto request = std::make_shared<mavros_msgs::srv::CommandHome::Request>();
         request->current_gps = false;
         request->yaw = 0.0;
-        request->latitude= 37.30769;
-        request->longitude= -5.94021;
-        request->altitude = 89.95863749032833;
+        request->latitude= origin[0];
+        request->longitude= origin[1];
+        request->altitude = origin[3];
 
         client_set_home->async_send_request(request,std::bind(&RcHandlerNode::callbackResponseSetHome, this, _1));
     }
@@ -319,9 +325,32 @@ private:
                         msg->manual_input, msg->armed);
     }
 
+    rcl_interfaces::msg::SetParametersResult param_callback(const std::vector<rclcpp::Parameter> &params){
+        rcl_interfaces::msg::SetParametersResult result;
+        for (const auto &param: params){
+            if (param.get_name() == "origin"){
+                if(param.as_double_array().size() == 3){
+                    RCLCPP_INFO(this->get_logger(), "changed param value");
+                    origin = param.as_double_array();
+                }else{
+                    RCLCPP_INFO(this->get_logger(), "could not change parameter value, array size must be 3");
+                    result.successful = false;
+                    result.reason = "array out of range";
+                    return result;
+                }
+            }
+        }
+        result.successful = true;
+        result.reason = "Success";
+        return result;
+    }
+
     bool armed = false;
     uint16_t sel_obs, sel_con;
     uint8_t mode = 1;
+
+    std::vector<double> origin;
+
     rclcpp::Subscription<mavros_msgs::msg::RCIn>::SharedPtr subscriber_;
     rclcpp::Subscription<mavros_msgs::msg::State>::SharedPtr subscriber_2;
     rclcpp::Client<mavros_msgs::srv::ParamSetV2>::SharedPtr client_set_param;
@@ -333,6 +362,7 @@ private:
     rclcpp::Client<asv_interfaces::srv::SetObs>::SharedPtr client_set_obs_;
     std::vector<std::thread> threads_;
 
+    OnSetParametersCallbackHandle::SharedPtr params_callback_handle_;
 };
 
 int main(int argc, char **argv)

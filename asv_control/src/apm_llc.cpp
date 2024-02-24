@@ -35,7 +35,7 @@ private:
     {
         auto cmd_vel = geometry_msgs::msg::Twist();
         cmd_vel.linear.x = msg->x;
-        cmd_vel.angular.z = msg->y;
+        cmd_vel.angular.z = -msg->y;
         publisher_cmd_vel_ ->publish(cmd_vel);
     }
 
