@@ -4,7 +4,6 @@
 #include "asv_interfaces/msg/pwm_values.hpp"        //Interface pwm values override
 #include "asv_interfaces/msg/state_observer.hpp"    //Interface state observer
 
-
 #include <cmath>
 #include <thread>
 #include <vector>
@@ -27,34 +26,33 @@ const float IGu_MIN = 0.0;
 const float IGr_MAX = 0.0929;
 const float IGr_MIN = -0.0929;
 
-class IfacLlcNode : public rclcpp::Node
+class MpcLlcNode : public rclcpp::Node
 {
 public:
-    IfacLlcNode() : Node("ifac_llc")
+    MpcLlcNode() : Node("mpc_llc")
     {     
         
         //---------Parámetros del LLC-------------------//
-        this-> declare_parameter("Ts", 100.0);
+        this-> declare_parameter("Ts", 100.0);      // Tiempo de Muestreo
+        //Declaras parametros
         this-> declare_parameter("sm_gain_ku", 2.0);
         this-> declare_parameter("sm_gain_kpsi", 1.0);
         this-> declare_parameter("sm_gain_kr", 4.0);
-        this-> declare_parameter("taud", 350); // Taud = #*Ts Est es #
-        this-> declare_parameter("IGr_en", 1.0);
-        this-> declare_parameter("Su_en", 1.0);
+        this-> declare_parameter("taud", 350); // Taud = #*Ts Est es # derivativo
+        this-> declare_parameter("IGr_en", 1.0);    //Habilitar Input Gain R
 
         this-> declare_parameter("Xu6", -0.0166263484863104);
         this-> declare_parameter("Xu7", 0.0592216770505099);
         this-> declare_parameter("Xr11", 0.0127391511137106);
         this-> declare_parameter("Xr13", 0.190555832330969);
         
-    
+        //Obtienes y guardos los parametros 
         Ts = this->get_parameter("Ts").as_double()/1000.0;
         sm_gain_ku = this->get_parameter("sm_gain_ku").as_double();
         sm_gain_kpsi = this->get_parameter("sm_gain_kpsi").as_double();
         sm_gain_kr = this->get_parameter("sm_gain_kr").as_double();
         taud = this->get_parameter("taud").as_int();
         IGr_en = this->get_parameter("IGr_en").as_double();
-        Su_en = this->get_parameter("Su_en").as_double();
 
         Xu6 = this->get_parameter("Xu6").as_double();
         Xu7 = this->get_parameter("Xu7").as_double();
@@ -67,31 +65,25 @@ public:
         a=(taud*Ts)/(taud*Ts+Ts);
         b=1/(taud*Ts+Ts);
 
-        u_ref=0.1;
-        r_ref=0.1;
-
         cb_group_sensors_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
         cb_group_obs_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
         auto options_sensors_ = rclcpp::SubscriptionOptions();
         options_sensors_.callback_group=cb_group_sensors_;
 
-        params_callback_handle_ = this->add_on_set_parameters_callback(std::bind(&IfacLlcNode::param_callback, this, _1));
+        params_callback_handle_ = this->add_on_set_parameters_callback(std::bind(&MpcLlcNode::param_callback, this, _1));
 
         subscriber_states_obs_ = this-> create_subscription<asv_interfaces::msg::StateObserver>(
-            "/control/state_observer",rclcpp::SensorDataQoS(), std::bind(&IfacLlcNode::callbackStates,
+            "/control/state_observer",rclcpp::SensorDataQoS(), std::bind(&MpcLlcNode::callbackStates,
             this, std::placeholders::_1), options_sensors_);
         subscriber_references_ = this-> create_subscription<geometry_msgs::msg::Vector3>(
-            "/control/reference_llc", 1, std::bind(&IfacLlcNode::callbackVelReference,
+            "/control/reference_llc", 1, std::bind(&MpcLlcNode::callbackVelReference,
             this, std::placeholders::_1), options_sensors_);
         subscriber_state = this-> create_subscription<mavros_msgs::msg::State>("/mavros/state",1,
-                std::bind(&IfacLlcNode::callbackStateData, this, std::placeholders::_1), options_sensors_);
+                std::bind(&MpcLlcNode::callbackStateData, this, std::placeholders::_1), options_sensors_);
         publisher_pwm = this-> create_publisher<asv_interfaces::msg::PwmValues>("/control/pwm_value_ifac",
                 rclcpp::SensorDataQoS());
-
-        publisher_IGu = this-> create_publisher<geometry_msgs::msg::Vector3>("/control/IGu_ifac",1);
-
         timer_ = this -> create_wall_timer(std::chrono::milliseconds(int(Ts*1000.0)),
-                std::bind(&IfacLlcNode::calculateLowLevelController, this), cb_group_obs_);
+                std::bind(&MpcLlcNode::calculateLowLevelController, this), cb_group_obs_);
 
         RCLCPP_INFO(this->get_logger(), "Low Level Controller IFAC Node has been started.");
     	
@@ -108,8 +100,6 @@ private:
         }else{
             //auto start = std::chrono::high_resolution_clock::now();
             auto msg = asv_interfaces::msg::PwmValues();
-
-            auto msg_Ig = geometry_msgs::msg::Vector3();
 
             float u_hat_i;
             float r_hat_i;
@@ -136,14 +126,14 @@ private:
                 psi_ref_i=psi_ref;
             }
 
+            //Codigo MPC
+
             float c_ref=r_ref_i-sm_gain_kpsi*(psi_hat_i-psi_ref_i);
 
-            msg_Ig.x= Ts*u_dot_ref_i;
-            msg_Ig.y= Ts*sm_gain_ku*(u_hat_i-u_ref_i);
-            msg_Ig.z= Su_en*Ts*sig_u_i;
-            float IG_u = msg_Ig.x - msg_Ig.y - msg_Ig.z;
-            //float IG_u = Ts*(u_dot_ref_i-sm_gain_ku*(u_hat_i-u_ref_i)-sig_u_i);
+            float IG_u = Ts*(u_dot_ref_i-sm_gain_ku*(u_hat_i-u_ref_i)-sig_u_i);
             float IG_r = IGr_en*Ts*(r_dot_ref_i-sm_gain_kr*(r_hat_i-c_ref)-sm_gain_kpsi*(r_hat_i-r_ref_i)-sig_r_i);
+
+            //Codigo input Gain
 
             if(IG_u==0 && IG_r==0){
                 msg.t_left=1500;
@@ -220,7 +210,6 @@ private:
                 count=count+1;
             }
             publisher_pwm->publish(msg);
-            publisher_IGu->publish(msg_Ig);
             // auto end = std::chrono::high_resolution_clock::now();
             // std::chrono::duration<double> elapsed = end - start;
             // double miliseconds = elapsed.count()*1000;
@@ -362,17 +351,6 @@ private:
                     return result;
                 }
             }
-            if (param.get_name() == "Su_en"){
-                if(param.as_double() == 0.0 or param.as_double() == 1.0){
-                    RCLCPP_INFO(this->get_logger(), "changed param value");
-                    Su_en = param.as_double();
-                }else{
-                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be 0.0 or 1.0");
-                    result.successful = false;
-                    result.reason = "Value out of range";
-                    return result;
-                }
-            }
         }
         result.successful = true;
         result.reason = "Success";
@@ -385,14 +363,14 @@ private:
     int count=0;
     //------Params-------//
     float Ts;  
-    /*Parámetros del controlador Sliding Modes*/
+    /*Parámetros del controlador MPC*/
     float sm_gain_ku; /*Ganancia del  controlador Sliding Modes (surge)*/
     float sm_gain_kpsi; /*Ganancia 1 del controlador Sliding Modes (yaw)*/
     float sm_gain_kr; /*Ganancia 2 del controlador Sliding Modes (yaw)*/
     
     float taud; /*Constante tau del filtro derivativo*/
     float a ,b; /*Constantes del filtro derivativo*/
-    float IGr_en, Su_en; /*Enable IGr y Sigmas surge*/
+    float IGr_en; /*Constantes del filtro derivativo*/
 
     float Xu6, Xu7, Xr11 , Xr13;  
 
@@ -405,8 +383,6 @@ private:
     rclcpp::Publisher<asv_interfaces::msg::PwmValues>::SharedPtr publisher_pwm;
     rclcpp::TimerBase::SharedPtr timer_;
 
-    rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr publisher_IGu;
-
     // mutex callback group: 
     std::mutex mutex_;
     rclcpp::CallbackGroup::SharedPtr cb_group_sensors_;
@@ -418,7 +394,7 @@ private:
 int main(int argc, char **argv)
 {
     rclcpp::init(argc, argv);
-    auto node = std::make_shared<IfacLlcNode>();
+    auto node = std::make_shared<MpcLlcNode>();
     rclcpp::executors::MultiThreadedExecutor executor;
     executor.add_node(node);
     executor.spin();

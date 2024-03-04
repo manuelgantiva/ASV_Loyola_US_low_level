@@ -80,6 +80,8 @@ public:
                 rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackVelocityLocalData, this, std::placeholders::_1));
         subscriber_xbee= this-> create_subscription<asv_interfaces::msg::XbeeObserver>("/comunication/xbee_observer",1,
                 std::bind(&BagRecordNode::callbackXbeeData, this, std::placeholders::_1));
+        subscriber_IGu = this-> create_subscription<geometry_msgs::msg::Vector3>("/control/IGu_ifac",1,
+                std::bind(&BagRecordNode::callbackIGu, this, std::placeholders::_1));
 
     	RCLCPP_INFO(this->get_logger(), "Bag Record Node has been started.");
     }
@@ -282,6 +284,15 @@ private:
         armed= msg->armed;
     }
 
+    void callbackIGu(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
+    {
+        if(armed==true){
+            rclcpp::Time time_stamp = this->now();
+            writer_->write(msg, "/control/IGu_ifac", "geometry_msgs/msg/Vector3", time_stamp);
+        }
+    }
+
+
     std::string my_id;
     std::string name_bag;
     bool armed = false;
@@ -310,6 +321,8 @@ private:
     rclcpp::Subscription<geometry_msgs::msg::TwistStamped>::SharedPtr subscriber_vel_local;
     rclcpp::Subscription<geometry_msgs::msg::TwistStamped>::SharedPtr subscriber_vel_body;
     rclcpp::Subscription<asv_interfaces::msg::XbeeObserver>::SharedPtr subscriber_xbee;
+
+    rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr subscriber_IGu;
 
 };
 
