@@ -21,11 +21,11 @@ using std::placeholders::_1;
 const int PWMMAX = 1900;
 const int PWMMIN = 1900;
 
-const float IGu_MAX = 0.0425;
+const float IGu_MAX = 0.0381065;
 const float IGu_MIN = 0.0;
 
-const float IGr_MAX = 0.0929;
-const float IGr_MIN = -0.0929;
+const float IGr_MAX = 0.0507984;
+const float IGr_MIN = -0.0507984;
 
 class IfacLlcNode : public rclcpp::Node
 {
@@ -36,6 +36,7 @@ public:
         //---------Parámetros del LLC-------------------//
         this-> declare_parameter("Ts", 100.0);
         this-> declare_parameter("sm_gain_ku", 2.0);
+        this-> declare_parameter("sm_gain_ki", 2.0);
         this-> declare_parameter("sm_gain_kpsi", 1.0);
         this-> declare_parameter("sm_gain_kr", 4.0);
         this-> declare_parameter("taud", 350); // Taud = #*Ts Est es #
@@ -50,6 +51,7 @@ public:
     
         Ts = this->get_parameter("Ts").as_double()/1000.0;
         sm_gain_ku = this->get_parameter("sm_gain_ku").as_double();
+        sm_gain_ki = this->get_parameter("sm_gain_ki").as_double();
         sm_gain_kpsi = this->get_parameter("sm_gain_kpsi").as_double();
         sm_gain_kr = this->get_parameter("sm_gain_kr").as_double();
         taud = this->get_parameter("taud").as_int();
@@ -105,6 +107,7 @@ private:
             memory_u.assign(4, 0.0);
             memory_r.assign(4, 0.0);
             count=0;
+            integral_error=0;
         }else{
             //auto start = std::chrono::high_resolution_clock::now();
             auto msg = asv_interfaces::msg::PwmValues();
@@ -137,11 +140,14 @@ private:
             }
 
             float c_ref=r_ref_i-sm_gain_kpsi*(psi_hat_i-psi_ref_i);
+            float error = (u_hat_i-u_ref_i);
+            integral_error += Ts*error;
+            msg_Ig.x = Ts*u_dot_ref_i;
+            msg_Ig.y = Ts*sm_gain_ku*error;
+            msg_Ig.z = Ts*sm_gain_ki*integral_error;
+            float sg = Su_en*Ts*sig_u_i;
 
-            msg_Ig.x= Ts*u_dot_ref_i;
-            msg_Ig.y= Ts*sm_gain_ku*(u_hat_i-u_ref_i);
-            msg_Ig.z= Su_en*Ts*sig_u_i;
-            float IG_u = msg_Ig.x - msg_Ig.y - msg_Ig.z;
+            float IG_u = msg_Ig.x - msg_Ig.y - msg_Ig.z - sg;
             //float IG_u = Ts*(u_dot_ref_i-sm_gain_ku*(u_hat_i-u_ref_i)-sig_u_i);
             float IG_r = IGr_en*Ts*(r_dot_ref_i-sm_gain_kr*(r_hat_i-c_ref)-sm_gain_kpsi*(r_hat_i-r_ref_i)-sig_r_i);
 
@@ -316,6 +322,17 @@ private:
                     return result;
                 }
             }
+            if (param.get_name() == "sm_gain_ki"){
+                if(param.as_double() >= 0.0 and param.as_double() < 100.0){
+                    RCLCPP_INFO(this->get_logger(), "changed param value");
+                    sm_gain_ki = param.as_double();
+                }else{
+                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-100");
+                    result.successful = false;
+                    result.reason = "Value out of range";
+                    return result;
+                }
+            }
             if (param.get_name() == "sm_gain_kpsi"){
                 if(param.as_double() >= 0.0 and param.as_double() < 100.0){
                     RCLCPP_INFO(this->get_logger(), "changed param value");
@@ -383,10 +400,12 @@ private:
     float u_hat, psi_hat, r_hat, sig_u, sig_r, u_ref, psi_ref, r_ref, u_dot_ref, r_dot_ref;
     float c_ref;
     int count=0;
+    float integral_error=0;
     //------Params-------//
     float Ts;  
     /*Parámetros del controlador Sliding Modes*/
     float sm_gain_ku; /*Ganancia del  controlador Sliding Modes (surge)*/
+    float sm_gain_ki; /*Ganancia del  controlador Sliding Modes (surge constant integrative)*/
     float sm_gain_kpsi; /*Ganancia 1 del controlador Sliding Modes (yaw)*/
     float sm_gain_kr; /*Ganancia 2 del controlador Sliding Modes (yaw)*/
     

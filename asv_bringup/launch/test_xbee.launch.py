@@ -120,7 +120,10 @@ def generate_launch_description():
         package= "asv_control",
         executable= "ifac_llc",
         namespace= 'control',
-        parameters = [config]
+        parameters = [config],
+        remappings=[
+            ("/control/pwm_value_ifac", "/control/pwm_value_ifac_2")
+        ]
     )
 
     mux_llc_node = Node (

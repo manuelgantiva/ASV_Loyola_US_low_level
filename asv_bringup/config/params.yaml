@@ -40,10 +40,11 @@ control:
   ifac_llc:
     ros__parameters:
       Ts: 100.0         #ms
-      sm_gain_ku: 0.5
+      sm_gain_ku: 0.2
+      sm_gain_ki: 0.2
       sm_gain_kpsi: 1.0
       sm_gain_kr: 4.0
-      taud: 350
+      taud: 200
       IGr_en: 0.0
       Su_en: 0.0
       Xu6: -0.0218397580300401
