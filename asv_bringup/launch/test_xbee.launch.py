@@ -148,6 +148,9 @@ def generate_launch_description():
         parameters = [
             {'my_id': LaunchConfiguration('my_id')},
             config
+        ],
+        remappings=[
+            ("/control/state_observer_guille", "/control/state_observer_guille_2")
         ]
     )
 
@@ -159,6 +162,9 @@ def generate_launch_description():
         parameters = [
             {'my_id': LaunchConfiguration('my_id')},
             config
+        ],
+        remappings=[
+            ("/control/state_observer_liu", "/control/state_observer_liu_2")
         ]
     )
 
@@ -183,11 +189,11 @@ def generate_launch_description():
     # ld.add_action(ref_llc_node)
     # ld.add_action(mux_llc_node)
     # ld.add_action(mux_obs_node)
-    # ld.add_action(observer_guille)
-    # ld.add_action(observer_liu)
+    ld.add_action(observer_guille)
+    ld.add_action(observer_liu)
     # ld.add_action(pwm_mapper_node)
     # ld.add_action(apm_llc_node)
-    ld.add_action(ifac_llc_node)
+    # ld.add_action(ifac_llc_node)
     # ld.add_action(record)
     # ld.add_action(transceiver_xbee_node)
 

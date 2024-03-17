@@ -69,9 +69,6 @@ public:
         a=(taud*Ts)/(taud*Ts+Ts);
         b=1/(taud*Ts+Ts);
 
-        u_ref=0.1;
-        r_ref=0.1;
-
         cb_group_sensors_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
         cb_group_obs_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
         auto options_sensors_ = rclcpp::SubscriptionOptions();
@@ -141,7 +138,7 @@ private:
 
             float c_ref=r_ref_i-sm_gain_kpsi*(psi_hat_i-psi_ref_i);
             float error = (u_hat_i-u_ref_i);
-            integral_error += Ts*error;
+            integral_error += error;
             msg_Ig.x = Ts*u_dot_ref_i;
             msg_Ig.y = Ts*sm_gain_ku*error;
             msg_Ig.z = Ts*sm_gain_ki*integral_error;

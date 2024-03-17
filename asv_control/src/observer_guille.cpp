@@ -16,7 +16,6 @@
 #include <Eigen/Dense>
 
 using namespace Eigen;
-#define PI 3.141592
 
 using std::placeholders::_1;
 
@@ -124,8 +123,6 @@ public:
 
         params_callback_handle_ = this->add_on_set_parameters_callback(std::bind(&ObserverGuilleNode::param_callback, this, _1));
 
-        subscriber_imu = this-> create_subscription<sensor_msgs::msg::Imu>("/mavros/imu/data",rclcpp::SensorDataQoS(),
-                std::bind(&ObserverGuilleNode::callbackImuData, this, std::placeholders::_1), options_sensors_);
         subscriber_gps_local= this-> create_subscription<geometry_msgs::msg::PoseStamped>("/mavros/local_position/pose",
                 rclcpp::SensorDataQoS(), std::bind(&ObserverGuilleNode::callbackGpsLocalData, this, std::placeholders::_1), options_sensors_);
         subscriber_rcout = this-> create_subscription<mavros_msgs::msg::RCOut>("/mavros/rc/out",1,
@@ -139,10 +136,6 @@ public:
         timer_ = this -> create_wall_timer(std::chrono::milliseconds(int(Ts)),
                                           std::bind(&ObserverGuilleNode::calculateState, this), cb_group_obs_);
                                         
-        // Declare and acquire 'base_link' parameter
-        tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
-        tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
-
         RCLCPP_INFO(this->get_logger(), "Observer Guille Node has been started.");
     	
     }
@@ -257,7 +250,6 @@ private:
                 msg_obs.pose.position.y= Xp_hat(1,0);
                 msg_obs.pose.position.z= 0.0;
                 tf2::Quaternion q;
-                //q.setRPY(3.1415, 0, -Xpsi_hat(0,0)+1.5708);
                 q.setRPY(0, 0, Xpsi_hat(0,0));
                 msg_obs.pose.orientation.x = q.x();
                 msg_obs.pose.orientation.y = q.y();
@@ -275,12 +267,6 @@ private:
         }        
     }
 
-    void callbackImuData(const sensor_msgs::msg::Imu::SharedPtr msg)
-    {
-        yaw=msg->angular_velocity.z;
-        //RCLCPP_INFO(this->get_logger(), "yaw: %f", yaw);
-    }
-
     void callbackGpsLocalData(const geometry_msgs::msg::PoseStamped::SharedPtr msg)
     {
         if(armed==true){
@@ -289,7 +275,7 @@ private:
                 float x = msg->pose.position.y;
                 float psi_rad = quat2EulerAngles_XYZ(msg->pose.orientation.w, msg->pose.orientation.x,
                                                     msg->pose.orientation.y, msg->pose.orientation.z);
-                psi_rad=-psi_rad+1.5708;
+                psi_rad=-psi_rad+(M_PI/2);
                 if (psi_rad<0){
                     psi_rad=psi_rad+(2*M_PI);
                 }
@@ -299,28 +285,27 @@ private:
                 // 1) Xp = Xo + R(psi)*OP
                 x = x + cos(psi_rad)*dx - sin(psi_rad)*dy;
                 y = y + sin(psi_rad)*dx + cos(psi_rad)*dy;
-                {
-                    std::lock_guard<std::mutex> lock(mutex_);
-                    Yp << x,
-                        y;
-                }
                 if(armed_act==false){
                     psi_ant = psi_rad;
                     laps = 0;
                     {
                         std::lock_guard<std::mutex> lock(mutex_);
+                        Yp << x,
+                            y;
                         psi = psi_rad;
                     }
                 }else{
                     psi_act = psi_rad;
-                    if((psi_act - psi_ant) > PI){
+                    if((psi_act - psi_ant) > M_PI){
                         laps = laps - 1;
-                    }else if((psi_act - psi_ant) < -PI){
+                    }else if((psi_act - psi_ant) < -M_PI){
                         laps = laps + 1;
                     }
                     {
                         std::lock_guard<std::mutex> lock(mutex_);
-                        psi = psi_act + 2*PI*laps;
+                        Yp << x,
+                            y;
+                        psi = psi_act + 2*M_PI*laps;
                     }
                     psi_ant=psi_act;
                 }
@@ -346,8 +331,8 @@ private:
         const double x2q0q3 = 2.0 * q0 * q3;
         const double m11 = q0_2 + q1_2 - q2_2 - q3_2;
         const double m12 = x2q1q2 + x2q0q3;
-        const double psi = atan2(m12, m11);
-        return static_cast<float>(psi);
+        const double psic = atan2(m12, m11);
+        return static_cast<float>(psic);
     }
 
     void callbackRcoutData(const mavros_msgs::msg::RCOut::SharedPtr msg)
@@ -366,7 +351,6 @@ private:
 
             delta_left = deleteDeadZone(delta_left);
             delta_right = deleteDeadZone(delta_right);
-
             {
                 std::lock_guard<std::mutex> lock(mutex_);
                 delta_diff = delta_left-delta_right;
@@ -483,7 +467,6 @@ private:
     Matrix <float, 3,1> Xpsi_hat_dot; 
     Matrix <float, 3,1> Xpsi_hat_ant; 
 
-    rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr subscriber_imu;
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr subscriber_gps_local;
     rclcpp::Subscription<mavros_msgs::msg::RCOut>::SharedPtr subscriber_rcout;
     rclcpp::Subscription<mavros_msgs::msg::State>::SharedPtr subscriber_state;
@@ -491,9 +474,6 @@ private:
     rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr publisher_obs;
     rclcpp::Publisher<asv_interfaces::msg::StateObserver>::SharedPtr publisher_state;
     rclcpp::TimerBase::SharedPtr timer_;
-
-    std::shared_ptr<tf2_ros::TransformListener> tf_listener_{nullptr};
-    std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
 
     // mutex callback group: 
     std::mutex mutex_;

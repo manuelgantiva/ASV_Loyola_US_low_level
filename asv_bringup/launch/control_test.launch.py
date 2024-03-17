@@ -109,6 +109,13 @@ def generate_launch_description():
         parameters = [config]
     )
 
+    ref_mlc_node = Node (
+        package= "asv_control",
+        executable= "ref_mlc",
+        namespace= 'control',
+        parameters = [config]
+    )
+
     apm_llc_node = Node (
         package= "asv_control",
         executable= "apm_llc",
@@ -119,6 +126,13 @@ def generate_launch_description():
     ifac_llc_node = Node (
         package= "asv_control",
         executable= "ifac_llc",
+        namespace= 'control',
+        parameters = [config]
+    )
+
+    wang_mlc_node = Node (
+        package= "asv_control",
+        executable= "wang_mlc",
         namespace= 'control',
         parameters = [config]
     )
@@ -185,6 +199,8 @@ def generate_launch_description():
     ld.add_action(pwm_mapper_node)
     ld.add_action(apm_llc_node)
     ld.add_action(ifac_llc_node)
+    #ld.add_action(wang_mlc_node)
+    #ld.add_action(ref_mlc_node)
     ld.add_action(record)
     ld.add_action(transceiver_xbee_node)
 

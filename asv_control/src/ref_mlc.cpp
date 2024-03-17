@@ -25,20 +25,33 @@ private:
     {
         if(armed==true){
             float u_ref=0.0;
-            if(msg->channels[2] < 1550 && msg->channels[2] > 1450){
-                msg->channels[2] = 1500;
-            }
-            u_ref = 0.5*((msg->channels[2]*0.0025)-3.75);
             auto ref = std_msgs::msg::Float64();
-            if(u_ref>1.0){
-                u_ref = 1.0;
-            }else if (u_ref<=-1.0)
-            {
-                u_ref = -1.0;
-            }
+            u_ref = normalizePwm(msg->channels[2]);
             ref.data = u_ref; 
             publisher_ref->publish(ref);
         }
+    }
+
+    float normalizePwm(uint16_t PWM){
+        float ref_vel;
+        if(PWM <= 1550 && PWM >= 1450){
+            PWM = 1500;
+            ref_vel = 0.0;
+        }else if(PWM > 1550){
+            PWM = PWM - 50;
+            ref_vel = ((PWM*0.002857142)-4.285714286);
+        }else if(PWM < 1450){
+            PWM = PWM + 50;
+            ref_vel = ((PWM*0.002857142)-4.285714286);
+        }
+                
+        if(ref_vel>1.0){
+            ref_vel = 1.0;
+        }else if (ref_vel<=-1.0)
+        {
+            ref_vel = -1.0;
+        }
+        return ref_vel;
     }
 
     void callbackMavrosState(const mavros_msgs::msg::State::SharedPtr msg)

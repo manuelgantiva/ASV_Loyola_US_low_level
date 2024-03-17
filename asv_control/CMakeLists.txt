@@ -69,6 +69,9 @@ ament_target_dependencies(ifac_llc rclcpp geometry_msgs mavros_msgs asv_interfac
 # add_executable(mpc_llc src/mpc_llc.cpp)
 # ament_target_dependencies(mpc_llc rclcpp geometry_msgs mavros_msgs asv_interfaces)
 
+add_executable(wang_mlc src/wang_mlc.cpp)
+ament_target_dependencies(wang_mlc rclcpp geometry_msgs mavros_msgs asv_interfaces std_msgs)
+
 # Install Targets
 install(TARGETS
   testnode
@@ -85,6 +88,7 @@ install(TARGETS
   asv_tf2_broadcaster
   apm_llc
   ifac_llc
+  wang_mlc
 DESTINATION lib/${PROJECT_NAME})
 
 # Install Scripts python

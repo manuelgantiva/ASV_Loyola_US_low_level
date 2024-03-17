@@ -124,8 +124,6 @@ public:
 
         params_callback_handle_ = this->add_on_set_parameters_callback(std::bind(&ObserverLiuNode::param_callback, this, _1));
 
-        subscriber_imu = this-> create_subscription<sensor_msgs::msg::Imu>("/mavros/imu/data",rclcpp::SensorDataQoS(),
-                std::bind(&ObserverLiuNode::callbackImuData, this, std::placeholders::_1), options_sensors_);
         subscriber_gps_local= this-> create_subscription<geometry_msgs::msg::PoseStamped>("/mavros/local_position/pose",
                 rclcpp::SensorDataQoS(), std::bind(&ObserverLiuNode::callbackGpsLocalData, this, std::placeholders::_1), options_sensors_);
         subscriber_rcout = this-> create_subscription<mavros_msgs::msg::RCOut>("/mavros/rc/out",1,
@@ -139,10 +137,6 @@ public:
         publisher_obs = this-> create_publisher<geometry_msgs::msg::PoseStamped>("pose_liu",
                 rclcpp::SensorDataQoS());
                                         
-        // Declare and acquire 'base_link' parameter
-        tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
-        tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
-
         RCLCPP_INFO(this->get_logger(), "Observer Liu Node has been started.");
     	
     }
@@ -257,7 +251,6 @@ private:
                 msg_obs.pose.position.y= Xp_hat(1,0);
                 msg_obs.pose.position.z= 0.0;
                 tf2::Quaternion q;
-                //q.setRPY(3.1415, 0, -Xpsi_hat(0,0)+1.5708);
                 q.setRPY(0, 0, Xpsi_hat(0,0));
                 msg_obs.pose.orientation.x = q.x();
                 msg_obs.pose.orientation.y = q.y();
@@ -273,12 +266,6 @@ private:
                 count=count+1;
             }
         }        
-    }
-
-    void callbackImuData(const sensor_msgs::msg::Imu::SharedPtr msg)
-    {
-        yaw=msg->angular_velocity.z;
-        //RCLCPP_INFO(this->get_logger(), "yaw: %f", yaw);
     }
 
     void callbackGpsLocalData(const geometry_msgs::msg::PoseStamped::SharedPtr msg)
@@ -299,17 +286,14 @@ private:
                 // 1) Xp = Xo + R(psi)*OP
                 x = x + cos(psi_rad)*dx - sin(psi_rad)*dy;
                 y = y + sin(psi_rad)*dx + cos(psi_rad)*dy;
-                {
-                    std::lock_guard<std::mutex> lock(mutex_);
-                    Yp << x,
-                        y;
-                }
                 if(armed_act==false){
                     psi_ant = psi_rad;
                     laps = 0;
                     {
                         std::lock_guard<std::mutex> lock(mutex_);
                         psi = psi_rad;
+                        Yp << x,
+                            y;
                     }
                 }else{
                     psi_act = psi_rad;
@@ -321,6 +305,8 @@ private:
                     {
                         std::lock_guard<std::mutex> lock(mutex_);
                         psi = psi_act + 2*PI*laps;
+                        Yp << x,
+                            y;
                     }
                     psi_ant=psi_act;
                 }
@@ -453,17 +439,17 @@ private:
     }
 
 
-    float yaw, lat, lon, alt, psi_act = 0.0, psi_ant = 0.0, psi_0 = 0.0, psi = 0.0, x_centro, y_centro;
+    float yaw, lat, lon, alt, psi_act = 0.0, psi_ant = 0.0, psi_0 = 0.0, psi = 0.0;
     int status_gps, laps=0;
     bool armed = false, armed_act = false;
 
     //------Params-------//
     std::string my_id;
-    float Ts, Xu6, Xu7, Xv10, Xv11, Xv12, Xv13, Xr10, Xr11 ,Xr12, Xr13;   
+    float Ts, Xu6, Xu7, Xv10, Xv11, Xv12, Xv13, Xr10, Xr11 ,Xr12, Xr13;  
 
     float delta_diff;
     float delta_mean;
-    int beta,count=0; 
+    int beta, count=0;
 
     Matrix <float, 3,3> Apsi; 
     Matrix <float, 3,1> IGpsi; 
@@ -485,7 +471,6 @@ private:
     Matrix <float, 3,1> Xpsi_hat_dot; 
     Matrix <float, 3,1> Xpsi_hat_ant; 
 
-    rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr subscriber_imu;
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr subscriber_gps_local;
     rclcpp::Subscription<mavros_msgs::msg::RCOut>::SharedPtr subscriber_rcout;
     rclcpp::Subscription<mavros_msgs::msg::State>::SharedPtr subscriber_state;
@@ -493,10 +478,7 @@ private:
     rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr publisher_obs;
     rclcpp::Publisher<asv_interfaces::msg::StateObserver>::SharedPtr publisher_state;
     rclcpp::TimerBase::SharedPtr timer_;
-
-    std::shared_ptr<tf2_ros::TransformListener> tf_listener_{nullptr};
-    std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
-    
+   
     // mutex callback group: 
     std::mutex mutex_;
     rclcpp::CallbackGroup::SharedPtr cb_group_sensors_;

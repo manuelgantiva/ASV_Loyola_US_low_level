@@ -61,16 +61,18 @@ private:
     }
 
     float normalizePwm(uint16_t PWM){
+        float ref_vel;
         if(PWM <= 1550 && PWM >= 1450){
             PWM = 1500;
+            ref_vel = 0.0;
         }else if(PWM > 1550){
             PWM = PWM - 50;
+            ref_vel = ((PWM*0.002857142)-4.285714286);
         }else if(PWM < 1450){
             PWM = PWM + 50;
+            ref_vel = ((PWM*0.002857142)-4.285714286);
         }
-        
-        float ref_vel = ((PWM*0.0025)-3.75);
-        
+                
         if(ref_vel>1.0){
             ref_vel = 1.0;
         }else if (ref_vel<=-1.0)
