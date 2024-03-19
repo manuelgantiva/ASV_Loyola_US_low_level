@@ -1,7 +1,7 @@
 control:
   rc_handler:
     ros__parameters:
-      origin: [37.30769, -5.94022, 85.37814771871618]
+      origin: [37.307689, -5.940203, 85.37814771871618]
   observer_guille:
     ros__parameters:
       Ts: 100.0         #ms
@@ -40,10 +40,10 @@ control:
   ifac_llc:
     ros__parameters:
       Ts: 100.0         #ms
-      sm_gain_ku: 0.2
+      sm_gain_ku: 0.1
       sm_gain_ki: 0.02
-      sm_gain_kpsi: 0.1
-      sm_gain_kr: 0.6
+      sm_gain_kpsi: 0.0666
+      sm_gain_kr: 0.4
       taud: 200
       IGr_en: 1.0
       Su_en: 1.0
@@ -54,7 +54,6 @@ control:
   wang_mlc:
     ros__parameters:
       Ts: 100.0         #ms
-      sm_gain_ku: 0.2
       delta_SGLOS: 4.0
       k_u_tar: 2.0
       taud: 200

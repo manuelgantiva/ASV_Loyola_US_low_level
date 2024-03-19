@@ -21,7 +21,7 @@ public:
         
         //---------Parámetros del LLC-------------------//
         this-> declare_parameter("Ts", 100.0);
-        this-> declare_parameter("delta_SGLOS", 4.0);
+        this-> declare_parameter("delta_SGLOS", 8.0);
         this-> declare_parameter("k_u_tar", 2.0);
         this-> declare_parameter("taud", 350); // Taud = #*Ts Est es #
         this-> declare_parameter("path_d", 1); // path_d = #Path deseado #
@@ -203,7 +203,7 @@ private:
                 result=-1*w;
                 break;
             case 2:
-                
+                result=((0.0022*w*w*w)+(3.9022*w*w)-(20.9302*w));
                 break;
             case 3:
                 
@@ -221,7 +221,7 @@ private:
                 result=0;
                 break;
             case 2:
-                
+                result=((0.17*w*w*w)+(1.5*w*w)-(4.22*w));
                 break;
             case 3:
                 
@@ -239,7 +239,7 @@ private:
                 result=-1;
                 break;
             case 2:
-                
+                result=((3*0.0022*w*w)+(2*3.9022*w)-(20.9302));
                 break;
             case 3:
                 
@@ -257,7 +257,7 @@ private:
                 result=0;
                 break;
             case 2:
-                
+                result=((3*0.17*w*w)+(2*1.5*w)-(4.22));
                 break;
             case 3:
                 
