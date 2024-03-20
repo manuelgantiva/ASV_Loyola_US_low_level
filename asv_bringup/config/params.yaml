@@ -56,6 +56,6 @@ control:
       Ts: 100.0         #ms
       delta_SGLOS: 4.0
       k_u_tar: 2.0
-      taud: 200
+      taud: 15.0
       path_d: 1
   

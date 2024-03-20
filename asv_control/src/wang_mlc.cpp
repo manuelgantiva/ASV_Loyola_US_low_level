@@ -23,13 +23,13 @@ public:
         this-> declare_parameter("Ts", 100.0);
         this-> declare_parameter("delta_SGLOS", 8.0);
         this-> declare_parameter("k_u_tar", 2.0);
-        this-> declare_parameter("taud", 350); // Taud = #*Ts Est es #
+        this-> declare_parameter("taud", 15.0); // Taud = #*Ts Est es #
         this-> declare_parameter("path_d", 1); // path_d = #Path deseado #
     
         Ts = this->get_parameter("Ts").as_double()/1000.0;
         delta_SGLOS = this->get_parameter("delta_SGLOS").as_double();
         k_u_tar = this->get_parameter("k_u_tar").as_double();
-        taud = this->get_parameter("taud").as_int();
+        taud = this->get_parameter("taud").as_double();
         path_d  = this->get_parameter("path_d").as_int();
 
         memory_psi.assign(4, 0.0);
@@ -134,6 +134,12 @@ private:
                 }
                         
                 float r_ref = derivationFilter(psi_ref, memory_psi, a, b);
+
+                if(r_ref > 1.0){
+                    r_ref = 1.0;
+                }else if(r_ref < -1.0){
+                    r_ref = -1.0;
+                }
                 
                 msg.x = u_ref;
                 msg.y = r_ref;
@@ -178,16 +184,22 @@ private:
 
     // Función para calcular la salida del filtro de derivación
     float derivationFilter(float input, std::vector<float>& memory, float a, float b){
-        //float a1 = 0.0;
-        //float b0 = 1.0;
-        //float output = (b0 * input - f_diff * memory[0] + f_diff * memory[1] - a1 * memory[2] + f_diff * memory[3]) / f_diff;
-        
         float output = (a * memory[0]) + b * (input - memory[1]);
+
+        // RCLCPP_INFO(this->get_logger(), "current left: %f and previous right: %f", input, memory[1]);
         // Actualizar memoria para la próxima iteración
         memory[0] = output;
         memory[1] = input;
-
         return output;
+
+        /*En esta funcón implementaremos un filtro de derivaciÃ³n discretizado con la transformación bilineal aplicado como ecuaciÃ³n en diferencias*/
+        /*float output;
+        float k = 2/Ts; //Ãšnicamente para ahorrar cÃ³digo
+        output = ((k*taud-1)*memory[0]+k*input-k*memory[1])/(k*taud+1); //AplicaciÃ³n de la ecuaciÃ³n de la derivaciÃ³n
+ 
+        memory[0] = output; //La salida previa pasa a ser la calculada ahora
+        memory[1] = input; //La entrada anterior pasa a ser la entrada de la funciÃ³n
+        return output;*/
     }  
 
     void callbackStateData(const mavros_msgs::msg::State::SharedPtr msg)
