@@ -41,7 +41,7 @@ control:
     ros__parameters:
       Ts: 100.0         #ms
       sm_gain_ku: 0.1
-      sm_gain_ki: 0.02
+      sm_gain_ki: 0.015
       sm_gain_kpsi: 0.0666
       sm_gain_kr: 0.4
       taud: 200
