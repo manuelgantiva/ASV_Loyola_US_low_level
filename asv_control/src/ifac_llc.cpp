@@ -88,6 +88,7 @@ public:
                 rclcpp::SensorDataQoS());
 
         publisher_IGu = this-> create_publisher<geometry_msgs::msg::Vector3>("/control/IGu_ifac",1);
+        publisher_IGr = this-> create_publisher<geometry_msgs::msg::Vector3>("/control/IGr_ifac",1);
 
         timer_ = this -> create_wall_timer(std::chrono::milliseconds(int(Ts*1000.0)),
                 std::bind(&IfacLlcNode::calculateLowLevelController, this), cb_group_obs_);
@@ -109,7 +110,8 @@ private:
             //auto start = std::chrono::high_resolution_clock::now();
             auto msg = asv_interfaces::msg::PwmValues();
 
-            auto msg_Ig = geometry_msgs::msg::Vector3();
+            auto msg_Igu = geometry_msgs::msg::Vector3();
+            auto msg_Igr = geometry_msgs::msg::Vector3();
 
             float u_hat_i;
             float r_hat_i;
@@ -136,17 +138,21 @@ private:
                 psi_ref_i=psi_ref;
             }
 
-            float c_ref=r_ref_i-sm_gain_kpsi*(psi_hat_i-psi_ref_i);
             float error = (u_hat_i-u_ref_i);
             integral_error += error;
-            msg_Ig.x = Ts*u_dot_ref_i;
-            msg_Ig.y = Ts*sm_gain_ku*error;
-            msg_Ig.z = Ts*sm_gain_ki*integral_error;
+            msg_Igu.x = Ts*u_dot_ref_i;
+            msg_Igu.y = Ts*sm_gain_ku*error;
+            msg_Igu.z = Ts*sm_gain_ki*integral_error;
             float sg = Su_en*Ts*sig_u_i;
 
-            float IG_u = msg_Ig.x - msg_Ig.y - msg_Ig.z - sg;
+            float IG_u = msg_Igu.x - msg_Igu.y - msg_Igu.z - sg;
             //float IG_u = Ts*(u_dot_ref_i-sm_gain_ku*(u_hat_i-u_ref_i)-sig_u_i);
-            float IG_r = IGr_en*Ts*(r_dot_ref_i-sm_gain_kr*(r_hat_i-c_ref)-sm_gain_kpsi*(r_hat_i-r_ref_i)-sig_r_i);
+
+            float c_ref=r_ref_i-sm_gain_kpsi*(psi_hat_i-psi_ref_i);
+            msg_Igr.x = sm_gain_kr*(r_hat_i-c_ref);
+            msg_Igr.y = sm_gain_kpsi*(r_hat_i-r_ref_i);
+            msg_Igr.z = r_dot_ref_i;
+            float IG_r = IGr_en*Ts*(r_dot_ref_i-msg_Igr.x-msg_Igr.y-sig_r_i);
 
             if(IG_u==0 && IG_r==0){
                 msg.t_left=1500;
@@ -223,7 +229,8 @@ private:
                 count=count+1;
             }
             publisher_pwm->publish(msg);
-            publisher_IGu->publish(msg_Ig);
+            publisher_IGu->publish(msg_Igu);
+            publisher_IGr->publish(msg_Igr);
             // auto end = std::chrono::high_resolution_clock::now();
             // std::chrono::duration<double> elapsed = end - start;
             // double miliseconds = elapsed.count()*1000;
@@ -422,6 +429,7 @@ private:
     rclcpp::TimerBase::SharedPtr timer_;
 
     rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr publisher_IGu;
+    rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr publisher_IGr;
 
     // mutex callback group: 
     std::mutex mutex_;

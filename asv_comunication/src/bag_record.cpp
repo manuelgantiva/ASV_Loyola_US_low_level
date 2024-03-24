@@ -82,6 +82,8 @@ public:
                 std::bind(&BagRecordNode::callbackXbeeData, this, std::placeholders::_1));
         subscriber_IGu = this-> create_subscription<geometry_msgs::msg::Vector3>("/control/IGu_ifac",1,
                 std::bind(&BagRecordNode::callbackIGu, this, std::placeholders::_1));
+        subscriber_IGr = this-> create_subscription<geometry_msgs::msg::Vector3>("/control/IGr_ifac",1,
+                std::bind(&BagRecordNode::callbackIGr, this, std::placeholders::_1));
         subscriber_ref_mlc = create_subscription<std_msgs::msg::Float64>("/control/reference_mlc", 1,
                 std::bind(&BagRecordNode::callbackRefMlc, this, std::placeholders::_1));
 
@@ -294,6 +296,14 @@ private:
         }
     }
 
+    void callbackIGr(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
+    {
+        if(armed==true){
+            rclcpp::Time time_stamp = this->now();
+            writer_->write(msg, "/control/IGr_ifac", "geometry_msgs/msg/Vector3", time_stamp);
+        }
+    }
+
     void callbackRefMlc(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
     {
         if(armed==true){
@@ -332,6 +342,7 @@ private:
     rclcpp::Subscription<asv_interfaces::msg::XbeeObserver>::SharedPtr subscriber_xbee;
     rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr subscriber_ref_mlc;
     rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr subscriber_IGu;
+    rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr subscriber_IGr;
 
 };
 

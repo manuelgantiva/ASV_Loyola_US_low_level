@@ -39,8 +39,8 @@ private:
 
             auto ref = geometry_msgs::msg::Vector3();
 
-            u_ref = normalizePwm(msg->channels[2]);
-            r_ref = normalizePwm(msg->channels[0]);
+            u_ref = normalizePwmSurge(msg->channels[2]);
+            r_ref = normalizePwmYaw(msg->channels[0]);
 
             if(reference_mode_ == true){
                 ref.x = u_ref;
@@ -60,24 +60,43 @@ private:
         }
     }
 
-    float normalizePwm(uint16_t PWM){
+    float normalizePwmSurge(uint16_t PWM){
         float ref_vel;
         if(PWM <= 1550 && PWM >= 1450){
             PWM = 1500;
             ref_vel = 0.0;
         }else if(PWM > 1550){
             PWM = PWM - 50;
-            ref_vel = ((PWM*0.002857142)-4.285714286);
         }else if(PWM < 1450){
             PWM = PWM + 50;
-            ref_vel = ((PWM*0.002857142)-4.285714286);
         }
-                
+        ref_vel = ((PWM*0.002857142)-4.285714286);      
         if(ref_vel>1.0){
             ref_vel = 1.0;
         }else if (ref_vel<=-1.0)
         {
             ref_vel = -1.0;
+        }
+        return ref_vel;
+    }
+
+    float normalizePwmYaw(uint16_t PWM){
+        float ref_vel;
+        if(PWM <= 1550 && PWM >= 1450){
+            PWM = 1500;
+            ref_vel = 0.0;
+        }else if(PWM > 1550){
+            PWM = PWM - 50;
+        }else if(PWM < 1450){
+            PWM = PWM + 50;
+            
+        }
+        ref_vel = ((PWM*0.001142857)-2.142857);     
+        if(ref_vel>0.4){
+            ref_vel = 0.4;
+        }else if (ref_vel<=-0.4)
+        {
+            ref_vel = -0.4;
         }
         return ref_vel;
     }

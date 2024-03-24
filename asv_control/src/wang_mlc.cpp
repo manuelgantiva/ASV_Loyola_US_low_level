@@ -135,10 +135,10 @@ private:
                         
                 float r_ref = derivationFilter(psi_ref, memory_psi, a, b);
 
-                if(r_ref > 1.0){
-                    r_ref = 1.0;
-                }else if(r_ref < -1.0){
-                    r_ref = -1.0;
+                if(r_ref > 0.4){
+                    r_ref = 0.4;
+                }else if(r_ref < -0.4){
+                    r_ref = -0.4;
                 }
                 
                 msg.x = u_ref;
@@ -191,15 +191,6 @@ private:
         memory[0] = output;
         memory[1] = input;
         return output;
-
-        /*En esta funcón implementaremos un filtro de derivaciÃ³n discretizado con la transformación bilineal aplicado como ecuaciÃ³n en diferencias*/
-        /*float output;
-        float k = 2/Ts; //Ãšnicamente para ahorrar cÃ³digo
-        output = ((k*taud-1)*memory[0]+k*input-k*memory[1])/(k*taud+1); //AplicaciÃ³n de la ecuaciÃ³n de la derivaciÃ³n
- 
-        memory[0] = output; //La salida previa pasa a ser la calculada ahora
-        memory[1] = input; //La entrada anterior pasa a ser la entrada de la funciÃ³n
-        return output;*/
     }  
 
     void callbackStateData(const mavros_msgs::msg::State::SharedPtr msg)
@@ -316,9 +307,9 @@ private:
                 }
             }
             if (param.get_name() == "taud"){
-                if(param.as_int() >= 0 and param.as_int() < 500){
+                if(param.as_double() >= 0.0 and param.as_double() < 500.0){
                     RCLCPP_INFO(this->get_logger(), "changed param value");
-                    taud = param.as_int();
+                    taud = param.as_double();
                     a=(taud*Ts)/(taud*Ts+Ts);
                     b=1/(taud*Ts+Ts);
                 }else{
