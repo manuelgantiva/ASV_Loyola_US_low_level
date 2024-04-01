@@ -91,7 +91,7 @@ private:
             PWM = PWM + 50;
             
         }
-        ref_vel = ((PWM*0.001142857)-2.142857);     
+        ref_vel = ((PWM*0.001142857)-1.7248545);     
         if(ref_vel>0.4){
             ref_vel = 0.4;
         }else if (ref_vel<=-0.4)
