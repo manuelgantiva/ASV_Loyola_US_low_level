@@ -142,6 +142,12 @@ private:
             integral_error += error;
             msg_Igu.x = Ts*u_dot_ref_i;
             msg_Igu.y = Ts*sm_gain_ku*error;
+            if(msg_Igu.y < -0.01){
+                msg_Igu.y = -0.01;
+            }else if(msg_Igu.y > 0.01){
+                msg_Igu.y = 0.01;
+            }
+
             msg_Igu.z = Ts*sm_gain_ki*integral_error;
             float sg = Su_en*Ts*sig_u_i;
 
@@ -149,10 +155,10 @@ private:
             //float IG_u = Ts*(u_dot_ref_i-sm_gain_ku*(u_hat_i-u_ref_i)-sig_u_i);
 
             float c_ref=r_ref_i-sm_gain_kpsi*(psi_hat_i-psi_ref_i);
-            msg_Igr.x = sm_gain_kr*(r_hat_i-c_ref);
-            msg_Igr.y = sm_gain_kpsi*(r_hat_i-r_ref_i);
-            msg_Igr.z = r_dot_ref_i;
-            float IG_r = IGr_en*Ts*(r_dot_ref_i-msg_Igr.x-msg_Igr.y-sig_r_i);
+            msg_Igr.x = Ts*sm_gain_kr*(r_hat_i-c_ref);
+            msg_Igr.y = Ts*sm_gain_kpsi*(r_hat_i-r_ref_i);
+            msg_Igr.z = Ts*r_dot_ref_i;
+            float IG_r = IGr_en*(msg_Igr.z-msg_Igr.x-msg_Igr.y-(Ts*sig_r_i));
 
             if(IG_u==0 && IG_r==0){
                 msg.t_left=1500;
