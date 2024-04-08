@@ -59,9 +59,9 @@ private:
             auto msg_p = asv_interfaces::msg::StateObserver();
             msg_p.header = msg->header;
             msg_p.point = msg->point;
-            FilVel=sumVectors(multiplyByScalar(msg->velocity, alfa), multiplyByScalar(FilVel, 1-alfa));
+            FilVel=sumVectors(multiplyByScalar(msg->velocity, alfa), multiplyByScalar(FilVel, 1.0-alfa));
             msg_p.velocity = FilVel;
-            FilDis=sumVectors(multiplyByScalar(msg->disturbances, alfa), multiplyByScalar(FilDis, 1-alfa));
+            FilDis=sumVectors(multiplyByScalar(msg->disturbances, alfa), multiplyByScalar(FilDis, 1.0-alfa));
             msg_p.disturbances = FilDis;
             publisher_state_ ->publish(msg_p);
         }
@@ -153,7 +153,7 @@ private:
     }
 
     // Function to multiply a vector by a scalar
-    geometry_msgs::msg::Vector3 multiplyByScalar(const geometry_msgs::msg::Vector3& vec, double scalar) {
+    geometry_msgs::msg::Vector3 multiplyByScalar(const geometry_msgs::msg::Vector3& vec, float scalar) {
         geometry_msgs::msg::Vector3 result;
         result.x = vec.x * scalar;
         result.y = vec.y * scalar;
