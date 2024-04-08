@@ -142,12 +142,6 @@ private:
             integral_error += error;
             msg_Igu.x = Ts*u_dot_ref_i;
             msg_Igu.y = Ts*sm_gain_ku*error;
-            if(msg_Igu.y < -0.01){
-                msg_Igu.y = -0.01;
-            }else if(msg_Igu.y > 0.01){
-                msg_Igu.y = 0.01;
-            }
-
             msg_Igu.z = Ts*sm_gain_ki*integral_error;
             float sg = Su_en*Ts*sig_u_i;
 
