@@ -42,6 +42,7 @@ public:
         this-> declare_parameter("taud", 350); // Taud = #*Ts Est es #
         this-> declare_parameter("IGr_en", 1.0);
         this-> declare_parameter("Su_en", 1.0);
+        this-> declare_parameter("Sr_en", 1.0);
 
         this-> declare_parameter("Xu6", -0.0166263484863104);
         this-> declare_parameter("Xu7", 0.0592216770505099);
@@ -57,6 +58,7 @@ public:
         taud = this->get_parameter("taud").as_int();
         IGr_en = this->get_parameter("IGr_en").as_double();
         Su_en = this->get_parameter("Su_en").as_double();
+        Sr_en = this->get_parameter("Sr_en").as_double();
 
         Xu6 = this->get_parameter("Xu6").as_double();
         Xu7 = this->get_parameter("Xu7").as_double();
@@ -152,7 +154,8 @@ private:
             msg_Igr.x = Ts*sm_gain_kr*(r_hat_i-c_ref);
             msg_Igr.y = Ts*sm_gain_kpsi*(r_hat_i-r_ref_i);
             msg_Igr.z = Ts*r_dot_ref_i;
-            float IG_r = IGr_en*(msg_Igr.z-msg_Igr.x-msg_Igr.y-(Ts*sig_r_i));
+            float sr = Sr_en*Ts*sig_r_i;
+            float IG_r = IGr_en*(msg_Igr.z-msg_Igr.x-msg_Igr.y-sr);
 
             if(IG_u==0 && IG_r==0){
                 msg.t_left=1500;
@@ -394,6 +397,17 @@ private:
                     return result;
                 }
             }
+            if (param.get_name() == "Sr_en"){
+                if(param.as_double() == 0.0 or param.as_double() == 1.0){
+                    RCLCPP_INFO(this->get_logger(), "changed param value");
+                    Sr_en = param.as_double();
+                }else{
+                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be 0.0 or 1.0");
+                    result.successful = false;
+                    result.reason = "Value out of range";
+                    return result;
+                }
+            }
         }
         result.successful = true;
         result.reason = "Success";
@@ -415,7 +429,7 @@ private:
     
     float taud; /*Constante tau del filtro derivativo*/
     float a ,b; /*Constantes del filtro derivativo*/
-    float IGr_en, Su_en; /*Enable IGr y Sigmas surge*/
+    float IGr_en, Su_en, Sr_en; /*Enable IGr y Sigmas surge y yaw*/
 
     float Xu6, Xu7, Xr11 , Xr13;  
 
