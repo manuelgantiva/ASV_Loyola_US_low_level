@@ -14,12 +14,12 @@ public:
         t_left=1500;
         t_right=1500;
         count_pwm=25;
-        publisher_ = this-> create_publisher<mavros_msgs::msg::OverrideRCIn>("/mavros/rc/override",1);
+        publisher_ = this-> create_publisher<mavros_msgs::msg::OverrideRCIn>("/mavros/rc/override",10);
         timer_ = this -> create_wall_timer(std::chrono::milliseconds(100),
                                           std::bind(&PwmMapperNode::publishOverridePwm, this));
         server_ = this-> create_service<example_interfaces::srv::SetBool>(
                 "/control/on_off_pwm", std::bind(&PwmMapperNode::callbackOnOffPwm, this, _1, _2));
-        subscriber_ = this-> create_subscription<asv_interfaces::msg::PwmValues>("/control/pwm_values",1,
+        subscriber_ = this-> create_subscription<asv_interfaces::msg::PwmValues>("/control/pwm_values",10,
                 std::bind(&PwmMapperNode::callbackPwmValues, this, std::placeholders::_1));
         RCLCPP_INFO(this->get_logger(), "Pwm Mapper Node has been started.");
 

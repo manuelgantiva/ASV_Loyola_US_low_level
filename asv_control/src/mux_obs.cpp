@@ -169,7 +169,7 @@ private:
                     RCLCPP_INFO(this->get_logger(), "changed param value");
                     alfa = param.as_double();
                 }else{
-                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0.0-1.0");
+                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be 0.0 or 1.0");
                     result.successful = false;
                     result.reason = "Value out of range";
                     return result;

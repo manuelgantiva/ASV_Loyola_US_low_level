@@ -36,7 +36,7 @@ public:
         prefix = "ASV" + my_id + "-" + std::to_string(day) + "-" + std::to_string(month) + "-bag" + "-";
         RCLCPP_INFO(this->get_logger(), "Current day: %s", prefix.c_str());
 
-        subscriber_state = this-> create_subscription<mavros_msgs::msg::State>("/mavros/state",10,
+        subscriber_state = this-> create_subscription<mavros_msgs::msg::State>("/mavros/state",1,
                 std::bind(&BagRecordNode::callbackMavrosState, this, std::placeholders::_1));
         subscriber_imu = this-> create_subscription<sensor_msgs::msg::Imu>("/mavros/imu/data",rclcpp::SensorDataQoS(),
                 std::bind(&BagRecordNode::callbackImuData, this, std::placeholders::_1));
@@ -44,19 +44,19 @@ public:
                 rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackGpsGlobalData, this, std::placeholders::_1));
         subscriber_gps_local= this-> create_subscription<geometry_msgs::msg::PoseStamped>("/mavros/local_position/pose",
                 rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackGpsLocalData, this, std::placeholders::_1));
-        subscriber_rcout = this-> create_subscription<mavros_msgs::msg::RCOut>("/mavros/rc/out",1,
+        subscriber_rcout = this-> create_subscription<mavros_msgs::msg::RCOut>("/mavros/rc/out",10,
                 std::bind(&BagRecordNode::callbackRcoutData, this, std::placeholders::_1));
-        subscriber_rcin = this-> create_subscription<mavros_msgs::msg::RCIn>("/mavros/rc/in",1,
+        subscriber_rcin = this-> create_subscription<mavros_msgs::msg::RCIn>("/mavros/rc/in",10,
                 std::bind(&BagRecordNode::callbackRcinData, this, std::placeholders::_1));
-        subscriber_rc_over_in = this-> create_subscription<mavros_msgs::msg::OverrideRCIn>("/mavros/rc/override",1,
+        subscriber_rc_over_in = this-> create_subscription<mavros_msgs::msg::OverrideRCIn>("/mavros/rc/override",10,
                 std::bind(&BagRecordNode::callbackRcOverinData, this, std::placeholders::_1));
-        subscriber_reference = this-> create_subscription<geometry_msgs::msg::Vector3>("/control/reference_llc",1,
+        subscriber_reference = this-> create_subscription<geometry_msgs::msg::Vector3>("/control/reference_llc",10,
                 std::bind(&BagRecordNode::callbackReference, this, std::placeholders::_1));
         subscriber_cmd_vel = this-> create_subscription<geometry_msgs::msg::Twist>("/mavros/setpoint_velocity/cmd_vel_unstamped"
                 ,1, std::bind(&BagRecordNode::callbackCmdVel, this, std::placeholders::_1));
-        subscriber_ifac_pwm = this-> create_subscription<asv_interfaces::msg::PwmValues>("/control/pwm_value_ifac",rclcpp::SensorDataQoS(),
+        subscriber_ifac_pwm = this-> create_subscription<asv_interfaces::msg::PwmValues>("/control/pwm_value_ifac",10,
                 std::bind(&BagRecordNode::callbackIfacPwm, this, std::placeholders::_1));
-        subscriber_pwm = this-> create_subscription<asv_interfaces::msg::PwmValues>("/control/pwm_values",1,
+        subscriber_pwm = this-> create_subscription<asv_interfaces::msg::PwmValues>("/control/pwm_values",10,
                 std::bind(&BagRecordNode::callbackPwms, this, std::placeholders::_1));
         subscriber_state_guille= this-> create_subscription<asv_interfaces::msg::StateObserver>("/control/state_observer_guille",
                 rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackStateGuilleData, this, std::placeholders::_1));

@@ -12,10 +12,10 @@ public:
     MuxLlcNode() : Node("mux_llc") 
     {
         subscriber_pwm_mpc_ = this-> create_subscription<asv_interfaces::msg::PwmValues>("/control/pwm_value_mpc",
-            rclcpp::SensorDataQoS(), std::bind(&MuxLlcNode::callbackPwmValueMpc, this, std::placeholders::_1));
+            10, std::bind(&MuxLlcNode::callbackPwmValueMpc, this, std::placeholders::_1));
         subscriber_pwm_ifac_ = this-> create_subscription<asv_interfaces::msg::PwmValues>("/control/pwm_value_ifac",
-            rclcpp::SensorDataQoS(), std::bind(&MuxLlcNode::callbackPwmValueIfac, this, std::placeholders::_1));
-        publisher_pwm_ = this-> create_publisher<asv_interfaces::msg::PwmValues>("/control/pwm_values", 1);
+            10, std::bind(&MuxLlcNode::callbackPwmValueIfac, this, std::placeholders::_1));
+        publisher_pwm_ = this-> create_publisher<asv_interfaces::msg::PwmValues>("/control/pwm_values", 10);
         server_set_llc_ = this-> create_service<asv_interfaces::srv::SetLlc>(
                 "/control/set_llc", std::bind(&MuxLlcNode::callbackSetLowLevelControl, this, _1, _2));  
         subscriber_state_mavros_ = this-> create_subscription<mavros_msgs::msg::State>("/mavros/state",1,

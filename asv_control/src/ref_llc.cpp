@@ -21,7 +21,7 @@ public:
 
         subscriber_compass = this-> create_subscription<std_msgs::msg::Float64>("/mavros/global_position/compass_hdg",rclcpp::SensorDataQoS(),
                 std::bind(&RefLlcNode::callbackCompassData, this, std::placeholders::_1));
-        subscriber_rc_in = this-> create_subscription<mavros_msgs::msg::RCIn>("/mavros/rc/in",1,
+        subscriber_rc_in = this-> create_subscription<mavros_msgs::msg::RCIn>("/mavros/rc/in",10,
                 std::bind(&RefLlcNode::callbackRcIn, this, std::placeholders::_1));
         subscriber_mavros_state = this-> create_subscription<mavros_msgs::msg::State>("/mavros/state",1,
                 std::bind(&RefLlcNode::callbackMavrosState, this, std::placeholders::_1));

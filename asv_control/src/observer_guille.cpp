@@ -61,6 +61,9 @@ public:
         std::vector<double> PpWpc1_par = this->get_parameter("PpWp_c1").as_double_array();
         std::vector<double> PpWpc2_par = this->get_parameter("PpWp_c2").as_double_array();
 
+        this-> declare_parameter("alpha", 0.2);
+        alpha = this->get_parameter("alpha").as_double();
+
         Apsi << 0.0, 1.0, 0.0,
                 0.0, 0.0, 1.0,
                 0.0, 0.0, 0.0;     
@@ -125,7 +128,7 @@ public:
 
         subscriber_gps_local= this-> create_subscription<geometry_msgs::msg::PoseStamped>("/mavros/local_position/pose",
                 rclcpp::SensorDataQoS(), std::bind(&ObserverGuilleNode::callbackGpsLocalData, this, std::placeholders::_1), options_sensors_);
-        subscriber_rcout = this-> create_subscription<mavros_msgs::msg::RCOut>("/mavros/rc/out",1,
+        subscriber_rcout = this-> create_subscription<mavros_msgs::msg::RCOut>("/mavros/rc/out",10,
                 std::bind(&ObserverGuilleNode::callbackRcoutData, this, std::placeholders::_1), options_sensors_);
         subscriber_state = this-> create_subscription<mavros_msgs::msg::State>("/mavros/state",1,
                 std::bind(&ObserverGuilleNode::callbackStateData, this, std::placeholders::_1), options_sensors_);
@@ -285,13 +288,22 @@ private:
                 // 1) Xp = Xo + R(psi)*OP
                 x = x + cos(psi_rad)*dx - sin(psi_rad)*dy;
                 y = y + sin(psi_rad)*dx + cos(psi_rad)*dy;
+
+                // Aplied Filter
+                if(count > 5){
+                    Xf = x;
+                    Yf = y;
+                }
+                Xf = (alpha * x) + ((1-alpha)*Xf);
+                Yf = (alpha * y) + ((1-alpha)*Yf);
+
                 if(armed_act==false){
                     psi_ant = psi_rad;
                     laps = 0;
                     {
                         std::lock_guard<std::mutex> lock(mutex_);
-                        Yp << x,
-                            y;
+                        Yp << Xf,
+                            Yf;
                         psi = psi_rad;
                     }
                 }else{
@@ -317,6 +329,8 @@ private:
         }else{
             psi_ant=0;
             laps=0;
+            Xf = 0.0;
+            Yf = 0.0;
         }
         armed_act=armed;
     }
@@ -430,6 +444,17 @@ private:
                     return result;
                 }
             }
+            if (param.get_name() == "alpha"){
+                if(param.as_double() >= 0.0 and param.as_double() <= 1.0){
+                    RCLCPP_INFO(this->get_logger(), "changed param value");
+                    alpha = param.as_double();
+                }else{
+                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be 0.0 or 1.0");
+                    result.successful = false;
+                    result.reason = "Value out of range";
+                    return result;
+                }
+            }
         }
         result.successful = true;
         result.reason = "Success";
@@ -439,6 +464,7 @@ private:
     float yaw, lat, lon, alt, psi_act = 0.0, psi_ant = 0.0, psi_0 = 0.0, psi = 0.0;
     int status_gps, laps=0;
     bool armed = false, armed_act = false;
+    float Xf = 0.0, Yf = 0.0, alpha;
 
     //------Params-------//
     std::string my_id;

@@ -40,7 +40,6 @@ public:
         this-> declare_parameter("sm_gain_kpsi", 1.0);
         this-> declare_parameter("sm_gain_kr", 4.0);
         this-> declare_parameter("taud", 350); // Taud = #*Ts Est es #
-        this-> declare_parameter("IGr_en", 1.0);
         this-> declare_parameter("Su_en", 1.0);
         this-> declare_parameter("Sr_en", 1.0);
 
@@ -56,7 +55,6 @@ public:
         sm_gain_kpsi = this->get_parameter("sm_gain_kpsi").as_double();
         sm_gain_kr = this->get_parameter("sm_gain_kr").as_double();
         taud = this->get_parameter("taud").as_int();
-        IGr_en = this->get_parameter("IGr_en").as_double();
         Su_en = this->get_parameter("Su_en").as_double();
         Sr_en = this->get_parameter("Sr_en").as_double();
 
@@ -87,7 +85,7 @@ public:
         subscriber_state = this-> create_subscription<mavros_msgs::msg::State>("/mavros/state",1,
                 std::bind(&IfacLlcNode::callbackStateData, this, std::placeholders::_1), options_sensors_);
         publisher_pwm = this-> create_publisher<asv_interfaces::msg::PwmValues>("/control/pwm_value_ifac",
-                rclcpp::SensorDataQoS());
+                10);
 
         publisher_IGu = this-> create_publisher<geometry_msgs::msg::Vector3>("/control/IGu_ifac",1);
         publisher_IGr = this-> create_publisher<geometry_msgs::msg::Vector3>("/control/IGr_ifac",1);
@@ -155,7 +153,7 @@ private:
             msg_Igr.y = Ts*sm_gain_kpsi*(r_hat_i-r_ref_i);
             msg_Igr.z = Ts*r_dot_ref_i;
             float sr = Sr_en*Ts*sig_r_i;
-            float IG_r = IGr_en*(msg_Igr.z-msg_Igr.x-msg_Igr.y-sr);
+            float IG_r = msg_Igr.z-msg_Igr.x-msg_Igr.y-sr;
 
             if(IG_u==0 && IG_r==0){
                 msg.t_left=1500;
@@ -375,17 +373,6 @@ private:
                     return result;
                 }
             }
-            if (param.get_name() == "IGr_en"){
-                if(param.as_double() == 0.0 or param.as_double() == 1.0){
-                    RCLCPP_INFO(this->get_logger(), "changed param value");
-                    IGr_en = param.as_double();
-                }else{
-                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be 0.0 or 1.0");
-                    result.successful = false;
-                    result.reason = "Value out of range";
-                    return result;
-                }
-            }
             if (param.get_name() == "Su_en"){
                 if(param.as_double() == 0.0 or param.as_double() == 1.0){
                     RCLCPP_INFO(this->get_logger(), "changed param value");
@@ -429,7 +416,7 @@ private:
     
     float taud; /*Constante tau del filtro derivativo*/
     float a ,b; /*Constantes del filtro derivativo*/
-    float IGr_en, Su_en, Sr_en; /*Enable IGr y Sigmas surge y yaw*/
+    float Su_en, Sr_en; /*Enable IGr y Sigmas surge y yaw*/
 
     float Xu6, Xu7, Xr11 , Xr13;  
 
