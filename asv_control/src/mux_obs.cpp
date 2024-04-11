@@ -33,10 +33,6 @@ public:
 
         params_callback_handle_ = this->add_on_set_parameters_callback(std::bind(&MuxObsNode::param_callback, this, _1));
 
-        Disturbance.x = 0.0;
-        Disturbance.y = 0.0;
-        Disturbance.z = 0.0;
-
         Velocity.x = 0.0;
         Velocity.y = 0.0;
         Velocity.z = 0.0;
@@ -59,8 +55,9 @@ private:
             auto msg_p = asv_interfaces::msg::StateObserver();
             msg_p.header = msg->header;
             msg_p.point = msg->point;
-            FilVel=sumVectors(multiplyByScalar(msg->velocity, alfa), multiplyByScalar(FilVel, 1.0-alfa));
-            msg_p.velocity = FilVel;
+            //FilVel=sumVectors(multiplyByScalar(msg->velocity, alfa), multiplyByScalar(FilVel, 1.0-alfa));
+            //msg_p.velocity = FilVel;
+            msg_p.velocity = Velocity;
             FilDis=sumVectors(multiplyByScalar(msg->disturbances, alfa), multiplyByScalar(FilDis, 1.0-alfa));
             msg_p.disturbances = FilDis;
             publisher_state_ ->publish(msg_p);
@@ -74,7 +71,7 @@ private:
             msg_p.header = msg->header;
             msg_p.point = msg->point;
             msg_p.velocity = Velocity;
-            msg_p.disturbances = Disturbance;
+            msg_p.disturbances = msg->disturbances;
             publisher_state_ ->publish(msg_p);
         }
     }
@@ -192,7 +189,7 @@ private:
 
     OnSetParametersCallbackHandle::SharedPtr params_callback_handle_;
 
-    geometry_msgs::msg::Vector3 Velocity , Disturbance, FilVel, FilDis;
+    geometry_msgs::msg::Vector3 Velocity, FilVel, FilDis;
     bool guille_enable = false, liu_enable = false, zono_enable = false;
     float alfa;
 
