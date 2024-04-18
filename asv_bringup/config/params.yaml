@@ -40,10 +40,10 @@ control:
   ifac_llc:
     ros__parameters:
       Ts: 100.0         #ms
-      sm_gain_ku: 0.3
-      sm_gain_ki: 0.0025
+      sm_gain_ku: 0.4
+      sm_gain_ki: 0.0035
       sm_gain_kpsi: 0.075
-      sm_gain_kr: 1.3
+      sm_gain_kr: 1.4
       taud: 200
       Su_en: 1.0
       Sr_en: 1.0
@@ -57,7 +57,7 @@ control:
       delta_SGLOS: 4.0
       k_u_tar: 2.0
       taud: 15.0
-      path_d: 1
+      path_d: 0
   mux_obs:
     ros__parameters:
       alfa: 0.09       

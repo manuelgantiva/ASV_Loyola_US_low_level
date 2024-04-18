@@ -6,6 +6,7 @@
 
 #include <cmath>
 #include <thread>
+#include "curvas.cpp"
 
 using namespace std;
 
@@ -24,7 +25,7 @@ public:
         this-> declare_parameter("delta_SGLOS", 8.0);
         this-> declare_parameter("k_u_tar", 2.0);
         this-> declare_parameter("taud", 15.0); // Taud = #*Ts Est es #
-        this-> declare_parameter("path_d", 1); // path_d = #Path deseado #
+        this-> declare_parameter("path_d", 0); // path_d = #Path deseado #
     
         Ts = this->get_parameter("Ts").as_double()/1000.0;
         delta_SGLOS = this->get_parameter("delta_SGLOS").as_double();
@@ -53,7 +54,7 @@ public:
         subscriber_state = this-> create_subscription<mavros_msgs::msg::State>("/mavros/state",1,
                 std::bind(&WangMlcNode::callbackStateData, this, std::placeholders::_1), options_sensors_);
         publisher_llc = this-> create_publisher<geometry_msgs::msg::Vector3>("/control/reference_llc",1);
-
+        publisher_error = this-> create_publisher<geometry_msgs::msg::Vector3>("/control/error_mlc",1);
 
         timer_ = this -> create_wall_timer(std::chrono::milliseconds(int(Ts*1000.0)),
                 std::bind(&WangMlcNode::calculateMidLevelController, this), cb_group_obs_);
@@ -74,6 +75,7 @@ private:
             if(count > 4){
                 //auto start = std::chrono::high_resolution_clock::now();
                 auto msg = geometry_msgs::msg::Vector3();
+                auto msg_e = geometry_msgs::msg::Vector3();
 
                 float x_hat_i;
                 float y_hat_i;
@@ -94,17 +96,21 @@ private:
                     psi_hat_i=psi_hat;
                     u_d_i=u_d;
                 }
-
-                xp_i=path_x(w);
-                yp_i=path_y(w);
-                dxp_i=path_dx(w);
-                dyp_i=path_dy(w);
+                Target p_i = currentTarget(w);
+                xp_i=p_i.xp;
+                yp_i=p_i.yp;
+                dxp_i=p_i.dxp;
+                dyp_i=p_i.dyp;
                 psip_i = atan2(dyp_i, dxp_i);
 
                 psi_hat_i = normalizeAngle(psi_hat_i);
 
                 xe = (x_hat_i - xp_i)*cos(psip_i) + (y_hat_i - yp_i)*sin(psip_i);
                 ye = -1*(x_hat_i - xp_i)*sin(psip_i) + (y_hat_i - yp_i)*cos(psip_i);
+
+                msg_e.x = xe;
+                msg_e.y = ye;
+                msg_e.z = w;
 
                 float k1_i = u_d_i / delta_SGLOS;
                 float u_ref = k1_i * std::sqrt(delta_SGLOS*delta_SGLOS + ye*ye);
@@ -146,6 +152,7 @@ private:
                 msg.z = psi_ref;
 
                 publisher_llc->publish(msg);
+                publisher_error->publish(msg_e);
                 armed_act = armed;
                 // auto end = std::chrono::high_resolution_clock::now();
                 // std::chrono::duration<double> elapsed = end - start;
@@ -199,77 +206,52 @@ private:
         // RCLCPP_INFO(this->get_logger(), "PWM left: %d and PWM right:%d", pwm_left, pwm_right);
     }
 
-    float path_x(float w){
-        float result;
+    Target currentTarget(float w){
+        Target result;
         switch(path_d) {
+            case 0:
+                result.xp =-1*w;
+                result.yp = 0;
+                result.dxp = -1;
+                result.dyp = 0;
+                break;
             case 1:
-                result=-1*w;
+                result = curva1(w);
                 break;
             case 2:
-                result=((0.0022*w*w*w)+(3.9022*w*w)-(20.9302*w));
+                result = curva2(w);
                 break;
             case 3:
-                
+                result = curva3(w);
+                break;
+            case 4:
+                result = curva4(w);
+                break;
+            case 5:
+                result = curva5(w);
+                break;
+            case 6:
+                result = curva6(w);
+                break;
+            case 7:
+                result = curva7(w);
+                break;
+            case 8:
+                result = curva8(w);
+                break;
+            case 9:
+                result = curva9(w);
                 break;
             default:
-                result=0;        
+                result.xp =0.0;
+                result.yp = 0.0;
+                result.dxp = 0.0;
+                result.dyp = 0.0;        
         }
         return result;
     }
 
-    float path_y(float w){
-        float result;
-        switch(path_d) {
-            case 1:
-                result=0;
-                break;
-            case 2:
-                result=((0.17*w*w*w)+(1.5*w*w)-(4.22*w));
-                break;
-            case 3:
-                
-                break;
-            default:
-                result=0;        
-        }
-        return result;
-    }
-
-    float path_dx(float w){
-        float result;
-        switch(path_d) {
-            case 1:
-                result=-1;
-                break;
-            case 2:
-                result=((3*0.0022*w*w)+(2*3.9022*w)-(20.9302));
-                break;
-            case 3:
-                
-                break;
-            default:
-                result=0;        
-        }
-        return result;
-    }
-
-    float path_dy(float w){
-        float result;
-        switch(path_d) {
-            case 1:
-                result=0;
-                break;
-            case 2:
-                result=((3*0.17*w*w)+(2*1.5*w)-(4.22));
-                break;
-            case 3:
-                
-                break;
-            default:
-                result=0;        
-        }
-        return result;
-    }
+        
 
     float normalizeAngle(float angle) {
         const double twoPi = 2.0 * M_PI;
@@ -320,11 +302,11 @@ private:
                 }
             }
             if (param.get_name() == "path_d"){
-                if(param.as_int() >= 0 and param.as_int() < 4){
+                if(param.as_int() >= 0 and param.as_int() <= 9){
                     RCLCPP_INFO(this->get_logger(), "changed param value");
                     path_d = param.as_int();
                 }else{
-                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-100");
+                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-9");
                     result.successful = false;
                     result.reason = "Value out of range";
                     return result;
@@ -356,6 +338,7 @@ private:
     rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr subscriber_references_;
     rclcpp::Subscription<mavros_msgs::msg::State>::SharedPtr subscriber_state;
     rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr publisher_llc;
+    rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr publisher_error;
     rclcpp::TimerBase::SharedPtr timer_;
 
     // mutex callback group: 

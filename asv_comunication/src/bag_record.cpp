@@ -86,6 +86,8 @@ public:
                 std::bind(&BagRecordNode::callbackIGr, this, std::placeholders::_1));
         subscriber_ref_mlc = create_subscription<std_msgs::msg::Float64>("/control/reference_mlc", 1,
                 std::bind(&BagRecordNode::callbackRefMlc, this, std::placeholders::_1));
+        subscriber_error_mlc = this-> create_subscription<geometry_msgs::msg::Vector3>("/control/error_mlc",1,
+                std::bind(&BagRecordNode::callbackErrorMlc, this, std::placeholders::_1));
 
     	RCLCPP_INFO(this->get_logger(), "Bag Record Node has been started.");
     }
@@ -312,6 +314,14 @@ private:
         }
     }
 
+    void callbackErrorMlc(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
+    {
+        if(armed==true){
+            rclcpp::Time time_stamp = this->now();
+            writer_->write(msg, "/control/error_mlc", "geometry_msgs/msg/Vector3", time_stamp);
+        }
+    }
+
     std::string my_id;
     std::string name_bag;
     bool armed = false;
@@ -343,6 +353,8 @@ private:
     rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr subscriber_ref_mlc;
     rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr subscriber_IGu;
     rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr subscriber_IGr;
+    rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr subscriber_error_mlc;
+    
 
 };
 
