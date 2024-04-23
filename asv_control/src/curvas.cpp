@@ -23,7 +23,7 @@ void arco(float w, Target* px, float ax, float by, float r, bool sig) {
 // Semicircle of radius 6
 Target curva1(float w) {
     Target result;
-    if (w >= 0.0 && w < 5.60258) {
+    if (w < 5.60258) {
         // Trajectory 1: Straight line
         recta(w, &result, 0.0, 0.0, -5.53317, -2.32036);
     } else if (w >= 5.60258 && w < 8.74418) {
@@ -39,7 +39,7 @@ Target curva1(float w) {
 // Semicircle of radius 5
 Target curva2(float w) {
     Target result;
-    if (w >= 0.0 && w < 6.72309) {
+    if (w < 6.72309) {
         // Trajectory 1: Straight line
         recta(w, &result, 0.0, 0.0, -4.61097, -1.93363);
     } else if (w >= 6.72309 && w < 9.86469) {
@@ -55,7 +55,7 @@ Target curva2(float w) {
 // Semicircle of radius 4
 Target curva3(float w) {
     Target result;
-    if (w >= 0.0 && w < 8.40387) {
+    if (w < 8.40387) {
         // Trajectory 1: Straight line
         recta(w, &result, 0.0, 0.0, -3.68878, -1.54691);
     } else if (w >= 8.40387 && w < 11.54546) {
@@ -74,7 +74,7 @@ Target curva4(float w) {
     while(w >= 28.70134){
         w = w - 28.70134;
     }
-    if (w >= 0.0 && w < 11.20516) {
+    if (w < 11.20516) {
         // Trajectory 1: Straight line
         recta(w, &result, 0.0, 0.0, -2.76658, -1.16018);
     } else if (w >= 11.20516 && w < 14.34675) {
@@ -96,7 +96,7 @@ Target curva5(float w) {
     while(w >= 30.05804){
         w = w - 30.05804;
     }
-    if (w >= 0.0 && w < 11.88486) {
+    if (w < 11.88486) {
         // Trajectory 1: Straight line
         recta(w, &result, 0.0, 0.0, -1.85109, -0.75727);
     } else if (w >= 11.88486 && w < 15.02645) {
@@ -115,7 +115,7 @@ Target curva5(float w) {
 // Quarter circle of radius 2
 Target curva6(float w) {
     Target result;
-    if (w >= 0.0 && w < 11.88486) {
+    if (w < 11.88486) {
         // Trajectory 1: Straight line
         recta(w, &result, 0.0, 0.0, -1.85109, -0.75727);
     } else if (w >= 11.88486 && w < 13.45968) {
@@ -138,7 +138,7 @@ Target curva6(float w) {
 // Quarter circle of radius 3
 Target curva7(float w) {
     Target result;
-    if (w >= 0.0 && w < 7.31057) {
+    if (w < 7.31057) {
         // Trajectory 1: Straight line
         recta(w, &result, 0.0, 0.0, -2.73576, -1.23109);
     } else if (w >= 7.31057 && w < 8.88137) {
@@ -160,7 +160,7 @@ Target curva7(float w) {
 // Quarter circle of radius 4
 Target curva8(float w) {
     Target result;
-    if (w >= 0.0 && w < 4.69707) {
+    if (w < 4.69707) {
         // Trajectory 1: Straight line
         recta(w, &result, 0.0, 0.0, -3.61927, -1.70319);
     } else if (w >= 4.69707 && w < 6.26787) {
@@ -182,7 +182,7 @@ Target curva8(float w) {
 //Complete circuit with arcs of circumference of radius 4
 Target curva9(float w) {
     Target result;
-    if (w >= 0.0 && w < 4.272) {
+    if (w < 4.272) {
         // Trajectory 1: Straight line
         recta(w, &result, 0.0, 0.0, -3.74532, -1.40449);
     } else if (w >= 4.272 && w < 5.8428) {
