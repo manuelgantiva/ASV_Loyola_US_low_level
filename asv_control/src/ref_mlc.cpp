@@ -51,6 +51,17 @@ private:
         {
             ref_vel = -1.0;
         }
+
+        if(ref_vel>=0.9){
+            ref_vel = 1.0;
+        }else if(ref_vel>=0.7 && ref_vel<0.9){
+            ref_vel = 0.75;
+        }else if(ref_vel>=0.4 && ref_vel<0.7){
+            ref_vel = 0.5;
+        }else if(ref_vel>=0.1 && ref_vel<0.4){
+            ref_vel = 0.3;
+        }
+        
         return ref_vel;
     }
 
