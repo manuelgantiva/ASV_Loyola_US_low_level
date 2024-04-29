@@ -179,8 +179,31 @@ Target curva8(float w) {
     return result;
 }
 
-//Complete circuit with arcs of circumference of radius 4
+// Quarter circle of radius 5
 Target curva9(float w) {
+    Target result;
+    if (w < 3.31059) {
+        // Trajectory 1: Straight line
+        recta(w, &result, 0.0, 0.0, -4.53092, -2.11443);
+    } else if (w >= 3.31059 && w < 4.88139) {
+        // Trajectory 2: 90 degree arc of circumference
+        arco(w - 3.31059 + 2.70497, &result, -17.11443, -2.46908 , 5.0, true);
+    } else if (w >= 4.88139 && w < 7.48139) {
+        // Trajectory 3: 13 meter straight line
+        recta(w - 4.88139, &result, -21.64534, -4.58351, -2.11443, 4.53092);
+    } else if (w >= 7.48139 && w < 9.05218) {
+        // Trajectory 4: 90 degree arc of circumference
+        arco(w - 7.48139 - 2.00742, &result, -22.61194, 9.3113 , 5.0, true);
+    } else if (w >= 9.05218) {
+        // Trajectory 5: 13 meter straight line
+        recta(w - 9.05218, &result, -24.72637, 13.84221, 4.53092, 2.11443);
+    } 
+    return result;
+}
+
+
+//Complete circuit with arcs of circumference of radius 4
+Target curva10(float w) {
     Target result;
     if (w < 4.272) {
         // Trajectory 1: Straight line

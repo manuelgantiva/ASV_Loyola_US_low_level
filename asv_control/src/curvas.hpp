@@ -22,5 +22,6 @@ Target curva6(float w);
 Target curva7(float w); 
 Target curva8(float w);
 Target curva9(float w); 
+Target curva10(float w); 
 
 #endif

@@ -57,8 +57,5 @@ control:
       delta_SGLOS: 4.0
       k_u_tar: 2.0
       taud: 15.0
-      path_d: 0
-  mux_obs:
-    ros__parameters:
-      alfa: 0.09       
+      path_d: 0  
   

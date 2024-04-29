@@ -12,14 +12,8 @@ class MuxObsNode : public rclcpp::Node
 public:
     MuxObsNode() : Node("mux_obs") 
     {
-        this-> declare_parameter("alfa", 0.2);
-        alfa = this->get_parameter("alfa").as_double();
-
         server_set_obs_ = this-> create_service<asv_interfaces::srv::SetObs>(
                 "/control/set_obs", std::bind(&MuxObsNode::callbackSetStateObserver, this, _1, _2)); 
-        subscriber_vel_body= this-> create_subscription<geometry_msgs::msg::TwistStamped>(
-            "/mavros/local_position/velocity_body", rclcpp::SensorDataQoS(), 
-            std::bind(&MuxObsNode::callbackVelocityBodyData, this, std::placeholders::_1)); 
         subscriber_state_mavros_ = this-> create_subscription<mavros_msgs::msg::State>("/mavros/state",1,
                 std::bind(&MuxObsNode::callbackMavrosState, this, std::placeholders::_1));   
         subscriber_state_guille_ = this-> create_subscription<asv_interfaces::msg::StateObserver>(
@@ -31,20 +25,6 @@ public:
         publisher_state_ = this-> create_publisher<asv_interfaces::msg::StateObserver>("/control/state_observer",
                 rclcpp::SensorDataQoS());
 
-        params_callback_handle_ = this->add_on_set_parameters_callback(std::bind(&MuxObsNode::param_callback, this, _1));
-
-        Velocity.x = 0.0;
-        Velocity.y = 0.0;
-        Velocity.z = 0.0;
-
-        FilVel.x = 0.0;
-        FilVel.y = 0.0;
-        FilVel.z = 0.0;
-
-        FilDis.x = 0.0;
-        FilDis.y = 0.0;
-        FilDis.z = 0.0;
-
         RCLCPP_INFO(this->get_logger(), "Mux state observer Node has been started.");
     }
 
@@ -55,11 +35,8 @@ private:
             auto msg_p = asv_interfaces::msg::StateObserver();
             msg_p.header = msg->header;
             msg_p.point = msg->point;
-            //FilVel=sumVectors(multiplyByScalar(msg->velocity, alfa), multiplyByScalar(FilVel, 1.0-alfa));
-            //msg_p.velocity = FilVel;
-            msg_p.velocity = Velocity;
-            FilDis=sumVectors(multiplyByScalar(msg->disturbances, alfa), multiplyByScalar(FilDis, 1.0-alfa));
-            msg_p.disturbances = FilDis;
+            msg_p.velocity = msg->velocity;
+            msg_p.disturbances = msg->disturbances;
             publisher_state_ ->publish(msg_p);
         }
     }
@@ -70,7 +47,7 @@ private:
             auto msg_p = asv_interfaces::msg::StateObserver();
             msg_p.header = msg->header;
             msg_p.point = msg->point;
-            msg_p.velocity = Velocity;
+            msg_p.velocity = msg->velocity;
             msg_p.disturbances = msg->disturbances;
             publisher_state_ ->publish(msg_p);
         }
@@ -114,68 +91,8 @@ private:
             guille_enable = false;
             liu_enable = false;
             zono_enable = false;
-            // Reset the velocity vector to zero 
-            Velocity.x = 0.0;
-            Velocity.y = 0.0;
-            Velocity.z = 0.0;
-            // Reset the Filter velocity vector to zero 
-            FilVel.x = 0.0;
-            FilVel.y = 0.0;
-            FilVel.z = 0.0;
-            // Reset the FIlter disturbance vector to zero 
-            FilDis.x = 0.0;
-            FilDis.y = 0.0;
-            FilDis.z = 0.0;
         }
         armed= msg->armed;
-    }
-
-    void callbackVelocityBodyData(const geometry_msgs::msg::TwistStamped::SharedPtr msg)
-    {
-        if (armed == true)
-        {
-            Velocity.x = msg->twist.linear.x;
-            Velocity.y = msg->twist.linear.y;
-            Velocity.z = -1*msg->twist.angular.z;
-        }
-    }
-
-    // Function to sum two vectors
-    geometry_msgs::msg::Vector3 sumVectors(const geometry_msgs::msg::Vector3& vec1, const geometry_msgs::msg::Vector3& vec2) {
-        geometry_msgs::msg::Vector3 result;
-        result.x = vec1.x + vec2.x;
-        result.y = vec1.y + vec2.y;
-        result.z = vec1.z + vec2.z;
-        return result;
-    }
-
-    // Function to multiply a vector by a scalar
-    geometry_msgs::msg::Vector3 multiplyByScalar(const geometry_msgs::msg::Vector3& vec, float scalar) {
-        geometry_msgs::msg::Vector3 result;
-        result.x = vec.x * scalar;
-        result.y = vec.y * scalar;
-        result.z = vec.z * scalar;
-        return result;
-    }
-
-    rcl_interfaces::msg::SetParametersResult param_callback(const std::vector<rclcpp::Parameter> &params){
-        rcl_interfaces::msg::SetParametersResult result;
-        for (const auto &param: params){
-            if (param.get_name() == "alfa"){
-                if(param.as_double() >= 0.0 and param.as_double() <= 1.0){
-                    RCLCPP_INFO(this->get_logger(), "changed param value");
-                    alfa = param.as_double();
-                }else{
-                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be 0.0 or 1.0");
-                    result.successful = false;
-                    result.reason = "Value out of range";
-                    return result;
-                }
-            }
-        }
-        result.successful = true;
-        result.reason = "Success";
-        return result;
     }
 
     bool armed = false;
@@ -185,13 +102,8 @@ private:
     rclcpp::Subscription<asv_interfaces::msg::StateObserver>::SharedPtr subscriber_state_guille_;
     rclcpp::Subscription<asv_interfaces::msg::StateObserver>::SharedPtr subscriber_state_liu_;
     rclcpp::Publisher<asv_interfaces::msg::StateObserver>::SharedPtr publisher_state_;
-    rclcpp::Subscription<geometry_msgs::msg::TwistStamped>::SharedPtr subscriber_vel_body;
 
-    OnSetParametersCallbackHandle::SharedPtr params_callback_handle_;
-
-    geometry_msgs::msg::Vector3 Velocity, FilVel, FilDis;
     bool guille_enable = false, liu_enable = false, zono_enable = false;
-    float alfa;
 
 };
 

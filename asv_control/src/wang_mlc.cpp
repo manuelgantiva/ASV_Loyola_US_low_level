@@ -146,6 +146,12 @@ private:
                 }else if(r_ref < -0.4){
                     r_ref = -0.4;
                 }
+
+                if(u_ref > 2.0){
+                    u_ref = 2.0;
+                }else if(u_ref < -2.0){
+                    u_ref = -2.0;
+                }
                 
                 msg.x = u_ref;
                 msg.y = r_ref;
@@ -242,6 +248,9 @@ private:
             case 9:
                 result = curva9(w);
                 break;
+            case 10:
+                result = curva10(w);
+                break;
             default:
                 result.xp =0.0;
                 result.yp = 0.0;
@@ -302,11 +311,11 @@ private:
                 }
             }
             if (param.get_name() == "path_d"){
-                if(param.as_int() >= 0 and param.as_int() <= 9){
+                if(param.as_int() >= 0 and param.as_int() <= 10){
                     RCLCPP_INFO(this->get_logger(), "changed param value");
                     path_d = param.as_int();
                 }else{
-                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-9");
+                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-10");
                     result.successful = false;
                     result.reason = "Value out of range";
                     return result;
