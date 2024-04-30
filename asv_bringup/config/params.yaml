@@ -54,8 +54,8 @@ control:
   wang_mlc:
     ros__parameters:
       Ts: 100.0         #ms
-      delta_SGLOS: 4.0
+      delta_SGLOS: 0.5
       k_u_tar: 2.0
-      taud: 15.0
+      taud: 7.0
       path_d: 0  
   
