@@ -41,10 +41,10 @@ control:
   ifac_llc:
     ros__parameters:
       Ts: 100.0         #ms
-      sm_gain_ku: 0.6
-      sm_gain_ki: 0.004
+      sm_gain_ku: 0.4
+      sm_gain_ki: 0.012
       sm_gain_kpsi: 0.075
-      sm_gain_kr: 1.6
+      sm_gain_kr: 0.5
       taud: 200
       Su_en: 1.0
       Sr_en: 1.0
@@ -58,5 +58,8 @@ control:
       delta_SGLOS: 0.5
       k_u_tar: 2.0
       taud: 7.0
-      path_d: 0  
+      path_d: 0 
+  ref_mlc:
+    ros__parameters:
+      Dis_ref: True     #Referencia por escalones o continua
   

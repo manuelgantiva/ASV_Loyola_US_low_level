@@ -11,6 +11,12 @@ class RefMlcNode : public rclcpp::Node
 public:
     RefMlcNode() : Node("ref_mlc") 
     {
+        this-> declare_parameter("Dis_ref", true);
+    
+        Dis_ref = this->get_parameter("Dis_ref").as_bool();
+
+        params_callback_handle_ = this->add_on_set_parameters_callback(std::bind(&RefMlcNode::param_callback, this, _1));
+
         subscriber_rc_in = this-> create_subscription<mavros_msgs::msg::RCIn>("/mavros/rc/in",1,
                 std::bind(&RefMlcNode::callbackRcIn, this, std::placeholders::_1));
         subscriber_mavros_state = this-> create_subscription<mavros_msgs::msg::State>("/mavros/state",1,
@@ -44,24 +50,27 @@ private:
             PWM = PWM + 50;
             ref_vel = ((PWM*0.002857142)-4.285714286);
         }
-                
-        if(ref_vel>1.0){
-            ref_vel = 1.0;
-        }else if (ref_vel<=-1.0)
-        {
-            ref_vel = -1.0;
-        }
 
-        if(ref_vel>=0.9){
+        if(Dis_ref){
+            if(ref_vel>=0.9){
             ref_vel = 1.0;
-        }else if(ref_vel>=0.7 && ref_vel<0.9){
-            ref_vel = 0.75;
-        }else if(ref_vel>=0.4 && ref_vel<0.7){
-            ref_vel = 0.5;
-        }else if(ref_vel>=0.1 && ref_vel<0.4){
-            ref_vel = 0.3;
-        }
-        
+            }else if(ref_vel>=0.7 && ref_vel<0.9){
+                ref_vel = 0.75;
+            }else if(ref_vel>=0.4 && ref_vel<0.7){
+                ref_vel = 0.5;
+            }else if(ref_vel>=0.1 && ref_vel<0.4){
+                ref_vel = 0.3;
+            }else{
+                ref_vel = 0.0;
+            }
+        }else{
+            if(ref_vel>1.0){
+                ref_vel = 1.0;
+            }else if (ref_vel<=-1.0)
+            {
+                ref_vel = -1.0;
+            }
+        } 
         return ref_vel;
     }
 
@@ -73,10 +82,25 @@ private:
         armed= msg->armed;
     }
 
-    bool armed = false;
+    rcl_interfaces::msg::SetParametersResult param_callback(const std::vector<rclcpp::Parameter> &params){
+        rcl_interfaces::msg::SetParametersResult result;
+        for (const auto &param: params){
+            if (param.get_name() == "Dis_ref"){
+                RCLCPP_INFO(this->get_logger(), "changed param value");
+                Dis_ref = param.as_bool();
+            }
+        }
+        result.successful = true;
+        result.reason = "Success";
+        return result;
+    }
+
+    bool armed = false, Dis_ref;
     rclcpp::Subscription<mavros_msgs::msg::RCIn>::SharedPtr subscriber_rc_in;
     rclcpp::Subscription<mavros_msgs::msg::State>::SharedPtr subscriber_mavros_state;
     rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr publisher_ref;
+
+    OnSetParametersCallbackHandle::SharedPtr params_callback_handle_;
 };
 
 int main(int argc, char **argv)

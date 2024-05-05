@@ -6,7 +6,7 @@
 
 #include <cmath>
 #include <thread>
-#include "curvas.cpp"
+#include "curvas_2.cpp"
 
 using namespace std;
 
@@ -216,10 +216,11 @@ private:
         Target result;
         switch(path_d) {
             case 0:
-                result.xp =-1*w;
+                /*result.xp =-1*w;
                 result.yp = 0;
                 result.dxp = -1;
-                result.dyp = 0;
+                result.dyp = 0;*/
+                result = curva0(w);
                 break;
             case 1:
                 result = curva1(w);
@@ -228,28 +229,28 @@ private:
                 result = curva2(w);
                 break;
             case 3:
-                result = curva3(w);
+                //result = curva3(w);
                 break;
             case 4:
-                result = curva4(w);
+                //result = curva4(w);
                 break;
             case 5:
-                result = curva5(w);
+                //result = curva5(w);
                 break;
             case 6:
-                result = curva6(w);
+                //result = curva6(w);
                 break;
             case 7:
-                result = curva7(w);
+                //result = curva7(w);
                 break;
             case 8:
-                result = curva8(w);
+                //result = curva8(w);
                 break;
             case 9:
-                result = curva9(w);
+                //result = curva9(w);
                 break;
             case 10:
-                result = curva10(w);
+                //result = curva10(w);
                 break;
             default:
                 result.xp =0.0;
@@ -311,11 +312,11 @@ private:
                 }
             }
             if (param.get_name() == "path_d"){
-                if(param.as_int() >= 0 and param.as_int() <= 10){
+                if(param.as_int() >= 0 and param.as_int() <= 2){
                     RCLCPP_INFO(this->get_logger(), "changed param value");
                     path_d = param.as_int();
                 }else{
-                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-10");
+                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-2");
                     result.successful = false;
                     result.reason = "Value out of range";
                     return result;
