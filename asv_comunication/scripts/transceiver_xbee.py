@@ -37,7 +37,7 @@ class TransceiverXbeeNode(Node):
         timenow = float(time.time())
 
         byte_array = bytearray()  # Create byte array
-
+        
         byte_array = struct.pack('!e e e e e e 1s',
                              msg.point.x, msg.point.y, msg.point.z,
                              msg.velocity.x, msg.velocity.y, msg.velocity.z,

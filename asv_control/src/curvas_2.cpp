@@ -23,7 +23,7 @@ void arco(float w, Target* px, float ax, float by, float r, bool sig) {
 // Straight line
 Target curva0(float w) {
     Target result;
-    if (w < 10.82959) {
+    if (w < 100.0) {
         // Trajectory 1: Straight line
         recta(w, &result, 0.0, -4.0, 2.49317, -0.18468);
     }   

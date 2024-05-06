@@ -59,7 +59,7 @@ def generate_launch_description():
         ]
     )
 
-    neighbor_description = ParameterValue(Command(['xacro ', urdf_path, ' id:=0', ' own:=false']), 
+    neighbor_description = ParameterValue(Command(['xacro ', urdf_path, ' id:=0', ' own:=false']),
                                             value_type=str)
 
     neighbor_robot_state_publisher_node = Node(
@@ -188,7 +188,7 @@ def generate_launch_description():
 
     ld.add_action(Mavros_launch)
     ld.add_action(own_robot_state_publisher_node)
-    # ld.add_action(neighbor_robot_state_publisher_node)
+    ld.add_action(neighbor_robot_state_publisher_node)
     ld.add_action(asv_tf_broadcast_node)
     ld.add_action(rc_handler_node)
     # ld.add_action(ref_llc_node)

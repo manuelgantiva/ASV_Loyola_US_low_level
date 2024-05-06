@@ -101,6 +101,7 @@ private:
             t.header.stamp = this->get_clock()->now();
             t.header.frame_id = "map_ned";
             t.child_frame_id = "ASV0";
+            //t.child_frame_id.append(msg->states[0].id);
 
             // asv only exists in 2D, thus we get x and y translation
             // coordinates from the message and set the z coordinate to 0
