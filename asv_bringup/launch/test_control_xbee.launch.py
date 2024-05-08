@@ -42,18 +42,37 @@ def generate_launch_description():
         'config',
         'params.yaml'
         )
-    
+        
     yf_pkg = get_package_share_directory("yf_description")
     urdf_path = os.path.join(yf_pkg, 'urdf', 'asv_loyola.urdf.xacro')
-    robot_description = ParameterValue(Command(['xacro ', urdf_path]), value_type=str)
+    own_description = ParameterValue(Command(['xacro ', urdf_path, ' id:=1', ' own:=true']), 
+                                            value_type=str)
 
-    robot_state_publisher_node = Node(
+    own_robot_state_publisher_node = Node(
         package="robot_state_publisher",
         executable="robot_state_publisher",
-        parameters=[{'robot_description': robot_description},
-                    {'publish_frequency': 10.0}]
+        name="own_robot_state_publisher",
+        parameters=[{'robot_description': own_description},
+                    {'publish_frequency': 10.0}],
+        remappings=[
+            ("/robot_description", "/own_description")
+        ]
     )
-    
+
+    neighbor_description = ParameterValue(Command(['xacro ', urdf_path, ' id:=0', ' own:=false']),
+                                            value_type=str)
+
+    neighbor_robot_state_publisher_node = Node(
+        package="robot_state_publisher",
+        executable="robot_state_publisher",
+        name="neighbor_robot_state_publisher",
+        parameters=[{'robot_description': neighbor_description},
+                    {'publish_frequency': 10.0}],
+        remappings=[
+            ("/robot_description", "/neighbor_description")
+        ]
+    )
+
     # mavros_node = Node(
     #     package="mavros",
     #     executable="mavros_node",
@@ -62,7 +81,7 @@ def generate_launch_description():
     #     ]
     # )
 
-    mavros_launch = IncludeLaunchDescription(
+    Mavros_launch = IncludeLaunchDescription(
         XMLLaunchDescriptionSource(
             os.path.join(get_package_share_directory('asv_bringup'),
                          'launch/apm.launch.xml')
@@ -73,26 +92,72 @@ def generate_launch_description():
         package= "asv_control",
         executable= "asv_tf2_broadcaster",
         namespace= 'control',
-        parameters = [config]
+        parameters = [config],
+        remappings=[
+            ("/control/pose_neighbor", "/control/pose_neighbor_1"),
+            ("/control/pose", "/control/pose_1")
+        ]
     )
 
-    listner_rc_node = Node (
+    rc_handler_node = Node (
         package= "asv_control",
-        executable= "listener_rc",
+        executable= "rc_handler",
         namespace= 'control',
         parameters = [config]
     )
 
-    change_mode_node = Node (
+    ref_llc_node = Node (
         package= "asv_control",
-        executable= "change_mode",
+        executable= "ref_llc",
+        namespace= 'control',
+        parameters = [config]
+    )
+
+    ref_mlc_node = Node (
+        package= "asv_control",
+        executable= "ref_mlc",
+        namespace= 'control',
+        parameters = [config]
+    )
+
+    apm_llc_node = Node (
+        package= "asv_control",
+        executable= "apm_llc",
+        namespace= 'control',
+        parameters = [config]
+    )
+
+    ifac_llc_node = Node (
+        package= "asv_control",
+        executable= "ifac_llc",
+        namespace= 'control',
+        parameters = [config]
+    )
+
+    wang_mlc_node = Node (
+        package= "asv_control",
+        executable= "wang_mlc",
+        namespace= 'control',
+        parameters = [config]
+    )
+
+    mux_llc_node = Node (
+        package= "asv_control",
+        executable= "mux_llc",
+        namespace= 'control',
+        parameters = [config]
+    )
+
+    mux_obs_node = Node (
+        package= "asv_control",
+        executable= "mux_obs",
         namespace= 'control',
         parameters = [config]
     )
 
     observer_guille = Node (
         package= "asv_control",
-        executable= "observer",
+        executable= "observer_guille",
         name= "observer_guille",
         namespace= 'control',
         parameters = [
@@ -106,9 +171,6 @@ def generate_launch_description():
         executable= "observer_liu",
         name= "observer_liu",
         namespace= 'control',
-        remappings=[
-            ("/control/state_observer", "/control/state_observe_liu")
-        ],
         parameters = [
             {'my_id': LaunchConfiguration('my_id')},
             config
@@ -128,16 +190,22 @@ def generate_launch_description():
         namespace= 'comunication'
     )
 
-    ld.add_action(mavros_launch)
-    ld.add_action(robot_state_publisher_node)
+    # ld.add_action(Mavros_launch)
+    ld.add_action(own_robot_state_publisher_node)
+    ld.add_action(neighbor_robot_state_publisher_node)
     ld.add_action(asv_tf_broadcast_node)
-    ld.add_action(listner_rc_node)
-    ld.add_action(change_mode_node)
-    ld.add_action(observer_guille)
-    ld.add_action(observer_liu)
-    ld.add_action(pwm_mapper_node)
-    ld.add_action(transceiver_xbee_node)
-    ld.add_action(record)
-
+    # ld.add_action(rc_handler_node)
+    # ld.add_action(ref_llc_node)
+    # ld.add_action(mux_llc_node)
+    # ld.add_action(mux_obs_node)
+    # ld.add_action(observer_guille)
+    # ld.add_action(observer_liu)
+    # ld.add_action(pwm_mapper_node)
+    # ld.add_action(apm_llc_node)
+    # ld.add_action(ifac_llc_node)
+    # ld.add_action(wang_mlc_node)
+    # ld.add_action(ref_mlc_node)
+    # ld.add_action(record)
+    # ld.add_action(transceiver_xbee_node)
 
     return ld

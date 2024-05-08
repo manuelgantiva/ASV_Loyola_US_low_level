@@ -235,7 +235,7 @@ private:
                 msg.point.y=Xp_hat(1,0);
                 msg.point.z=Xpsi_hat(0,0);
                 msg.velocity.x=Xp_hat(2,0);
-                msg.velocity.y=Xp_hat(3,0);
+                msg.velocity.y=-Xp_hat(3,0);
                 msg.velocity.z=Xpsi_hat(1,0);
                 msg.disturbances.x=Xp_hat(4,0);
                 msg.disturbances.y=Xp_hat(5,0);
