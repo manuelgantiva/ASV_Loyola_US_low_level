@@ -309,7 +309,7 @@ Target curva10(float w) {
     } else if (w >= 8.53208 && w < 9.13208) {
         // Trajectory 3: 1.2 meters straight line
         recta(w - 8.53208, &result, −22.71674, 2.02607, −1.02607, −1.71674);
-    } else if (w >= 9.13208 && w < 23.14159) {
+    } else if (w >= 9.13208 && w < 10.16416) {
         // Trajectory 4: 59.13 degree arc of circumference radius 2
         arco(w - 9.13208 + 2.10951, &result, −25.0, 2.0, 2.0, true);
     } else if (w >= 10.16416 && w < 10.66416) {
