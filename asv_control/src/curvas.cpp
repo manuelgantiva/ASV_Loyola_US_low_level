@@ -21,7 +21,7 @@ void arco(float w, Target* px, float ax, float by, float r, bool sig) {
 }
 
 // Semicircle of radius 6
-Target curva1(float w) {
+Target curva1(const float w) {
     Target result;
     if (w < 5.60258) {
         // Trajectory 1: Straight line
@@ -37,7 +37,7 @@ Target curva1(float w) {
 }
 
 // Semicircle of radius 5
-Target curva2(float w) {
+Target curva2(const float w) {
     Target result;
     if (w < 6.72309) {
         // Trajectory 1: Straight line
@@ -53,7 +53,7 @@ Target curva2(float w) {
 }
 
 // Semicircle of radius 4
-Target curva3(float w) {
+Target curva3(const float w) {
     Target result;
     if (w < 8.40387) {
         // Trajectory 1: Straight line
@@ -113,7 +113,7 @@ Target curva5(float w) {
 }
 
 // Quarter circle of radius 2
-Target curva6(float w) {
+Target curva6(const float w) {
     Target result;
     if (w < 11.88486) {
         // Trajectory 1: Straight line
@@ -136,7 +136,7 @@ Target curva6(float w) {
 }
 
 // Quarter circle of radius 3
-Target curva7(float w) {
+Target curva7(const float w) {
     Target result;
     if (w < 7.31057) {
         // Trajectory 1: Straight line
@@ -158,7 +158,7 @@ Target curva7(float w) {
 }
 
 // Quarter circle of radius 4
-Target curva8(float w) {
+Target curva8(const float w) {
     Target result;
     if (w < 4.69707) {
         // Trajectory 1: Straight line
@@ -180,7 +180,7 @@ Target curva8(float w) {
 }
 
 // Quarter circle of radius 5
-Target curva9(float w) {
+Target curva9(const float w) {
     Target result;
     if (w < 3.31059) {
         // Trajectory 1: Straight line
@@ -203,7 +203,7 @@ Target curva9(float w) {
 
 
 //Complete circuit with arcs of circumference of radius 4
-Target curva10(float w) {
+Target curva10(const float w) {
     Target result;
     if (w < 4.272) {
         // Trajectory 1: Straight line

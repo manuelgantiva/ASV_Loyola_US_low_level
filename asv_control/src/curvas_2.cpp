@@ -21,7 +21,7 @@ void arco(float w, Target* px, float ax, float by, float r, bool sig) {
 }
 
 // Straight line
-Target curva0(float w) {
+Target curva0(const float w) {
     Target result;
     if (w < 100.0) {
         // Trajectory 1: Straight line
@@ -31,7 +31,7 @@ Target curva0(float w) {
 }
 
 // Circuit of two straight lines with semicircles radius 2.5
-Target curva1(float w) {
+Target curva1(const float w) {
     Target result;
     if (w < 7.64199) {
         // Trajectory 1: Straight line
@@ -47,7 +47,7 @@ Target curva1(float w) {
 }
 
 // Straight line
-Target curva2(float w) {
+Target curva2(const float w) {
     Target result;
     if (w < 12.93626) {
         // Trajectory 1: Straight line

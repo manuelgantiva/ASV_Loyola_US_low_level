@@ -141,10 +141,10 @@ private:
                         
                 float r_ref = derivationFilter(psi_ref, memory_psi, a, b);
 
-                if(r_ref > 0.5){
-                    r_ref = 0.5;
-                }else if(r_ref < -0.5){
-                    r_ref = -0.5;
+                if(r_ref > 0.6){
+                    r_ref = 0.6;
+                }else if(r_ref < -0.6){
+                    r_ref = -0.6;
                 }
 
                 if(u_ref > 2.0){
