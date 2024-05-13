@@ -39,14 +39,6 @@ private:
             msg_p=*msg;
             publisher_state_ ->publish(msg_p);
         }
-        if(zono_enable){
-            auto msg_p = asv_interfaces::msg::StateObserver();
-            msg_p.header = msg->header;
-            msg_p.point = msg->point;
-            msg_p.velocity = Velocity;
-            msg_p.disturbances = msg->disturbances;
-            publisher_state_ ->publish(msg_p);
-        }
     }
 
     void callbackStatesLiu(const asv_interfaces::msg::StateObserver::SharedPtr msg)
@@ -58,6 +50,14 @@ private:
             msg_p.point = msg->point;
             msg_p.velocity = msg->velocity;
             msg_p.disturbances = msg->disturbances;*/
+            publisher_state_ ->publish(msg_p);
+        }
+        if(zono_enable){
+            auto msg_p = asv_interfaces::msg::StateObserver();
+            msg_p.header = msg->header;
+            msg_p.point = msg->point;
+            msg_p.velocity = Velocity;
+            msg_p.disturbances = msg->disturbances;
             publisher_state_ ->publish(msg_p);
         }
     }
