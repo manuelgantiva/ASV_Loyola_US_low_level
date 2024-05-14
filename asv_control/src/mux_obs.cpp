@@ -99,7 +99,7 @@ private:
         if (armed == true)
         {
             Velocity.x = msg->twist.linear.x;
-            Velocity.y = msg->twist.linear.y;
+            Velocity.y = -1*msg->twist.linear.y;
             Velocity.z = -1*msg->twist.angular.z;
         }
     }

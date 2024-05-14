@@ -26,12 +26,14 @@ public:
         this-> declare_parameter("k_u_tar", 2.0);
         this-> declare_parameter("taud", 15.0); // Taud = #*Ts Est es #
         this-> declare_parameter("path_d", 0); // path_d = #Path deseado #
+        this-> declare_parameter("flag", true); // path_d = #Path deseado #
     
         Ts = this->get_parameter("Ts").as_double()/1000.0;
         delta_SGLOS = this->get_parameter("delta_SGLOS").as_double();
         k_u_tar = this->get_parameter("k_u_tar").as_double();
         taud = this->get_parameter("taud").as_double();
         path_d  = this->get_parameter("path_d").as_int();
+        flag  = this->get_parameter("flag").as_bool();
 
         memory_psi.assign(4, 0.0);
 
@@ -114,10 +116,15 @@ private:
 
                 float k1_i = u_d_i / delta_SGLOS;
                 float u_ref = k1_i * std::sqrt(delta_SGLOS*delta_SGLOS + ye*ye);
-                float b_ref = atan2(v_hat_i, u_ref);
+                float b_ref = 0.0;
+                if(flag){
+                    b_ref = atan2(v_hat_i, u_ref);
+                }else{
+                    b_ref = -1*atan2(v_hat_i, u_ref);
+                }
                 float psi_ref = psip_i - b_ref - atan2(ye, delta_SGLOS);
                 float U_ref = std::sqrt(u_ref*u_ref + v_hat_i*v_hat_i);
-                float u_tar = k_u_tar*xe + U_ref*cos(psi_hat_i-psip_i-b_ref);
+                float u_tar = k_u_tar*xe + U_ref*cos(psi_hat_i-psip_i+b_ref);
                 float w_dot = u_tar / (std::sqrt(dxp_i*dxp_i + dyp_i*dyp_i));
 
                 w += Ts*w_dot;
@@ -328,13 +335,17 @@ private:
                     return result;
                 }
             }
+            if (param.get_name() == "flag"){
+                RCLCPP_INFO(this->get_logger(), "changed param value");
+                flag = param.as_bool();
+            }
         }
         result.successful = true;
         result.reason = "Success";
         return result;
     }
 
-    bool armed = false, armed_act=false;
+    bool armed = false, armed_act=false, flag;
     float u_hat, psi_hat, r_hat, v_hat, x_hat, y_hat, u_d, w=0.0, psi_ant;
     int count=0, laps=0;
     //------Params-------//
