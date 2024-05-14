@@ -61,7 +61,7 @@ control:
       k_u_tar: 2.0
       taud: 7.0
       path_d: 0 
-      flag: True
+      flag: False     #True signo igual False invertido
   ref_mlc:
     ros__parameters:
       Dis_ref: True     #Referencia por escalones o continua
