@@ -41,6 +41,12 @@ def generate_launch_description():
         ]
     )
 
+    config_1 = os.path.join(
+        get_package_share_directory('asv_bringup'),
+        'config',
+        'params_1.yaml'
+    )
+    
     config_3 = os.path.join(
         get_package_share_directory('asv_bringup'),
         'config',
@@ -122,6 +128,18 @@ def generate_launch_description():
         executable= "apm_llc",
         namespace= 'control'
     )
+    
+    ifac_llc_node1 = Node (
+        package= "asv_control",
+        executable= "ifac_llc",
+        namespace= 'control',
+        parameters = [config_1],
+        condition=IfCondition(
+            PythonExpression(
+                [my_id, ' == 1']
+            )
+        )
+    )
 
     ifac_llc_node3 = Node (
         package= "asv_control",
@@ -147,6 +165,18 @@ def generate_launch_description():
         )
     )
 
+    wang_mlc_node1 = Node (
+        package= "asv_control",
+        executable= "wang_mlc",
+        namespace= 'control',
+        parameters = [config_1],
+        condition=IfCondition(
+            PythonExpression(
+                [my_id, ' == 1']
+            )
+        )
+    )
+    
     wang_mlc_node3 = Node (
         package= "asv_control",
         executable= "wang_mlc",
@@ -182,6 +212,22 @@ def generate_launch_description():
         executable= "mux_obs",
         namespace= 'control'
     )
+    
+    observer_guille1 = Node (
+        package= "asv_control",
+        executable= "observer_guille",
+        name= "observer_guille",
+        namespace= 'control',
+        parameters = [
+            {'my_id': LaunchConfiguration('my_id')},
+            config_1
+        ],
+        condition=IfCondition(
+            PythonExpression(
+                [my_id, ' == 1']
+            )
+        )
+    )
 
     observer_guille3 = Node (
         package= "asv_control",
@@ -215,6 +261,22 @@ def generate_launch_description():
         )
     )
 
+    observer_liu1 = Node (
+        package= "asv_control",
+        executable= "observer_liu",
+        name= "observer_liu",
+        namespace= 'control',
+        parameters = [
+            {'my_id': LaunchConfiguration('my_id')},
+            config_1
+        ],
+        condition=IfCondition(
+            PythonExpression(
+                [my_id, ' == 1']
+            )
+        )
+    )
+    
     observer_liu3 = Node (
         package= "asv_control",
         executable= "observer_liu",
@@ -271,12 +333,16 @@ def generate_launch_description():
     ld.add_action(pwm_mapper_node)
     ld.add_action(apm_llc_node)
     # ASV_nodes
+    ld.add_action(observer_guille1)
     ld.add_action(observer_guille3)
     ld.add_action(observer_guille4)
+    ld.add_action(observer_liu1)
     ld.add_action(observer_liu3)
     ld.add_action(observer_liu4)
+    ld.add_action(ifac_llc_node1)
     ld.add_action(ifac_llc_node3)
     ld.add_action(ifac_llc_node4)
+    ld.add_action(wang_mlc_node1)
     ld.add_action(wang_mlc_node3)
     ld.add_action(wang_mlc_node4)
     ld.add_action(record)

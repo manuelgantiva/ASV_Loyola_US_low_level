@@ -19,13 +19,7 @@ using std::placeholders::_1;
 
 // Declaración de contantes
 const int PWMMAX = 1900;
-const int PWMMIN = 1900;
-
-const float IGu_MAX = 0.0381065;
-const float IGu_MIN = 0.0;
-
-const float IGr_MAX = 0.0507984;
-const float IGr_MIN = -0.0507984;
+const int PWMMIN = 1100;
 
 class IfacLlcNode : public rclcpp::Node
 {
@@ -43,6 +37,9 @@ public:
         this-> declare_parameter("Su_en", 1.0);
         this-> declare_parameter("Sr_en", 1.0);
 
+        this-> declare_parameter("IGr_max", 0.0507984);
+        this-> declare_parameter("IGu_max", 0.0381065);
+
         this-> declare_parameter("Xu6", -0.0166263484863104);
         this-> declare_parameter("Xu7", 0.0592216770505099);
         this-> declare_parameter("Xr11", 0.0127391511137106);
@@ -57,6 +54,9 @@ public:
         taud = this->get_parameter("taud").as_int();
         Su_en = this->get_parameter("Su_en").as_double();
         Sr_en = this->get_parameter("Sr_en").as_double();
+
+        IGr_max = this->get_parameter("IGr_max").as_double();
+        IGu_max = this->get_parameter("IGu_max").as_double();
 
         Xu6 = this->get_parameter("Xu6").as_double();
         Xu7 = this->get_parameter("Xu7").as_double();
@@ -159,16 +159,16 @@ private:
                 msg.t_left=1500;
                 msg.t_righ=1500;  
             }else{
-                if(IG_u<IGu_MIN){
-                    IG_u=IGu_MIN;
-                }else if (IG_u > IGu_MAX) {
-                    IG_u=IGu_MAX;
+                if(IG_u<0.0){
+                    IG_u=0.0;
+                }else if (IG_u > IGu_max) {
+                    IG_u=IGu_max;
                 }
 
-                if(IG_r<IGr_MIN){
-                    IG_r=IGr_MIN;
-                }else if (IG_r > IGr_MAX) {
-                    IG_r=IGr_MAX;
+                if(IG_r<-1*IGr_max){
+                    IG_r=-1*IGr_max;
+                }else if (IG_r > IGr_max) {
+                    IG_r=IGr_max;
                 }
 
                 double t0 = -4 * Xr11 * Xr11;
@@ -413,6 +413,7 @@ private:
     float sm_gain_ki; /*Ganancia del  controlador Sliding Modes (surge constant integrative)*/
     float sm_gain_kpsi; /*Ganancia 1 del controlador Sliding Modes (yaw)*/
     float sm_gain_kr; /*Ganancia 2 del controlador Sliding Modes (yaw)*/
+    float IGr_max, IGu_max; /*Valoreas maximos de Input Gain*/
     
     float taud; /*Constante tau del filtro derivativo*/
     float a ,b; /*Constantes del filtro derivativo*/
