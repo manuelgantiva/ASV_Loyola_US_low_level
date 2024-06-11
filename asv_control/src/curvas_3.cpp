@@ -114,8 +114,8 @@ Target curva3(float w) {
 // Closed semicircle radius 2, straight line 20
 Target curva4(float w) {
     Target result;
-    while(w >= 36.28318){
-        w = w - 36.28318;
+    while(w >= 26.28318){
+        w = w - 26.28318;
     }
     if (w < 10.0) {
         // Trajectory 1: 20 meters straight line
@@ -212,7 +212,7 @@ Target curva7(float w) {
     }
     if (w < 5.0) {
         // Trajectory 1: 20 meters straight line
-        recta(w, &result, 0.0, -6.0, 0.0, -4.0);
+        recta(w, &result, 0.0, 6.0, 0.0, -4.0);
     } else if (w >= 5.0 && w < 6.5708) {
         // Trajectory 2: 90 degree arc of circumference radius 4
         arco(w - 5.0 + 1.57079, &result, -4.0, -14.0, 4.0, true);
