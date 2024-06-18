@@ -62,6 +62,37 @@ public:
         Xu7 = this->get_parameter("Xu7").as_double();
         Xr11 = this->get_parameter("Xr11").as_double();
         Xr13 = this->get_parameter("Xr13").as_double();
+
+        mf0 = 0.0013545;
+        mf1 = 6.0977;
+        mf2 = 0.0;
+        mf3 = -2.769;
+        mf4 = 0.0;
+        mf5 = -1.0978;
+        mr0 = -0.0059858;
+        mr1 = 6.1789;
+        mr2 = 0.20095;
+        mr3 = -5.1266;
+        mr4 = 1.048;
+        mr5 = -2.5286;
+        df0 = 0.0;
+        df1 = 0.0;
+        df2 = 6.3681;
+        df3 = 0.0;
+        df4 = 8.2298;
+        df5 = 0.0;
+        dr0 = 0.030548;
+        dr1 = -2.8142;
+        dr2 = 5.3685;
+        dr3 = 27.237;
+        dr4 = 4.2689;
+        dr5 = 13.881;
+
+        IGumax_ff = 0.17794;
+        IGumax_rf = 0.22898,
+        IGumin_rf = -0.07331;
+        IGrmax_ff = 0.14128;
+        IGrmax_rf = 0.22898;
         
         memory_u.assign(4, 0.0);
         memory_r.assign(4, 0.0);
@@ -155,75 +186,83 @@ private:
             float sr = Sr_en*Ts*sig_r_i;
             float IG_r = msg_Igr.z-msg_Igr.x-msg_Igr.y-sr;
 
-            if(IG_u==0 && IG_r==0){
-                msg.t_left=1500;
-                msg.t_righ=1500;  
+            // New Code
+            float m, d;
+
+            if(IG_u>IGumax_ff){
+                IG_u=IGumax_ff;
+            }
+
+            if(IG_u<IGumin_rf){
+                IG_u=IGumin_rf;
+            }
+
+            if(IG_r>IGrmax_rf){
+                IG_r=IGrmax_rf;
+            }
+
+            if(IG_r<-IGrmax_rf){
+                IG_r=-IGrmax_rf;
+            }
+            
+            if(IG_u>IGumax_rf){
+                // Zona Roja
+                m = mf0+mf1*IG_u+mf2*IG_r+mf3*IG_u*IG_u+mf4*IG_u*IG_r+mf5*IG_r*IG_r;
+                d = df0+df1*IG_u+df2*IG_r+df3*IG_u*IG_u+df4*IG_u*IG_r+df5*IG_r*IG_r;
+            }else if(IG_r>IGrmax_ff){
+                // Zona Azul
+                m = mr0+mr1*IG_u+mr2*IG_r+mr3*IG_u*IG_u+mr4*IG_u*IG_r+mr5*IG_r*IG_r;
+                d = dr0+dr1*IG_u+dr2*IG_r+dr3*IG_u*IG_u+dr4*IG_u*IG_r+dr5*IG_r*IG_r;
+            }else if(IG_r<-IGrmax_ff){
+                // Zona Verde
+                m = mr0+mr1*IG_u-mr2*IG_r+mr3*IG_u*IG_u-mr4*IG_u*IG_r+mr5*IG_r*IG_r;
+                d = dr0-dr1*IG_u+dr2*IG_r-dr3*IG_u*IG_u+dr4*IG_u*IG_r-dr5*IG_r*IG_r;
             }else{
-                if(IG_u<0.0){
-                    IG_u=0.0;
-                }else if (IG_u > IGu_max) {
-                    IG_u=IGu_max;
-                }
-
-                if(IG_r<-1*IGr_max){
-                    IG_r=-1*IGr_max;
-                }else if (IG_r > IGr_max) {
-                    IG_r=IGr_max;
-                }
-
-                double t0 = -4 * Xr11 * Xr11;
-                double t1 = -(4 * Xr11 * Xr11 * Xu7 / Xu6) - (4 * Xr11 * Xr13);
-                double t2 = (4 * Xr11 * Xr11 * IG_u / Xu6) - (4 * Xr11 * Xr13 * Xu7 / Xu6) - (Xr13 * Xr13);
-                double t3 = (4 * Xr11 * Xr13 * IG_u / Xu6) - (Xr13 * Xr13 * Xu7 / Xu6);
-                double t4 = (Xr13 * Xr13 * IG_u / Xu6) - (IG_r * IG_r);
-
-
-                vector<double> yr = solveY(t0, t1, t2, t3, t4);
-                vector<double> res;
-
-                for (double yi : yr) {
-                    if (yi >= 0 && yi <= 1.13) {
-                        res.push_back(yi);
+                // Zona Roja
+                m = mf0+mf1*IG_u+mf2*IG_r+mf3*IG_u*IG_u+mf4*IG_u*IG_r+mf5*IG_r*IG_r;
+                d = df0+df1*IG_u+df2*IG_r+df3*IG_u*IG_u+df4*IG_u*IG_r+df5*IG_r*IG_r;
+                if((m>=0.5*d) || (m>=-0.5*d) || (m<=-0.5*d+1) || (m<=0.5*d+1)){
+                    if(IG_r>=0){
+                        //Zona Azul
+                        m = mr0+mr1*IG_u+mr2*IG_r+mr3*IG_u*IG_u+mr4*IG_u*IG_r+mr5*IG_r*IG_r;
+                        d = dr0+dr1*IG_u+dr2*IG_r+dr3*IG_u*IG_u+dr4*IG_u*IG_r+dr5*IG_r*IG_r;
+                    }else{
+                        //Zona Verde
+                        m = mr0+mr1*IG_u-mr2*IG_r+mr3*IG_u*IG_u-mr4*IG_u*IG_r+mr5*IG_r*IG_r;
+                        d = dr0-dr1*IG_u+dr2*IG_r-dr3*IG_u*IG_u+dr4*IG_u*IG_r-dr5*IG_r*IG_r;
                     }
                 }
-
-                double xf, yf;
-                for (double yi : res) {
-                    double xi = solveX(yi, IG_r, Xr11, Xr13);
-                    xf = xi;
-                    yf = yi;
-                }
-
-                double L, R;
-                L = ((2 * yf + xf) / 2);
-                if (L > 0) {
-                    L = L + 0.0775;
-                } else {
-                    L = L - 0.0925;
-                }
-
-                R = ((2 * yf - xf) / 2);
-                if (R > 0) {
-                    R = R + 0.0775;
-                } else {
-                    R = R - 0.0925;
-                }
-
-                // Publish pwms
-                msg.t_left=400 * L + 1500;
-                msg.t_righ=400 * R + 1500;
-                if(msg.t_left<1500){
-                    msg.t_left=1500;
-                }else if (msg.t_left > 1900) {
-                    msg.t_left=1900;
-                }
-                if(msg.t_righ<1500){
-                    msg.t_righ=1500;
-                }else if (msg.t_righ > 1900) {
-                    msg.t_righ=1900;
-                }
-                
             }
+
+            double L, R;
+            L = ((2 * m + d) / 2);
+            if (L > 0) {
+                L = L + 0.0775;
+            } else {
+                L = L - 0.0925;
+            }
+
+            R = ((2 * m - d) / 2);
+            if (R > 0) {
+                R = R + 0.0775;
+            } else {
+                R = R - 0.0925;
+            }
+
+            // Publish pwms
+            msg.t_left=400 * L + 1500;
+            msg.t_righ=400 * R + 1500;
+            if(msg.t_left<1500){
+                msg.t_left=1500;
+            }else if (msg.t_left > 1900) {
+                msg.t_left=1900;
+            }
+            if(msg.t_righ<1500){
+                msg.t_righ=1500;
+            }else if (msg.t_righ > 1900) {
+                msg.t_righ=1900;
+            }
+
             if(count < 5){
                 msg.t_left= 1500;
                 msg.t_righ= 1500; 
@@ -420,6 +459,13 @@ private:
     float Su_en, Sr_en; /*Enable IGr y Sigmas surge y yaw*/
 
     float Xu6, Xu7, Xr11 , Xr13;  
+
+    float mf0, mf1, mf2, mf3, mf4, mf5;
+    float mr0, mr1, mr2, mr3, mr4, mr5;
+    float df0, df1, df2, df3, df4, df5;
+    float dr0, dr1, dr2, dr3, dr4, dr5;
+    float IGumax_ff, IGumax_rf, IGumin_rf;
+    float IGrmax_ff, IGrmax_rf;
 
     std::vector<float> memory_u; // Memoria para mantener los valores anteriores
     std::vector<float> memory_r; // Memoria para mantener los valores anteriores

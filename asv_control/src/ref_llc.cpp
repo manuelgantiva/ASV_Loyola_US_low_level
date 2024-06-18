@@ -98,6 +98,10 @@ private:
         {
             ref_vel = -0.4;
         }
+
+        // Cuantizar ref_vel a pasos de 0.05
+        ref_vel = round(ref_vel / 0.08) * 0.08;
+
         return ref_vel;
     }
 
