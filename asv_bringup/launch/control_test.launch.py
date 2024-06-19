@@ -164,6 +164,42 @@ def generate_launch_description():
             )
         )
     )
+    
+    mpc_llc_node1 = Node (
+        package= "asv_control",
+        executable= "mpc_llc",
+        namespace= 'control',
+        parameters = [config_1],
+        condition=IfCondition(
+            PythonExpression(
+                [my_id, ' == 1']
+            )
+        )
+    )
+    
+    mpc_llc_node3 = Node (
+        package= "asv_control",
+        executable= "mpc_llc",
+        namespace= 'control',
+        parameters = [config_3],
+        condition=IfCondition(
+            PythonExpression(
+                [my_id, ' == 3']
+            )
+        )
+    )
+    
+    mpc_llc_node4 = Node (
+        package= "asv_control",
+        executable= "mpc_llc",
+        namespace= 'control',
+        parameters = [config_4],
+        condition=IfCondition(
+            PythonExpression(
+                [my_id, ' == 4']
+            )
+        )
+    )
 
     wang_mlc_node1 = Node (
         package= "asv_control",
@@ -336,12 +372,15 @@ def generate_launch_description():
     ld.add_action(observer_guille1)
     ld.add_action(observer_guille3)
     ld.add_action(observer_guille4)
-    ld.add_action(observer_liu1)
-    ld.add_action(observer_liu3)
-    ld.add_action(observer_liu4)
+    # ld.add_action(observer_liu1)
+    # ld.add_action(observer_liu3)
+    # ld.add_action(observer_liu4)
     ld.add_action(ifac_llc_node1)
     ld.add_action(ifac_llc_node3)
     ld.add_action(ifac_llc_node4)
+    ld.add_action(mpc_llc_node1)
+    ld.add_action(mpc_llc_node3)
+    ld.add_action(mpc_llc_node4)
     # ld.add_action(wang_mlc_node1)
     # ld.add_action(wang_mlc_node3)
     # ld.add_action(wang_mlc_node4)

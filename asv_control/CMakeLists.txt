@@ -23,6 +23,11 @@ find_package(tf2_ros REQUIRED)        # interface to use navio2's sensors
 
 include_directories(SYSTEM ${EIGEN3_INCLUDE_DIRS})
 
+# Incluir los directorios de encabezados de gurubi_c++
+
+set(GUROBI_ROOT /opt/gurobi1102/linux64)
+include_directories(${GUROBI_ROOT}/include)
+link_directories(${GUROBI_ROOT}/lib)
 
 add_executable(testnode src/testnode.cpp)
 ament_target_dependencies(testnode rclcpp std_msgs)
@@ -66,11 +71,15 @@ ament_target_dependencies(apm_llc rclcpp geometry_msgs mavros_msgs asv_interface
 add_executable(ifac_llc src/ifac_llc.cpp)
 ament_target_dependencies(ifac_llc rclcpp geometry_msgs mavros_msgs asv_interfaces)
 
-# add_executable(mpc_llc src/mpc_llc.cpp)
-# ament_target_dependencies(mpc_llc rclcpp geometry_msgs mavros_msgs asv_interfaces)
+add_executable(mpc_llc src/mpc_llc.cpp)
+ament_target_dependencies(mpc_llc rclcpp geometry_msgs mavros_msgs asv_interfaces std_msgs)
+# Linkear el ejecutable con las librerías de Gurobi
+target_link_libraries(mpc_llc gurobi_c++ gurobi110)
 
 add_executable(wang_mlc src/wang_mlc.cpp)
 ament_target_dependencies(wang_mlc rclcpp geometry_msgs mavros_msgs asv_interfaces std_msgs)
+
+
 
 # Install Targets
 install(TARGETS
@@ -89,7 +98,7 @@ install(TARGETS
   apm_llc
   ifac_llc
   wang_mlc
-  # mpc_llc
+  mpc_llc
 DESTINATION lib/${PROJECT_NAME})
 
 # Install Scripts python

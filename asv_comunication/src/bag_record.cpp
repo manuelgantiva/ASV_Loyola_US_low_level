@@ -56,6 +56,8 @@ public:
                 ,1, std::bind(&BagRecordNode::callbackCmdVel, this, std::placeholders::_1));
         subscriber_ifac_pwm = this-> create_subscription<asv_interfaces::msg::PwmValues>("/control/pwm_value_ifac",10,
                 std::bind(&BagRecordNode::callbackIfacPwm, this, std::placeholders::_1));
+        subscriber_mpc_pwm = this-> create_subscription<asv_interfaces::msg::PwmValues>("/control/pwm_value_mpc",10,
+                std::bind(&BagRecordNode::callbackMpcPwm, this, std::placeholders::_1));
         subscriber_pwm = this-> create_subscription<asv_interfaces::msg::PwmValues>("/control/pwm_values",10,
                 std::bind(&BagRecordNode::callbackPwms, this, std::placeholders::_1));
         subscriber_state_guille= this-> create_subscription<asv_interfaces::msg::StateObserver>("/control/state_observer_guille",
@@ -245,6 +247,14 @@ private:
         }
     }
 
+    void callbackMpcPwm(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
+    {
+        if(armed==true){
+            rclcpp::Time time_stamp = this->now();
+            writer_->write(msg, "/control/pwm_value_mpc", "asv_interfaces/msg/PwmValues", time_stamp);
+        }
+    }
+
     void callbackPwms(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
     {
         if(armed==true){
@@ -338,6 +348,7 @@ private:
     rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr subscriber_reference;
     rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr subscriber_cmd_vel;
     rclcpp::Subscription<asv_interfaces::msg::PwmValues>::SharedPtr subscriber_ifac_pwm;
+    rclcpp::Subscription<asv_interfaces::msg::PwmValues>::SharedPtr subscriber_mpc_pwm;
     rclcpp::Subscription<asv_interfaces::msg::PwmValues>::SharedPtr subscriber_pwm;
     rclcpp::Subscription<asv_interfaces::msg::StateObserver>::SharedPtr subscriber_states;
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr subscriber_pose_liu;
