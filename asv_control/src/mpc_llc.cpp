@@ -152,7 +152,7 @@ private:
         else {
             if (count > 5) {
                 //auto start = std::chrono::high_resolution_clock::now();
-                RCLCPP_INFO(this->get_logger(), "Ejecutando");
+                //RCLCPP_INFO(this->get_logger(), "Ejecutando");
                 auto msg = asv_interfaces::msg::PwmValues();
 
                 float u_hat_i;
@@ -355,6 +355,9 @@ private:
                 }
                 catch (...) {
                     RCLCPP_ERROR(this->get_logger(), "Exception during optimization");
+                    msg.t_left = 1500;
+                    msg.t_righ = 1500;
+                    publisher_pwm->publish(msg);
                 }
                 // -----------------------------------------------------------------------------------------// 
             }
@@ -570,7 +573,7 @@ private:
         return result;
     }
     /******/
-    bool armed = true;  // PILAS DEBE SER FALSE PARA IMPLEMENTAR
+    bool armed = false;  // PILAS DEBE SER FALSE PARA IMPLEMENTAR
     /******/
     float sig_u, sig_r, u_hat, r_hat, psi_hat;
     int count = 0;

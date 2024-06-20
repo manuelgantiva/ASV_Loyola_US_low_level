@@ -16,7 +16,6 @@
 #include <Eigen/Dense>
 
 using namespace Eigen;
-#define PI 3.141592
 
 using std::placeholders::_1;
 
@@ -197,10 +196,16 @@ private:
                 float delta_mean_i_2 = delta_mean_i*delta_mean_i;
                 float delta_diff_i_2 = delta_diff_i*delta_diff_i;
                 float sum_1 = (delta_mean_i_2+(delta_diff_i_2/4.0));
+                float sig;
+                if(delta_diff_i>=0){
+                    sig=1;
+                }else{
+                    sig=-1;
+                }
                 
                 IGp(2,0) = (Xu6*sum_1)+(Xu7*delta_mean_i);
-                IGp(3,0) = (Xv10*sum_1*(1-beta_i))+(Xv11*delta_mean_i*delta_diff_i)+(Xv12*delta_mean_i*(1-beta_i))+(Xv13*delta_diff_i/2.0);
-                IGpsi(1,0)=(Xr10*sum_1*(1-beta_i))+(Xr11*delta_mean_i*delta_diff_i)+(Xr12*delta_mean_i*(1-beta_i))+(Xr13*delta_diff_i/2.0);
+                IGp(3,0) = (Xv10*sum_1*(1-beta_i)*sig)+(Xv11*delta_mean_i*delta_diff_i)+(Xv12*delta_mean_i*(1-beta_i)*sig)+(Xv13*delta_diff_i/2.0);
+                IGpsi(1,0)=(Xr10*sum_1*(1-beta_i)*sig)+(Xr11*delta_mean_i*delta_diff_i)+(Xr12*delta_mean_i*(1-beta_i)*sig)+(Xr13*delta_diff_i/2.0);
 
                 Lp=Tp.inverse()*PpWp*R2T; 
 
@@ -297,14 +302,14 @@ private:
                     }
                 }else{
                     psi_act = psi_rad;
-                    if((psi_act - psi_ant) > PI){
+                    if((psi_act - psi_ant) > M_PI){
                         laps = laps - 1;
-                    }else if((psi_act - psi_ant) < -PI){
+                    }else if((psi_act - psi_ant) < -M_PI){
                         laps = laps + 1;
                     }
                     {
                         std::lock_guard<std::mutex> lock(mutex_);
-                        psi = psi_act + 2*PI*laps;
+                        psi = psi_act + 2*M_PI*laps;
                         Yp << x,
                             y;
                     }

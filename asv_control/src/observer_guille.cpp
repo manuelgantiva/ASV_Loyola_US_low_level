@@ -196,10 +196,16 @@ private:
                 float delta_mean_i_2 = delta_mean_i*delta_mean_i;
                 float delta_diff_i_2 = delta_diff_i*delta_diff_i;
                 float sum_1 = (delta_mean_i_2+(delta_diff_i_2/4.0));
+                float sig;
+                if(delta_diff_i>=0){
+                    sig=1;
+                }else{
+                    sig=-1;
+                }
                 
                 IGp(2,0) = (Xu6*sum_1)+(Xu7*delta_mean_i);
-                IGp(3,0) = (Xv10*sum_1*(1-beta_i))+(Xv11*delta_mean_i*delta_diff_i)+(Xv12*delta_mean_i*(1-beta_i))+(Xv13*delta_diff_i/2.0);
-                IGpsi(1,0)=(Xr10*sum_1*(1-beta_i))+(Xr11*delta_mean_i*delta_diff_i)+(Xr12*delta_mean_i*(1-beta_i))+(Xr13*delta_diff_i/2.0);
+                IGp(3,0) = (Xv10*sum_1*(1-beta_i)*sig)+(Xv11*delta_mean_i*delta_diff_i)+(Xv12*delta_mean_i*(1-beta_i)*sig)+(Xv13*delta_diff_i/2.0);
+                IGpsi(1,0)=(Xr10*sum_1*(1-beta_i)*sig)+(Xr11*delta_mean_i*delta_diff_i)+(Xr12*delta_mean_i*(1-beta_i)*sig)+(Xr13*delta_diff_i/2.0);
 
                 Lp=Tp.inverse()*PpWp*R2T; 
 
@@ -285,7 +291,6 @@ private:
                 // 1) Xp = Xo + R(psi)*OP
                 x = x + cos(psi_rad)*dx - sin(psi_rad)*dy;
                 y = y + sin(psi_rad)*dx + cos(psi_rad)*dy;
-
                 if(armed_act==false){
                     psi_ant = psi_rad;
                     laps = 0;
