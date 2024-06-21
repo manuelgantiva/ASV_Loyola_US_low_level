@@ -408,16 +408,24 @@ private:
         model.addConstr(Delta_diff == Delta_R - Delta_L, "Delta_diff_constr");
         model.addQConstr(Delta_diff_square == Delta_diff * Delta_diff, "Delta_diff_square_constr");
 
-    
+        // Crear variable Alpha que varía entre -1 y 1
+        GRBVar Alpha = model.addVar(-1.0, 1.0, 0.0, GRB_CONTINUOUS, "Alpha");       
+        GRBVar Alpha_aux = model.addVar(0.0, 1.0, 0.0, GRB_BINARY, "Alpha_aux");// Crear la variable binaria auxiliar Alpha_aux
+        model.addConstr(Alpha == 2 * Alpha_aux - 1, "Definir_Alpha"); // Definir Alpha en términos de Alpha_aux     
+        model.addGenConstrIndicator(Alpha_aux, 1, Delta_diff, GRB_GREATER_EQUAL, 0);// Si Delta_diff >= 0 Alpha_aux = 1 (Alpha = 1)
+        model.addGenConstrIndicator(Alpha_aux, 0, Delta_diff, GRB_LESS_EQUAL, -1e-6); // Si Delta_diff < 0 Alpha_aux = 0 (Alpha = -1)
+        GRBVar alfaxbeta = model.addVar(-GRB_INFINITY, GRB_INFINITY, 0.0, GRB_CONTINUOUS, "Alfa_beta");
+        model.addQConstr(alfaxbeta == (1-Beta) * Alpha , "Alfa_beta_constr");
+
         // Aplicación de las ecuaciones del modelo para calcular los siguientes estados
         x_next[0] = Psi + Ts * r_var;
 
         x_next[1] = u_var + Ts * ( Parameters_.Xu6 * (Delta_mean_square + Delta_diff_square/4) +
                                 Parameters_.Xu7 * Delta_mean + sigma_u_i);
     
-        x_next[2] = r_var + Ts * ( Parameters_.Xr10 * (1-Beta) * (Delta_mean_square + Delta_diff_square/4) +
-                                Parameters_.Xr11 * (Delta_mean * Delta_diff) +
-                                Parameters_.Xr12 * (1-Beta) * Delta_mean +
+        x_next[2] = r_var + Ts * ( Parameters_.Xr10 * alfaxbeta * (Delta_mean_square + Delta_diff_square/4) +
+                                Parameters_.Xr11 * Delta_mean * Delta_diff +
+                                Parameters_.Xr12 * alfaxbeta * Delta_mean +
                                 Parameters_.Xr13 * Delta_diff/2 + sigma_r_i);
     }
 

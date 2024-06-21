@@ -25,7 +25,7 @@ include_directories(SYSTEM ${EIGEN3_INCLUDE_DIRS})
 
 # Incluir los directorios de encabezados de gurubi_c++
 
-set(GUROBI_ROOT /opt/gurobi1102/linux64)
+set(GUROBI_ROOT /opt/gurobi/linux)
 include_directories(${GUROBI_ROOT}/include)
 link_directories(${GUROBI_ROOT}/lib)
 

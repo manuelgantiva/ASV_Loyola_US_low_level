@@ -40,6 +40,8 @@ public:
                 std::bind(&BagRecordNode::callbackMavrosState, this, std::placeholders::_1));
         subscriber_imu = this-> create_subscription<sensor_msgs::msg::Imu>("/mavros/imu/data",rclcpp::SensorDataQoS(),
                 std::bind(&BagRecordNode::callbackImuData, this, std::placeholders::_1));
+        subscriber_imu_raw = this-> create_subscription<sensor_msgs::msg::Imu>("/mavros/imu/data_raw",rclcpp::SensorDataQoS(),
+                std::bind(&BagRecordNode::callbackImuDataRaw, this, std::placeholders::_1));
         subscriber_gps_global = this-> create_subscription<sensor_msgs::msg::NavSatFix>("/mavros/global_position/global",
                 rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackGpsGlobalData, this, std::placeholders::_1));
         subscriber_gps_local= this-> create_subscription<geometry_msgs::msg::PoseStamped>("/mavros/local_position/pose",
@@ -271,6 +273,14 @@ private:
         }
     }
 
+    void callbackImuDataRaw(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
+    {
+        if(armed==true){
+            rclcpp::Time time_stamp = this->now();
+            writer_->write(msg, "/mavros/imu/data_raw", "sensor_msgs/msg/Imu", time_stamp);
+        }
+    }
+
     void callbackMavrosState(const mavros_msgs::msg::State::SharedPtr msg)
     {
         if(armed != msg->armed){
@@ -340,6 +350,7 @@ private:
     std::unique_ptr<rosbag2_cpp::Writer> writer_;
 
     rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr subscriber_imu;
+    rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr subscriber_imu_raw;
     rclcpp::Subscription<sensor_msgs::msg::NavSatFix>::SharedPtr subscriber_gps_global;
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr subscriber_gps_local;
     rclcpp::Subscription<mavros_msgs::msg::RCOut>::SharedPtr subscriber_rcout;
