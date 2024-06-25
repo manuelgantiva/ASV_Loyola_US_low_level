@@ -50,8 +50,8 @@ control:
       taud: 200
       Su_en: 1.0
       Sr_en: 1.0
-      IGr_max: 0.0235 
-      IGu_max: 0.1770
+      IGr_max: 0.14128
+      IGu_max: 0.1779
       Xu6: 0.015655833255439
       Xu7:  0.162285711090086
       Xr11: -0.029304212206678
@@ -76,7 +76,7 @@ control:
       Ts: 100.0         #ms
       delta_SGLOS: 1.0
       k_u_tar: 2.0
-      taud: 7.0
+      taud: 5.0
       path_d: 0 
       flag: False     #True signo igual False invertido
   ref_mlc:
