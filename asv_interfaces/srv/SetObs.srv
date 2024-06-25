@@ -1,0 +1,12 @@
+# set ESO
+# this is a service used to set the the state observer
+# If you want to embed it in another message.
+
+# basic ESO_MODE
+uint8 ESO_GUILLE	= 1
+uint8 ESO_LIU	    = 2
+uint8 ESO_ZONO		= 3
+
+uint8 eso_mode		# filled by ESO_MODE enum value
+---
+bool success		# Mode correctly and SET_ESO are sent

@@ -28,13 +28,16 @@ public:
         subscriber_xbee = this-> create_subscription<asv_interfaces::msg::XbeeObserver>(
             "/comunication/xbee_observer",1, 
             std::bind(&FramePublisher::callbackXbeeData, this, std::placeholders::_1));
-        publisher_pose_neighbor = this-> create_publisher<geometry_msgs::msg::PoseStamped>("pose_neighbor",
+        publisher_pose_neighbor = this-> create_publisher<geometry_msgs::msg::PoseStamped>("/control/pose_neighbor",
+                rclcpp::SensorDataQoS());
+        publisher_pose = this-> create_publisher<geometry_msgs::msg::PoseStamped>("/control/pose",
                 rclcpp::SensorDataQoS());
     	RCLCPP_INFO(this->get_logger(), "Frame Publisher Node has been started.");
 
     }
 
 private:
+    
     void callbackGpsLocalData(const geometry_msgs::msg::PoseStamped::SharedPtr msg)
     {
         if (status_gps!=-1){
@@ -58,6 +61,33 @@ private:
 
             // Send the transformation
             tf_broadcaster_->sendTransform(t);
+
+            // Send the pose base_link
+            float y = msg->pose.position.x;
+            float x = msg->pose.position.y;
+            float psi_rad = quat2EulerAngles_XYZ(msg->pose.orientation.w, msg->pose.orientation.x,
+                                                msg->pose.orientation.y, msg->pose.orientation.z);
+            psi_rad=-psi_rad+1.5708;
+            float dy = -0.2750;            //distancia de la antena del GPS al navio coordenada x
+            float dx = 0.2625;           //distancia de la antena del GPS al navio coordenada y
+            // 1) Xp = Xo + R(psi)*OP
+            x = x + cos(psi_rad)*dx - sin(psi_rad)*dy;
+            y = y + sin(psi_rad)*dx + cos(psi_rad)*dy;
+
+            auto msg_pose = geometry_msgs::msg::PoseStamped();
+            msg_pose.header.stamp = this->now();
+            msg_pose.header.frame_id = "map_ned";
+            msg_pose.pose.position.x= x;
+            msg_pose.pose.position.y= y;
+            msg_pose.pose.position.z= 0.0;
+            tf2::Quaternion q;
+            q.setRPY(0, 0, psi_rad);
+            msg_pose.pose.orientation.x = q.x();
+            msg_pose.pose.orientation.y = q.y();
+            msg_pose.pose.orientation.z = q.z();
+            msg_pose.pose.orientation.w = q.w();
+            publisher_pose->publish(msg_pose); 
+
         }
         // RCLCPP_INFO(this->get_logger(), "Satus gps is: %d", int(status_gps));
     }
@@ -71,6 +101,7 @@ private:
             t.header.stamp = this->get_clock()->now();
             t.header.frame_id = "map_ned";
             t.child_frame_id = "ASV0";
+            //t.child_frame_id.append(msg->states[0].id);
 
             // asv only exists in 2D, thus we get x and y translation
             // coordinates from the message and set the z coordinate to 0
@@ -79,7 +110,7 @@ private:
             t.transform.translation.z = 0.0;
 
             tf2::Quaternion q;
-            q.setRPY(3.14159, 0, -(msg->states[0].point.z));
+            q.setRPY(3.14159, 0,(msg->states[0].point.z));
 
             t.transform.rotation.x = q.x();
             t.transform.rotation.y = q.y();
@@ -107,11 +138,27 @@ private:
         // RCLCPP_INFO(this->get_logger(), "Satus gps is: %d", int(status_gps));
     }
 
+    float quat2EulerAngles_XYZ(float q0, float q1, float q2,float q3)
+    {
+        const double q0_2 = q0 * q0;
+        const double q1_2 = q1 * q1;
+        const double q2_2 = q2 * q2;
+        const double q3_2 = q3 * q3;
+        const double x2q1q2 = 2.0 * q1 * q2;
+        const double x2q0q3 = 2.0 * q0 * q3;
+        const double m11 = q0_2 + q1_2 - q2_2 - q3_2;
+        const double m12 = x2q1q2 + x2q0q3;
+        const double psi = atan2(m12, m11);
+        return static_cast<float>(psi);
+    }
+
+
     int status_gps;
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr subscriber_gps_local;
     rclcpp::Subscription<asv_interfaces::msg::XbeeObserver>::SharedPtr subscriber_xbee;
 
     rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr publisher_pose_neighbor;
+    rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr publisher_pose;
 
     std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
     std::string asv_id_;

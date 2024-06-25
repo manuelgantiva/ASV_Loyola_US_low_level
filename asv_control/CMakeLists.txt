@@ -23,15 +23,17 @@ find_package(tf2_ros REQUIRED)        # interface to use navio2's sensors
 
 include_directories(SYSTEM ${EIGEN3_INCLUDE_DIRS})
 
+# Incluir los directorios de encabezados de gurubi_c++
+
+set(GUROBI_ROOT /opt/gurobi/linux)
+include_directories(${GUROBI_ROOT}/include)
+link_directories(${GUROBI_ROOT}/lib)
 
 add_executable(testnode src/testnode.cpp)
 ament_target_dependencies(testnode rclcpp std_msgs)
 
-add_executable(change_mode src/change_mode.cpp)
-ament_target_dependencies(change_mode rclcpp example_interfaces mavros_msgs)
-
-add_executable(listener_rc src/listener_rc.cpp)
-ament_target_dependencies(listener_rc rclcpp example_interfaces mavros_msgs)
+add_executable(rc_handler src/rc_handler.cpp)
+ament_target_dependencies(rc_handler rclcpp example_interfaces mavros_msgs asv_interfaces)
 
 add_executable(pwm_mapper src/pwm_mapper.cpp)
 ament_target_dependencies(pwm_mapper rclcpp example_interfaces mavros_msgs asv_interfaces)
@@ -39,8 +41,20 @@ ament_target_dependencies(pwm_mapper rclcpp example_interfaces mavros_msgs asv_i
 add_executable(pwm_key src/pwm_key.cpp)
 ament_target_dependencies(pwm_key rclcpp example_interfaces mavros_msgs asv_interfaces)
 
-add_executable(observer src/observer.cpp)
-ament_target_dependencies(observer rclcpp std_msgs sensor_msgs mavros_msgs asv_interfaces tf2 tf2_ros geometry_msgs)
+add_executable(mux_llc src/mux_llc.cpp)
+ament_target_dependencies(mux_llc rclcpp example_interfaces mavros_msgs asv_interfaces)
+
+add_executable(mux_obs src/mux_obs.cpp)
+ament_target_dependencies(mux_obs rclcpp example_interfaces mavros_msgs asv_interfaces)
+
+add_executable(ref_llc src/ref_llc.cpp)
+ament_target_dependencies(ref_llc rclcpp std_msgs mavros_msgs geometry_msgs)
+
+add_executable(ref_mlc src/ref_mlc.cpp)
+ament_target_dependencies(ref_mlc rclcpp std_msgs mavros_msgs)
+
+add_executable(observer_guille src/observer_guille.cpp)
+ament_target_dependencies(observer_guille rclcpp std_msgs sensor_msgs mavros_msgs asv_interfaces tf2 tf2_ros geometry_msgs)
 
 add_executable(observer_liu src/observer_liu.cpp)
 ament_target_dependencies(observer_liu rclcpp std_msgs sensor_msgs mavros_msgs asv_interfaces tf2 tf2_ros geometry_msgs)
@@ -51,17 +65,40 @@ ament_target_dependencies(observer_zono rclcpp std_msgs sensor_msgs mavros_msgs 
 add_executable(asv_tf2_broadcaster src/asv_tf2_broadcaster.cpp)
 ament_target_dependencies(asv_tf2_broadcaster rclcpp tf2 tf2_ros geometry_msgs asv_interfaces)
 
+add_executable(apm_llc src/apm_llc.cpp)
+ament_target_dependencies(apm_llc rclcpp geometry_msgs mavros_msgs asv_interfaces)
+
+add_executable(ifac_llc src/ifac_llc.cpp)
+ament_target_dependencies(ifac_llc rclcpp geometry_msgs mavros_msgs asv_interfaces)
+
+add_executable(mpc_llc src/mpc_llc.cpp)
+ament_target_dependencies(mpc_llc rclcpp geometry_msgs mavros_msgs asv_interfaces std_msgs)
+# Linkear el ejecutable con las librerías de Gurobi
+target_link_libraries(mpc_llc gurobi_c++ gurobi110)
+
+add_executable(wang_mlc src/wang_mlc.cpp)
+ament_target_dependencies(wang_mlc rclcpp geometry_msgs mavros_msgs asv_interfaces std_msgs)
+
+
+
 # Install Targets
 install(TARGETS
   testnode
-  change_mode
-  listener_rc
+  rc_handler
   pwm_mapper
   pwm_key
-  observer
+  mux_llc
+  mux_obs
+  ref_llc
+  ref_mlc
+  observer_guille
   observer_liu
   observer_zono
   asv_tf2_broadcaster
+  apm_llc
+  ifac_llc
+  wang_mlc
+  mpc_llc
 DESTINATION lib/${PROJECT_NAME})
 
 # Install Scripts python

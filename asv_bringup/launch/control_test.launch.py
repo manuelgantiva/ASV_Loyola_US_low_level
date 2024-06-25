@@ -15,9 +15,10 @@ from launch_xml.launch_description_sources import XMLLaunchDescriptionSource
 
 # Add Arguments Launch
 from launch.actions import DeclareLaunchArgument
-from launch.substitutions import LaunchConfiguration
+from launch.substitutions import LaunchConfiguration, PythonExpression
 
-from launch.actions import ExecuteProcess
+# Add Arguments IfCondition Launch
+from launch.conditions import IfCondition
 
 def generate_launch_description():
     ld= LaunchDescription()
@@ -27,6 +28,9 @@ def generate_launch_description():
         default_value="0",
         description='Vehicle ID, is a single character string'
     )
+    
+    # Obtiene el valor del argumento
+    my_id = LaunchConfiguration('my_id')
 
     record = Node(
         package="asv_comunication",
@@ -37,11 +41,23 @@ def generate_launch_description():
         ]
     )
 
-    config = os.path.join(
+    config_1 = os.path.join(
         get_package_share_directory('asv_bringup'),
         'config',
-        'params.yaml'
-        )
+        'params_1.yaml'
+    )
+    
+    config_3 = os.path.join(
+        get_package_share_directory('asv_bringup'),
+        'config',
+        'params_3.yaml'
+    )
+    
+    config_4 = os.path.join(
+        get_package_share_directory('asv_bringup'),
+        'config',
+        'params_4.yaml'
+    )
         
     yf_pkg = get_package_share_directory("yf_description")
     urdf_path = os.path.join(yf_pkg, 'urdf', 'asv_loyola.urdf.xacro')
@@ -59,7 +75,7 @@ def generate_launch_description():
         ]
     )
 
-    neighbor_description = ParameterValue(Command(['xacro ', urdf_path, ' id:=0', ' own:=false']), 
+    neighbor_description = ParameterValue(Command(['xacro ', urdf_path, ' id:=0', ' own:=false']),
                                             value_type=str)
 
     neighbor_robot_state_publisher_node = Node(
@@ -73,14 +89,6 @@ def generate_launch_description():
         ]
     )
 
-    # mavros_node = Node(
-    #     package="mavros",
-    #     executable="mavros_node",
-    #     parameters=[
-    #         {"fcu_url": "udp://:14550@"},
-    #     ]
-    # )
-
     Mavros_launch = IncludeLaunchDescription(
         XMLLaunchDescriptionSource(
             os.path.join(get_package_share_directory('asv_bringup'),
@@ -91,54 +99,256 @@ def generate_launch_description():
     asv_tf_broadcast_node = Node (
         package= "asv_control",
         executable= "asv_tf2_broadcaster",
-        namespace= 'control',
-        parameters = [config]
+        namespace= 'control'
     )
 
-    listner_rc_node = Node (
+    rc_handler_node = Node (
         package= "asv_control",
-        executable= "listener_rc",
+        executable= "rc_handler",
         namespace= 'control',
-        parameters = [config]
+        parameters = [config_3]
     )
 
-    change_mode_node = Node (
+    ref_llc_node = Node (
         package= "asv_control",
-        executable= "change_mode",
+        executable= "ref_llc",
         namespace= 'control',
-        parameters = [config]
+        parameters = [config_3]
     )
 
-    observer_guille = Node (
+    ref_mlc_node = Node (
         package= "asv_control",
-        executable= "observer",
+        executable= "ref_mlc",
+        namespace= 'control',
+        parameters = [config_3]
+    )
+
+    apm_llc_node = Node (
+        package= "asv_control",
+        executable= "apm_llc",
+        namespace= 'control'
+    )
+    
+    ifac_llc_node1 = Node (
+        package= "asv_control",
+        executable= "ifac_llc",
+        namespace= 'control',
+        parameters = [config_1],
+        condition=IfCondition(
+            PythonExpression(
+                [my_id, ' == 1']
+            )
+        )
+    )
+
+    ifac_llc_node3 = Node (
+        package= "asv_control",
+        executable= "ifac_llc",
+        namespace= 'control',
+        parameters = [config_3],
+        condition=IfCondition(
+            PythonExpression(
+                [my_id, ' == 3']
+            )
+        )
+    )
+    
+    ifac_llc_node4 = Node (
+        package= "asv_control",
+        executable= "ifac_llc",
+        namespace= 'control',
+        parameters = [config_4],
+        condition=IfCondition(
+            PythonExpression(
+                [my_id, ' == 4']
+            )
+        )
+    )
+    
+    mpc_llc_node1 = Node (
+        package= "asv_control",
+        executable= "mpc_llc",
+        namespace= 'control',
+        parameters = [config_1],
+        condition=IfCondition(
+            PythonExpression(
+                [my_id, ' == 1']
+            )
+        )
+    )
+    
+    mpc_llc_node3 = Node (
+        package= "asv_control",
+        executable= "mpc_llc",
+        namespace= 'control',
+        parameters = [config_3],
+        condition=IfCondition(
+            PythonExpression(
+                [my_id, ' == 3']
+            )
+        )
+    )
+    
+    mpc_llc_node4 = Node (
+        package= "asv_control",
+        executable= "mpc_llc",
+        namespace= 'control',
+        parameters = [config_4],
+        condition=IfCondition(
+            PythonExpression(
+                [my_id, ' == 4']
+            )
+        )
+    )
+
+    wang_mlc_node1 = Node (
+        package= "asv_control",
+        executable= "wang_mlc",
+        namespace= 'control',
+        parameters = [config_1],
+        condition=IfCondition(
+            PythonExpression(
+                [my_id, ' == 1']
+            )
+        )
+    )
+    
+    wang_mlc_node3 = Node (
+        package= "asv_control",
+        executable= "wang_mlc",
+        namespace= 'control',
+        parameters = [config_3],
+        condition=IfCondition(
+            PythonExpression(
+                [my_id, ' == 3']
+            )
+        )
+    )
+    
+    wang_mlc_node4 = Node (
+        package= "asv_control",
+        executable= "wang_mlc",
+        namespace= 'control',
+        parameters = [config_4],
+        condition=IfCondition(
+            PythonExpression(
+                [my_id, ' == 4']
+            )
+        )
+    )
+
+    mux_llc_node = Node (
+        package= "asv_control",
+        executable= "mux_llc",
+        namespace= 'control'
+    )
+
+    mux_obs_node = Node (
+        package= "asv_control",
+        executable= "mux_obs",
+        namespace= 'control'
+    )
+    
+    observer_guille1 = Node (
+        package= "asv_control",
+        executable= "observer_guille",
         name= "observer_guille",
         namespace= 'control',
         parameters = [
             {'my_id': LaunchConfiguration('my_id')},
-            config
-        ]
+            config_1
+        ],
+        condition=IfCondition(
+            PythonExpression(
+                [my_id, ' == 1']
+            )
+        )
     )
 
-    observer_liu = Node (
+    observer_guille3 = Node (
+        package= "asv_control",
+        executable= "observer_guille",
+        name= "observer_guille",
+        namespace= 'control',
+        parameters = [
+            {'my_id': LaunchConfiguration('my_id')},
+            config_3
+        ],
+        condition=IfCondition(
+            PythonExpression(
+                [my_id, ' == 3']
+            )
+        )
+    )
+    
+    observer_guille4 = Node (
+        package= "asv_control",
+        executable= "observer_guille",
+        name= "observer_guille",
+        namespace= 'control',
+        parameters = [
+            {'my_id': LaunchConfiguration('my_id')},
+            config_4
+        ],
+        condition=IfCondition(
+            PythonExpression(
+                [my_id, ' == 4']
+            )
+        )
+    )
+
+    observer_liu1 = Node (
         package= "asv_control",
         executable= "observer_liu",
         name= "observer_liu",
         namespace= 'control',
-        remappings=[
-            ("/control/state_observer", "/control/state_observe_liu")
-        ],
         parameters = [
             {'my_id': LaunchConfiguration('my_id')},
-            config
-        ]
+            config_1
+        ],
+        condition=IfCondition(
+            PythonExpression(
+                [my_id, ' == 1']
+            )
+        )
+    )
+    
+    observer_liu3 = Node (
+        package= "asv_control",
+        executable= "observer_liu",
+        name= "observer_liu",
+        namespace= 'control',
+        parameters = [
+            {'my_id': LaunchConfiguration('my_id')},
+            config_3
+        ],
+        condition=IfCondition(
+            PythonExpression(
+                [my_id, ' == 3']
+            )
+        )
+    )
+    
+    observer_liu4 = Node (
+        package= "asv_control",
+        executable= "observer_liu",
+        name= "observer_liu",
+        namespace= 'control',
+        parameters = [
+            {'my_id': LaunchConfiguration('my_id')},
+            config_4
+        ],
+        condition=IfCondition(
+            PythonExpression(
+                [my_id, ' == 4']
+            )
+        )
     )
 
     pwm_mapper_node = Node (
         package= "asv_control",
         executable= "pwm_mapper",
-        namespace= 'control',
-        parameters = [config]
+        namespace= 'control'
     )
 
     transceiver_xbee_node = Node(
@@ -147,17 +357,34 @@ def generate_launch_description():
         namespace= 'comunication'
     )
 
-    # ld.add_action(Mavros_launch)
+    ld.add_action(Mavros_launch)
     ld.add_action(own_robot_state_publisher_node)
     ld.add_action(neighbor_robot_state_publisher_node)
     ld.add_action(asv_tf_broadcast_node)
-    # ld.add_action(listner_rc_node)
-    # ld.add_action(change_mode_node)
-    # ld.add_action(observer_guille)
-    # ld.add_action(observer_liu)
-    # ld.add_action(pwm_mapper_node)
-    # ld.add_action(record)
-    #ld.add_action(transceiver_xbee_node)
-
+    ld.add_action(rc_handler_node)
+    # ld.add_action(ref_llc_node)
+    ld.add_action(ref_mlc_node)
+    ld.add_action(mux_llc_node)
+    ld.add_action(mux_obs_node)
+    ld.add_action(pwm_mapper_node)
+    ld.add_action(apm_llc_node)
+    # ASV_nodes
+    ld.add_action(observer_guille1)
+    ld.add_action(observer_guille3)
+    ld.add_action(observer_guille4)
+    ld.add_action(observer_liu1)
+    ld.add_action(observer_liu3)
+    ld.add_action(observer_liu4)
+    # ld.add_action(ifac_llc_node1)
+    # ld.add_action(ifac_llc_node3)
+    # ld.add_action(ifac_llc_node4)
+    # ld.add_action(mpc_llc_node1)
+    # ld.add_action(mpc_llc_node3)
+    # ld.add_action(mpc_llc_node4)
+    ld.add_action(wang_mlc_node1)
+    ld.add_action(wang_mlc_node3)
+    ld.add_action(wang_mlc_node4)
+    ld.add_action(record)
+    ld.add_action(transceiver_xbee_node)
 
     return ld
