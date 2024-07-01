@@ -252,13 +252,13 @@ private:
             // Publish pwms
             msg.t_left=400 * L + 1500;
             msg.t_righ=400 * R + 1500;
-            if(msg.t_left<1500){
-                msg.t_left=1500;
+            if(msg.t_left<1100){
+                msg.t_left=1100;
             }else if (msg.t_left > 1900) {
                 msg.t_left=1900;
             }
-            if(msg.t_righ<1500){
-                msg.t_righ=1500;
+            if(msg.t_righ<1100){
+                msg.t_righ=1100;
             }else if (msg.t_righ > 1900) {
                 msg.t_righ=1900;
             }

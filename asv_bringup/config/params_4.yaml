@@ -2,7 +2,8 @@ control:
   rc_handler:
     ros__parameters:
       #origin: [37.307689, -5.940203, 85.37814771871618] #Lago de la vida Grande
-      origin: [37.3047028, -5.9404694, 85.37814771871618] #Lago de la vida Pequeño
+      #origin: [37.3047028, -5.9404694, 85.37814771871618] #Lago de la vida Pequeño
+      origin: [37.3088513, -5.9398486, 85.37814771871618] #Lago de la vida Alto
       #origin: [37.4191583,  -5.9989917, 63.49701432163044] #Lago de Alamillo Izq
       #origin: [37.4190694, -5.9984778, 63.49701432163044] #Lago de Alamillo Der
   observer_guille:
@@ -59,9 +60,9 @@ control:
   mpc_llc:
     ros__parameters:
       Ts: 100.0         #ms
-      W_psi: 3.0
-      W_u: 5.0
-      W_dL: 7.0
+      W_psi: 200.0
+      W_u: 200.0
+      W_dL: 1.0
       W_dR: 1.0
       NC: 3
       NP: 3

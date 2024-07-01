@@ -32,6 +32,9 @@ const float d_min = -1.0;
 const float delta_dz_up = 0.0775;
 const float delta_dz_lo = -0.0925;
 
+//const float delta_dz_up = 0.0;
+//const float delta_dz_lo = 0.0;
+
 // Declaración dimención matrices MPC 
 const int nx = 3;
 const int ny = 2;
@@ -55,20 +58,20 @@ public:
     {
         //--------- Parámetros del LLC MPC-------------------//
         this->declare_parameter("Ts", 100.0);
-        this->declare_parameter("W_psi", 3.0);
-        this->declare_parameter("W_u", 5.0);
-        this->declare_parameter("W_dL", 7.0);
+        this->declare_parameter("W_psi", 200.0);
+        this->declare_parameter("W_u", 200.0);
+        this->declare_parameter("W_dL", 1.0);
         this->declare_parameter("W_dR", 1.0);
         this->declare_parameter("NC", 3);
         this->declare_parameter("NP", 3);
 
         //----------- Parámetros Modelo --------------------------//
-        this->declare_parameter("Xu6", -0.003148);
-        this->declare_parameter("Xu7", 0.0810014);
-        this->declare_parameter("Xr10", -0.0129643);
-        this->declare_parameter("Xr11", -0.0110386);
-        this->declare_parameter("Xr12", 0.0);
-        this->declare_parameter("Xr13", 0.1717909);
+        this->declare_parameter("Xu6", 0.015655833255439);
+        this->declare_parameter("Xu7", 0.162285711090086);
+        this->declare_parameter("Xr10", -0.082872491904003);
+        this->declare_parameter("Xr11", -0.029304212206678);
+        this->declare_parameter("Xr12", 0.065979938580103);
+        this->declare_parameter("Xr13", 0.311856792874191);
 
         //--------- Obtener parámetros -------------------//
         Ts = this->get_parameter("Ts").as_double() / 1000.0;
@@ -203,8 +206,8 @@ private:
 
                     // Definir variables de control a lo largo del horizonte de control
                     for (int k = 0; k < NC; ++k) {
-                        u[k * nu + 0] = model.addVar(d_min, d_max, 0.0, GRB_CONTINUOUS, "dL_" + std::to_string(k));
-                        u[k * nu + 1] = model.addVar(d_min, d_max, 0.0, GRB_CONTINUOUS, "dR_" + std::to_string(k));
+                        u[k * nu + 0] = model.addVar(-GRB_INFINITY, GRB_INFINITY, 0.0, GRB_CONTINUOUS, "dL_" + std::to_string(k));
+                        u[k * nu + 1] = model.addVar(-GRB_INFINITY, GRB_INFINITY, 0.0, GRB_CONTINUOUS, "dR_" + std::to_string(k));
                     }
 
                     // -----------------------------------------------------------------------------------------//
@@ -323,14 +326,14 @@ private:
                     // Publicar valores PWM
                     msg.t_left = 400 * dL + 1500;
                     msg.t_righ = 400 * dR + 1500;
-                    if (msg.t_left < 1500) {
-                        msg.t_left = 1500;
+                    if (msg.t_left < 1100) {
+                        msg.t_left = 1100;
                     }
                     else if (msg.t_left > 1900) {
                         msg.t_left = 1900;
                     }
-                    if (msg.t_righ < 1500) {
-                        msg.t_righ = 1500;
+                    if (msg.t_righ < 1100) {
+                        msg.t_righ = 1100;
                     }
                     else if (msg.t_righ > 1900) {
                         msg.t_righ = 1900;
@@ -388,13 +391,22 @@ private:
         // Crear la variable binaria Beta
         GRBVar Beta = model.addVar(0.0, 1.0, 0.0, GRB_BINARY, "Beta");
 
-        // Si Delta_L >= 0 y Delta_R >= 0, entonces Beta = 1
-        model.addGenConstrIndicator(Beta, 1, Delta_L, GRB_GREATER_EQUAL, 0);
-        model.addGenConstrIndicator(Beta, 1, Delta_R, GRB_GREATER_EQUAL, 0);
+        // Crear variables binarias auxiliares
+        GRBVar zL = model.addVar(0.0, 1.0, 0.0, GRB_BINARY, "zL");
+        GRBVar zR = model.addVar(0.0, 1.0, 0.0, GRB_BINARY, "zR");
 
-        // Si Delta_L < 0 o Delta_R < 0, entonces Beta = 0
-        model.addGenConstrIndicator(Beta, 0, Delta_L, GRB_LESS_EQUAL, -1e-6);
-        model.addGenConstrIndicator(Beta, 0, Delta_R, GRB_LESS_EQUAL, -1e-6);
+        // Si Delta_L >= 0, entonces zL = 0
+        model.addGenConstrIndicator(zL, 0, Delta_L, GRB_GREATER_EQUAL, 0);
+        // Si Delta_L < 0, entonces zL = 1
+        model.addGenConstrIndicator(zL, 1, Delta_L, GRB_LESS_EQUAL, -1e-12);
+        // Si Delta_R >= 0, entonces zR = 0
+        model.addGenConstrIndicator(zR, 0, Delta_R, GRB_GREATER_EQUAL, 0);
+        // Si Delta_R < 0, entonces zR = 1
+        model.addGenConstrIndicator(zR, 1, Delta_R, GRB_LESS_EQUAL, -1e-12);
+        // Si zL = 0 y zR = 0, entonces Beta = 1
+        model.addGenConstrIndicator(Beta, 1, zL + zR, GRB_EQUAL, 0);
+        // Si zL = 1 o zR = 1, entonces Beta = 0
+        model.addGenConstrIndicator(Beta, 0, zL + zR, GRB_GREATER_EQUAL, 1);
 
         // Variables auxiliares para términos cuadrados y cúbicos
         GRBVar Delta_mean = model.addVar(-GRB_INFINITY, GRB_INFINITY, 0.0, GRB_CONTINUOUS, "Delta_mean");
@@ -489,7 +501,7 @@ private:
         rcl_interfaces::msg::SetParametersResult result;
         for (const auto& param : params) {
             if (param.get_name() == "W_psi") {
-                if (param.as_double() >= 0.0 and param.as_double() < 100.0) {
+                if (param.as_double() >= 0.0 and param.as_double() < 1000.0) {
                     RCLCPP_INFO(this->get_logger(), "changed param value");
                     W_psi = param.as_double();
                     fillSquareMatrix(Q, NP, ny, this->W_psi, this->W_u);
@@ -502,7 +514,7 @@ private:
                 }
             }
             if (param.get_name() == "W_u") {
-                if (param.as_double() >= 0.0 and param.as_double() < 100.0) {
+                if (param.as_double() >= 0.0 and param.as_double() < 1000.0) {
                     RCLCPP_INFO(this->get_logger(), "changed param value");
                     W_u = param.as_double();
                     fillSquareMatrix(Q, NP, ny, this->W_psi, this->W_u);
@@ -515,7 +527,7 @@ private:
                 }
             }
             if (param.get_name() == "W_dL") {
-                if (param.as_double() >= 0.0 and param.as_double() < 100.0) {
+                if (param.as_double() >= 0.0 and param.as_double() < 1000.0) {
                     RCLCPP_INFO(this->get_logger(), "changed param value");
                     W_dL = param.as_double();
                     fillSquareMatrix(R, NC, nu, this->W_dL, this->W_dR);
@@ -528,7 +540,7 @@ private:
                 }
             }
             if (param.get_name() == "W_dR") {
-                if (param.as_double() >= 0.0 and param.as_double() < 100.0) {
+                if (param.as_double() >= 0.0 and param.as_double() < 1000.0) {
                     RCLCPP_INFO(this->get_logger(), "changed param value");
                     W_dR = param.as_double();
                     fillSquareMatrix(R, NC, nu, this->W_dL, this->W_dR);
