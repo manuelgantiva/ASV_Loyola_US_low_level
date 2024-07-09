@@ -39,6 +39,9 @@ public:
         this-> declare_parameter("Xr12", 0.0);
         this-> declare_parameter("Xr13", 0.1717909);
 
+        this-> declare_parameter("Dz_up", 0.0750);
+        this-> declare_parameter("Dz_down", -0.08);
+
         this-> declare_parameter("PpWp_c1", std::vector<float>{6.567173587771372, 0.0, 12.050184632655890, 0.0, 6.992727395821864, 0.0});
         this-> declare_parameter("PpWp_c2", std::vector<float>{0.0, 6.567173587771372, 0.0, 12.050184632655867, 0.0, 6.992727395821881});
         this-> declare_parameter("Lpsi", std::vector<float>{10.370372264461590, 42.762463429973230, 76.008320148412050});
@@ -56,6 +59,9 @@ public:
         Xr11 = this->get_parameter("Xr11").as_double();
         Xr12 = this->get_parameter("Xr12").as_double();
         Xr13 = this->get_parameter("Xr13").as_double();
+
+        Dz_up  = this->get_parameter("Dz_up").as_double();
+        Dz_down = this->get_parameter("Dz_down").as_double();
 
         std::vector<double> Lpsi_par= this->get_parameter("Lpsi").as_double_array();
         std::vector<double> PpWpc1_par = this->get_parameter("PpWp_c1").as_double_array();
@@ -369,12 +375,12 @@ private:
 
     float deleteDeadZone(float delta)
     {
-        if(delta>-0.08 && delta<0.075){
+        if(delta>Dz_down && delta<Dz_up){
             delta = 0;
-        }else if(delta <= -0.08){
-            delta = delta+0.08;
-        }else if(delta >= 0.075){
-            delta = delta-0.075;
+        }else if(delta <= Dz_down){
+            delta = delta-Dz_down;
+        }else if(delta >= Dz_up){
+            delta = delta-Dz_up;
         }
         return delta;
     }
@@ -449,6 +455,7 @@ private:
     //------Params-------//
     std::string my_id;
     float Ts, Xu6, Xu7, Xv10, Xv11, Xv12, Xv13, Xr10, Xr11 ,Xr12, Xr13;  
+    float Dz_up, Dz_down;  
 
     float delta_diff;
     float delta_mean;

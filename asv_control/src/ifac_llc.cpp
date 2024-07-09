@@ -37,15 +37,40 @@ public:
         this-> declare_parameter("Su_en", 1.0);
         this-> declare_parameter("Sr_en", 1.0);
 
-        this-> declare_parameter("IGr_max", 0.0507984);
-        this-> declare_parameter("IGu_max", 0.0381065);
+        this-> declare_parameter("mf0", 0.0013545);
+        this-> declare_parameter("mf1", 6.0977);
+        this-> declare_parameter("mf2", 0.0);
+        this-> declare_parameter("mf3", -2.769);
+        this-> declare_parameter("mf4", 0.0);
+        this-> declare_parameter("mf5", -1.0978);
+        this-> declare_parameter("mr0", -0.0059858);
+        this-> declare_parameter("mr1", 6.1789);
+        this-> declare_parameter("mr2", 0.20095);
+        this-> declare_parameter("mr3", -5.1266);
+        this-> declare_parameter("mr4", 1.048);
+        this-> declare_parameter("mr5", -2.5286);
+        this-> declare_parameter("df0", 0.0);
+        this-> declare_parameter("df1", 0.0);
+        this-> declare_parameter("df2", 6.3681);
+        this-> declare_parameter("df3", 0.0);
+        this-> declare_parameter("df4", 8.2298);
+        this-> declare_parameter("df5", 0.0);
+        this-> declare_parameter("dr0", 0.030548);
+        this-> declare_parameter("dr1", -2.8142);
+        this-> declare_parameter("dr2", 5.3685);
+        this-> declare_parameter("dr3", 27.237);
+        this-> declare_parameter("dr4", 4.2689);
+        this-> declare_parameter("dr5", 13.881);
 
-        this-> declare_parameter("Xu6", -0.0166263484863104);
-        this-> declare_parameter("Xu7", 0.0592216770505099);
-        this-> declare_parameter("Xr11", 0.0127391511137106);
-        this-> declare_parameter("Xr13", 0.190555832330969);
+        this-> declare_parameter("IGumax_ff", 0.17794);
+        this-> declare_parameter("IGumax_rf", 0.08897),
+        this-> declare_parameter("IGumin_rf", -0.07331);
+        this-> declare_parameter("IGrmax_ff", 0.14128);
+        this-> declare_parameter("IGrmax_rf", 0.22898);
+
+        this-> declare_parameter("Dz_up", 0.0750);
+        this-> declare_parameter("Dz_down", -0.08);
         
-    
         Ts = this->get_parameter("Ts").as_double()/1000.0;
         sm_gain_ku = this->get_parameter("sm_gain_ku").as_double();
         sm_gain_ki = this->get_parameter("sm_gain_ki").as_double();
@@ -55,44 +80,41 @@ public:
         Su_en = this->get_parameter("Su_en").as_double();
         Sr_en = this->get_parameter("Sr_en").as_double();
 
-        IGr_max = this->get_parameter("IGr_max").as_double();
-        IGu_max = this->get_parameter("IGu_max").as_double();
+        mf0 = this->get_parameter("mf0").as_double();
+        mf1 = this->get_parameter("mf1").as_double();
+        mf2 = this->get_parameter("mf2").as_double();
+        mf3 = this->get_parameter("mf3").as_double();
+        mf4 = this->get_parameter("mf4").as_double();
+        mf5 = this->get_parameter("mf5").as_double();
+        mr0 = this->get_parameter("mr0").as_double();
+        mr1 = this->get_parameter("mr1").as_double();
+        mr2 = this->get_parameter("mr2").as_double();
+        mr3 = this->get_parameter("mr3").as_double();
+        mr4 = this->get_parameter("mr4").as_double();
+        mr5 = this->get_parameter("mr5").as_double();
+        df0 = this->get_parameter("df0").as_double();
+        df1 = this->get_parameter("df1").as_double();
+        df2 = this->get_parameter("df2").as_double();
+        df3 = this->get_parameter("df3").as_double();
+        df4 = this->get_parameter("df4").as_double();
+        df5 = this->get_parameter("df5").as_double();
+        dr0 = this->get_parameter("dr0").as_double();
+        dr1 = this->get_parameter("dr1").as_double();
+        dr2 = this->get_parameter("dr2").as_double();
+        dr3 = this->get_parameter("dr3").as_double();
+        dr4 = this->get_parameter("dr4").as_double();
+        dr5 = this->get_parameter("dr5").as_double();
 
-        Xu6 = this->get_parameter("Xu6").as_double();
-        Xu7 = this->get_parameter("Xu7").as_double();
-        Xr11 = this->get_parameter("Xr11").as_double();
-        Xr13 = this->get_parameter("Xr13").as_double();
+        IGumax_ff = this->get_parameter("IGumax_ff").as_double();
+        IGumax_rf = this->get_parameter("IGumax_rf").as_double();
+        IGumin_rf = this->get_parameter("IGumin_rf").as_double();
+        IGrmax_ff = this->get_parameter("IGrmax_ff").as_double();
+        IGrmax_rf = this->get_parameter("IGrmax_rf").as_double();
 
-        mf0 = 0.0013545;
-        mf1 = 6.0977;
-        mf2 = 0.0;
-        mf3 = -2.769;
-        mf4 = 0.0;
-        mf5 = -1.0978;
-        mr0 = -0.0059858;
-        mr1 = 6.1789;
-        mr2 = 0.20095;
-        mr3 = -5.1266;
-        mr4 = 1.048;
-        mr5 = -2.5286;
-        df0 = 0.0;
-        df1 = 0.0;
-        df2 = 6.3681;
-        df3 = 0.0;
-        df4 = 8.2298;
-        df5 = 0.0;
-        dr0 = 0.030548;
-        dr1 = -2.8142;
-        dr2 = 5.3685;
-        dr3 = 27.237;
-        dr4 = 4.2689;
-        dr5 = 13.881;
-
-        IGumax_ff = 0.17794;
-        IGumax_rf = 0.22898,
-        IGumin_rf = -0.07331;
-        IGrmax_ff = 0.14128;
-        IGrmax_rf = 0.22898;
+        Dz_2  = this->get_parameter("Dz_up").as_double();
+        Dz_1 = this->get_parameter("Dz_down").as_double();
+        p = 1 - Dz_2;
+        q = -1 - Dz_1;
         
         memory_u.assign(4, 0.0);
         memory_r.assign(4, 0.0);
@@ -221,7 +243,7 @@ private:
                 // Zona Roja
                 m = mf0+mf1*IG_u+mf2*IG_r+mf3*IG_u*IG_u+mf4*IG_u*IG_r+mf5*IG_r*IG_r;
                 d = df0+df1*IG_u+df2*IG_r+df3*IG_u*IG_u+df4*IG_u*IG_r+df5*IG_r*IG_r;
-                if((m>=0.5*d) || (m>=-0.5*d) || (m<=-0.5*d+1) || (m<=0.5*d+1)){
+                if((m<=0.5*d) || (m<=-0.5*d)){
                     if(IG_r>=0){
                         //Zona Azul
                         m = mr0+mr1*IG_u+mr2*IG_r+mr3*IG_u*IG_u+mr4*IG_u*IG_r+mr5*IG_r*IG_r;
@@ -236,17 +258,18 @@ private:
 
             double L, R;
             L = ((2 * m + d) / 2);
+            R = ((2 * m - d) / 2);
+
             if (L > 0) {
-                L = L + 0.0775;
-            } else {
-                L = L - 0.0925;
+                L = L + Dz_2;
+            } else if (L < 0){
+                L = L + Dz_1;
             }
 
-            R = ((2 * m - d) / 2);
             if (R > 0) {
-                R = R + 0.0775;
-            } else {
-                R = R - 0.0925;
+                R = R + Dz_2;;
+            } else if (R < 0){
+                R = R + Dz_1;
             }
 
             // Publish pwms
@@ -452,13 +475,10 @@ private:
     float sm_gain_ki; /*Ganancia del  controlador Sliding Modes (surge constant integrative)*/
     float sm_gain_kpsi; /*Ganancia 1 del controlador Sliding Modes (yaw)*/
     float sm_gain_kr; /*Ganancia 2 del controlador Sliding Modes (yaw)*/
-    float IGr_max, IGu_max; /*Valoreas maximos de Input Gain*/
     
     float taud; /*Constante tau del filtro derivativo*/
     float a ,b; /*Constantes del filtro derivativo*/
     float Su_en, Sr_en; /*Enable IGr y Sigmas surge y yaw*/
-
-    float Xu6, Xu7, Xr11 , Xr13;  
 
     float mf0, mf1, mf2, mf3, mf4, mf5;
     float mr0, mr1, mr2, mr3, mr4, mr5;
@@ -466,6 +486,7 @@ private:
     float dr0, dr1, dr2, dr3, dr4, dr5;
     float IGumax_ff, IGumax_rf, IGumin_rf;
     float IGrmax_ff, IGrmax_rf;
+    float Dz_1, Dz_2, p , q;
 
     std::vector<float> memory_u; // Memoria para mantener los valores anteriores
     std::vector<float> memory_r; // Memoria para mantener los valores anteriores

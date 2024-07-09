@@ -13,6 +13,7 @@
 #include "geometry_msgs/msg/twist_stamped.hpp"       //Interface velocity
 #include "geometry_msgs/msg/twist.hpp"              //Interface cmd vel ardupilot
 #include "asv_interfaces/msg/pwm_values.hpp"        //Interface pwm values override
+#include "geometry_msgs/msg/twist.hpp"              //Interface accel computed
 
 
 #include <rosbag2_cpp/writer.hpp>
@@ -92,6 +93,8 @@ public:
                 std::bind(&BagRecordNode::callbackRefMlc, this, std::placeholders::_1));
         subscriber_error_mlc = this-> create_subscription<geometry_msgs::msg::Vector3>("/control/error_mlc",1,
                 std::bind(&BagRecordNode::callbackErrorMlc, this, std::placeholders::_1));
+        subscriber_accel = this-> create_subscription<geometry_msgs::msg::Twist>("/control/accel_imu",1,
+                std::bind(&BagRecordNode::callbackAcceleration, this, std::placeholders::_1));
 
     	RCLCPP_INFO(this->get_logger(), "Bag Record Node has been started.");
     }
@@ -342,6 +345,14 @@ private:
         }
     }
 
+    void callbackAcceleration(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
+    {
+        if(armed==true){
+            rclcpp::Time time_stamp = this->now();
+            writer_->write(msg, "/control/accel_imu", "geometry_msgs/msg/Twist", time_stamp);
+        }
+    }
+
     std::string my_id;
     std::string name_bag;
     bool armed = false;
@@ -376,6 +387,7 @@ private:
     rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr subscriber_IGu;
     rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr subscriber_IGr;
     rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr subscriber_error_mlc;
+    rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr subscriber_accel;
     
 
 };

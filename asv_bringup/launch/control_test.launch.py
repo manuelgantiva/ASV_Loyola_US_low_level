@@ -129,6 +129,12 @@ def generate_launch_description():
         namespace= 'control'
     )
     
+    imu_fix_node = Node (
+        package= "asv_control",
+        executable= "imu_fix",
+        namespace= 'control'
+    )
+    
     ifac_llc_node1 = Node (
         package= "asv_control",
         executable= "ifac_llc",
@@ -368,6 +374,7 @@ def generate_launch_description():
     ld.add_action(mux_obs_node)
     ld.add_action(pwm_mapper_node)
     ld.add_action(apm_llc_node)
+    ld.add_action(imu_fix_node)
     # ASV_nodes
     ld.add_action(observer_guille1)
     ld.add_action(observer_guille3)

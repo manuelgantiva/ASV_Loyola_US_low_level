@@ -79,7 +79,8 @@ target_link_libraries(mpc_llc gurobi_c++ gurobi110)
 add_executable(wang_mlc src/wang_mlc.cpp)
 ament_target_dependencies(wang_mlc rclcpp geometry_msgs mavros_msgs asv_interfaces std_msgs)
 
-
+add_executable(imu_fix src/imu_fix.cpp)
+ament_target_dependencies(imu_fix rclcpp std_msgs geometry_msgs sensor_msgs mavros_msgs)
 
 # Install Targets
 install(TARGETS
@@ -99,6 +100,7 @@ install(TARGETS
   ifac_llc
   wang_mlc
   mpc_llc
+  imu_fix
 DESTINATION lib/${PROJECT_NAME})
 
 # Install Scripts python

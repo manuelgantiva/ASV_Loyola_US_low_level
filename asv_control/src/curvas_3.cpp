@@ -247,7 +247,7 @@ Target curva8(float w) {
     }
     if (w < 10.0) {
         // Trajectory 1: 20 meters straight line
-        recta(w, &result, -6.0, -2.0, -2.0, 0.0);
+        recta(w, &result, -6.0, 2.0, -2.0, 0.0);
     } else if (w >= 10.0 && w < 13.14159) {
         // Trajectory 2: 180 degree arc of circumference radius 2
         arco(w - 10.0 + 3.14159, &result, -26.0, 4.0, 2.0, true);
@@ -270,7 +270,7 @@ Target curva9(float w) {
     }
     if (w < 10.0) {
         // Trajectory 1: 20 meters straight line
-        recta(w, &result, -4.0, -6.0, 0.0, -2.0);
+        recta(w, &result, -4.0, 6.0, 0.0, -2.0);
     } else if (w >= 10.0 && w < 11.57079) {
         // Trajectory 2: 90 degree arc of circumference radius 2
         arco(w - 10.0 + 1.57079, &result, -6.0, -14.0, 2.0, true);
@@ -303,36 +303,36 @@ Target curva10(const float w) {
     if (w < 7.5) {
         // Trajectory 1: 15 meters straight line
         recta(w, &result, -6.0, 3.0, -2.0, 0.0);
-    } else if (w >= 7.5 && w < 8.53208) {
-        // Trajectory 2: 59.13 degree arc of circumference radius 2
+    } else if (w >= 7.5 && w < 8.58084) {
+        // Trajectory 2: 61 degree arc of circumference radius 2
         arco(w - 7.5 + 3.14159, &result, -21.0, 1.0, 2.0, false);
-    } else if (w >= 8.53208 && w < 9.13208) {
+    } else if (w >= 8.58084 && w < 9.08084) {
         // Trajectory 3: 1.2 meters straight line
-        recta(w - 8.53208, &result, -22.71674, 2.02607, -1.02607, -1.71674);
-    } else if (w >= 9.13208 && w < 10.16416) {
-        // Trajectory 4: 59.13 degree arc of circumference radius 2
-        arco(w - 9.13208 + 2.10951, &result, -25.0, 2.0, 2.0, true);
-    } else if (w >= 10.16416 && w < 10.66416) {
+        recta(w - 8.58084, &result, -22.76476, 1.94118, -0.94118, -1.76471);
+    } else if (w >= 9.08084 && w < 10.16168) {
+        // Trajectory 4: 61 degree arc of circumference radius 2
+        arco(w - 9.08084 + 2.06075, &result, -25.0, 2.0, 2.0, true);
+    } else if (w >= 10.16168 && w < 10.66168) {
         // Trajectory 5: 1 meters straight line
-        recta(w - 10.16416, &result, -25.0, 0.0, -2.0, 0.0);
-    } else if (w >= 10.66416 && w < 13.80575) {
+        recta(w - 10.16168, &result, -25.0, 0.0, -2.0, 0.0);
+    } else if (w >= 10.66168 && w < 13.80327) {
         // Trajectory 6: 180 degree arc of circumference radius 2
         arco(w - 10.66416 + 3.14159, &result, -26.0, 2.0, 2.0, true);
-    } else if (w >= 13.80575 && w < 14.30575) {
+    } else if (w >= 13.80327 && w < 14.30327) {
         // Trajectory 7: 1 meters straight line
-        recta(w - 13.80575, &result, -26.0, 4.0, 2.0, 0.0);
-    } else if (w >= 14.30575 && w < 15.33783) {
-        // Trajectory 8: 59.13 degree arc of circumference radius 2
-        arco(w - 14.30575, &result, -25.0, 2.0, 2.0, true);
-    } else if (w >= 15.33783 && w < 15.93783) {
+        recta(w - 13.80327, &result, -26.0, 4.0, 2.0, 0.0);
+    } else if (w >= 14.30327 && w < 15.38411) {
+        // Trajectory 8: 61 degree arc of circumference radius 2
+        arco(w - 14.30327, &result, -25.0, 2.0, 2.0, true);
+    } else if (w >= 15.38411 && w < 15.88411) {
         // Trajectory 9: 1 meters straight line
-        recta(w - 15.33783, &result, -23.28326, 3.02607, 1.02607, 1.71674);
-    } else if (w >= 15.93783 && w < 16.96991) {
-        // Trajectory 9: 59.13 degree arc of circumference radius 2
-        arco(w - 15.93783 - 1.03208, &result, -21.0, 3.0, 2.0, false);
-    } else if (w >= 16.96991) {
+        recta(w - 15.38411, &result, -23.23529, 2.94118, 0.94118, -1.76471);
+    } else if (w >= 15.88411 && w < 16.96495) {
+        // Trajectory 9: 61 degree arc of circumference radius 2
+        arco(w - 15.88411 - 1.08084, &result, -21.0, 3.0, 2.0, false);
+    } else if (w >= 16.96495) {
         // Trajectory 11: 15 meters straight line
-        recta(w - 16.96991, &result, -21.0, 1.0, 2.0, 0.0);
+        recta(w - 16.96495, &result, -21.0, 1.0, 2.0, 0.0);
     }
     
     return result;

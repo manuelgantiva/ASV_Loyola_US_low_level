@@ -21,19 +21,14 @@ using std::placeholders::_1;
 //------------------------------------------------------------------------------------//
 
 // Declaración de Limites MPC 
-const float u_max = 2.0;
+const float u_max = 3.0;
 const float u_min = 0.01;
 const float psi_max = 2 * M_PI;
 const float psi_min = 0.0;
 const float delta_d_max = 0.4;
 const float delta_d_min = -0.4;
-const float d_max = 1.0;
-const float d_min = -1.0;
-const float delta_dz_up = 0.0775;
-const float delta_dz_lo = -0.0925;
-
-//const float delta_dz_up = 0.0;
-//const float delta_dz_lo = 0.0;
+float d_max = 1.0;
+float d_min = -1.0;
 
 // Declaración dimención matrices MPC 
 const int nx = 3;
@@ -73,6 +68,8 @@ public:
         this->declare_parameter("Xr12", 0.065979938580103);
         this->declare_parameter("Xr13", 0.311856792874191);
 
+        this-> declare_parameter("Dz_up", 0.0750);
+        this-> declare_parameter("Dz_down", -0.08);
         //--------- Obtener parámetros -------------------//
         Ts = this->get_parameter("Ts").as_double() / 1000.0;
         W_psi = this->get_parameter("W_psi").as_double();
@@ -90,6 +87,10 @@ public:
         Parameters_.Xr12 = this->get_parameter("Xr12").as_double();
         Parameters_.Xr13 = this->get_parameter("Xr13").as_double();
 
+        Dz_up  = this->get_parameter("Dz_up").as_double();
+        Dz_down = this->get_parameter("Dz_down").as_double();
+        d_max = d_max - Dz_up;
+        d_min = d_min - Dz_down;
         //----------- Crear Matrices MPC ------------------------//
         Q.resize(NP * ny, NP * ny);
         R.resize(NC * nu, NC * nu);
@@ -155,7 +156,7 @@ private:
         else {
             if (count > 5) {
                 //auto start = std::chrono::high_resolution_clock::now();
-                //RCLCPP_INFO(this->get_logger(), "Ejecutando");
+                RCLCPP_INFO(this->get_logger(), "Ejecutando");
                 auto msg = asv_interfaces::msg::PwmValues();
 
                 float u_hat_i;
@@ -206,8 +207,8 @@ private:
 
                     // Definir variables de control a lo largo del horizonte de control
                     for (int k = 0; k < NC; ++k) {
-                        u[k * nu + 0] = model.addVar(-GRB_INFINITY, GRB_INFINITY, 0.0, GRB_CONTINUOUS, "dL_" + std::to_string(k));
-                        u[k * nu + 1] = model.addVar(-GRB_INFINITY, GRB_INFINITY, 0.0, GRB_CONTINUOUS, "dR_" + std::to_string(k));
+                        u[k * nu + 0] = model.addVar(d_min, d_max, 0.0, GRB_CONTINUOUS, "dL_" + std::to_string(k));
+                        u[k * nu + 1] = model.addVar(d_min, d_max, 0.0, GRB_CONTINUOUS, "dR_" + std::to_string(k));
                     }
 
                     // -----------------------------------------------------------------------------------------//
@@ -273,31 +274,6 @@ private:
                             model.addConstr(u[k * nu + 1] - u[(k - 1) * nu + 1] >= delta_d_min);
                             model.addConstr(u[k * nu + 1] - u[(k - 1) * nu + 1] <= delta_d_max);
                         }
-
-                        // ---- Restricción  d_min<=delta<=delta_dz_lo OR delta_dz_up<=delta<=d_max -----------
-
-                        // Definir variables binarias para las restricciones OR
-
-                        GRBVar zL1 = model.addVar(0.0, 1.0, 0.0, GRB_BINARY);
-                        GRBVar zL2 = model.addVar(0.0, 1.0, 0.0, GRB_BINARY);
-                        GRBVar zR1 = model.addVar(0.0, 1.0, 0.0, GRB_BINARY);
-                        GRBVar zR2 = model.addVar(0.0, 1.0, 0.0, GRB_BINARY);
-
-                        // Restricciones indicadoras para dL
-                        model.addGenConstrIndicator(zL1, 1, u[k * nu] >= d_min);
-                        model.addGenConstrIndicator(zL1, 1, u[k * nu] <= delta_dz_lo);
-                        model.addGenConstrIndicator(zL2, 1, u[k * nu] >= delta_dz_up);
-                        model.addGenConstrIndicator(zL2, 1, u[k * nu] <= d_max);
-
-                        // Restricciones indicadoras para dR
-                        model.addGenConstrIndicator(zR1, 1, u[k * nu + 1] >= d_min);
-                        model.addGenConstrIndicator(zR1, 1, u[k * nu + 1] <= delta_dz_lo);
-                        model.addGenConstrIndicator(zR2, 1, u[k * nu + 1] >= delta_dz_up);
-                        model.addGenConstrIndicator(zR2, 1, u[k * nu + 1] <= d_max);
-
-                        // Asegurar que al menos una de las restricciones se cumple
-                        model.addConstr(zL1 + zL2 == 1); // Sólo una de las dos puede ser verdadera
-                        model.addConstr(zR1 + zR2 == 1); // Sólo una de las dos puede ser verdadera
                     }
 
                     // -----------------------------------------------------------------------------------------//
@@ -323,6 +299,17 @@ private:
 
                     // -----------------------------------------------------------------------------------------// 
 
+                    if (dL > 0) {
+                        dL = dL + Dz_up;
+                    } else if (dL < 0){
+                        dL = dL + Dz_down;
+                    }
+
+                    if (dR > 0) {
+                        dR = dR + Dz_up;;
+                    } else if (dR < 0){
+                        dR = dR + Dz_down;
+                    }
                     // Publicar valores PWM
                     msg.t_left = 400 * dL + 1500;
                     msg.t_righ = 400 * dR + 1500;
@@ -601,6 +588,7 @@ private:
     //------Params-------//
     float Ts;
     float dL, dR;
+    float Dz_up, Dz_down;
 
     // Instancia de la estructura Model_Parameters
 
