@@ -34,7 +34,7 @@ public:
         
         publisher_accel = this-> create_publisher<geometry_msgs::msg::Twist>("/control/accel_imu",1);
         
-        ema_previous.setZero();
+        ema_previous << 0.0, 0.0, 9.8;
                                 
         RCLCPP_INFO(this->get_logger(), "Imu Fix Node has been started.");
     	
@@ -110,7 +110,7 @@ private:
             //RCLCPP_INFO(this->get_logger(), "Old Roll: %f, Pitch: %f, Yaw: %f", roll, pitch, yaw);             
 
         }else{
-            ema_previous.setZero();
+            ema_previous << 0.0, 0.0, 9.8;
         }
     }
 
