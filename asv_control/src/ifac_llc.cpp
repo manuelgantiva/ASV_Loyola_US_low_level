@@ -29,10 +29,10 @@ public:
         
         //---------Parámetros del LLC-------------------//
         this-> declare_parameter("Ts", 100.0);
-        this-> declare_parameter("sm_gain_ku", 2.0);
-        this-> declare_parameter("sm_gain_ki", 2.0);
-        this-> declare_parameter("sm_gain_kpsi", 1.0);
-        this-> declare_parameter("sm_gain_kr", 4.0);
+        this-> declare_parameter("ku", 2.0);
+        this-> declare_parameter("ki", 2.0);
+        this-> declare_parameter("kpsi", 1.0);
+        this-> declare_parameter("kr", 4.0);
         this-> declare_parameter("taud", 350); // Taud = #*Ts Est es #
         this-> declare_parameter("Su_en", 1.0);
         this-> declare_parameter("Sr_en", 1.0);
@@ -72,10 +72,10 @@ public:
         this-> declare_parameter("Dz_down", -0.08);
         
         Ts = this->get_parameter("Ts").as_double()/1000.0;
-        sm_gain_ku = this->get_parameter("sm_gain_ku").as_double();
-        sm_gain_ki = this->get_parameter("sm_gain_ki").as_double();
-        sm_gain_kpsi = this->get_parameter("sm_gain_kpsi").as_double();
-        sm_gain_kr = this->get_parameter("sm_gain_kr").as_double();
+        sm_gain_ku = this->get_parameter("ku").as_double();
+        sm_gain_ki = this->get_parameter("ki").as_double();
+        sm_gain_kpsi = this->get_parameter("kpsi").as_double();
+        sm_gain_kr = this->get_parameter("kr").as_double();
         taud = this->get_parameter("taud").as_int();
         Su_en = this->get_parameter("Su_en").as_double();
         Sr_en = this->get_parameter("Sr_en").as_double();
@@ -140,8 +140,7 @@ public:
         publisher_pwm = this-> create_publisher<asv_interfaces::msg::PwmValues>("/control/pwm_value_ifac",
                 10);
 
-        publisher_IGu = this-> create_publisher<geometry_msgs::msg::Vector3>("/control/IGu_ifac",1);
-        publisher_IGr = this-> create_publisher<geometry_msgs::msg::Vector3>("/control/IGr_ifac",1);
+        publisher_IG = this-> create_publisher<geometry_msgs::msg::Vector3>("/control/IG_ifac",1);
 
         timer_ = this -> create_wall_timer(std::chrono::milliseconds(int(Ts*1000.0)),
                 std::bind(&IfacLlcNode::calculateLowLevelController, this), cb_group_obs_);
@@ -165,6 +164,8 @@ private:
 
             auto msg_Igu = geometry_msgs::msg::Vector3();
             auto msg_Igr = geometry_msgs::msg::Vector3();
+            auto msg_Ig = geometry_msgs::msg::Vector3();
+            float zone;
 
             float u_hat_i;
             float r_hat_i;
@@ -231,27 +232,33 @@ private:
                 // Zona Roja
                 m = mf0+mf1*IG_u+mf2*IG_r+mf3*IG_u*IG_u+mf4*IG_u*IG_r+mf5*IG_r*IG_r;
                 d = df0+df1*IG_u+df2*IG_r+df3*IG_u*IG_u+df4*IG_u*IG_r+df5*IG_r*IG_r;
+                zone = 0;
             }else if(IG_r>IGrmax_ff){
                 // Zona Azul
                 m = mr0+mr1*IG_u+mr2*IG_r+mr3*IG_u*IG_u+mr4*IG_u*IG_r+mr5*IG_r*IG_r;
                 d = dr0+dr1*IG_u+dr2*IG_r+dr3*IG_u*IG_u+dr4*IG_u*IG_r+dr5*IG_r*IG_r;
+                zone = 1;
             }else if(IG_r<-IGrmax_ff){
                 // Zona Verde
                 m = mr0+mr1*IG_u-mr2*IG_r+mr3*IG_u*IG_u-mr4*IG_u*IG_r+mr5*IG_r*IG_r;
                 d = dr0-dr1*IG_u+dr2*IG_r-dr3*IG_u*IG_u+dr4*IG_u*IG_r-dr5*IG_r*IG_r;
+                zone = -1;
             }else{
                 // Zona Roja
                 m = mf0+mf1*IG_u+mf2*IG_r+mf3*IG_u*IG_u+mf4*IG_u*IG_r+mf5*IG_r*IG_r;
                 d = df0+df1*IG_u+df2*IG_r+df3*IG_u*IG_u+df4*IG_u*IG_r+df5*IG_r*IG_r;
+                zone = 0;
                 if((m<=0.5*d) || (m<=-0.5*d)){
                     if(IG_r>=0){
                         //Zona Azul
                         m = mr0+mr1*IG_u+mr2*IG_r+mr3*IG_u*IG_u+mr4*IG_u*IG_r+mr5*IG_r*IG_r;
                         d = dr0+dr1*IG_u+dr2*IG_r+dr3*IG_u*IG_u+dr4*IG_u*IG_r+dr5*IG_r*IG_r;
+                        zone = 1;
                     }else{
                         //Zona Verde
                         m = mr0+mr1*IG_u-mr2*IG_r+mr3*IG_u*IG_u-mr4*IG_u*IG_r+mr5*IG_r*IG_r;
                         d = dr0-dr1*IG_u+dr2*IG_r-dr3*IG_u*IG_u+dr4*IG_u*IG_r-dr5*IG_r*IG_r;
+                        zone = -1;
                     }
                 }
             }
@@ -291,9 +298,11 @@ private:
                 msg.t_righ= 1500; 
                 count=count+1;
             }
+            msg_Igr.x = IG_u;
+            msg_Igr.y = IG_r;
+            msg_Igr.z = zone;
             publisher_pwm->publish(msg);
-            publisher_IGu->publish(msg_Igu);
-            publisher_IGr->publish(msg_Igr);
+            publisher_IG->publish(msg_Ig);
             // auto end = std::chrono::high_resolution_clock::now();
             // std::chrono::duration<double> elapsed = end - start;
             // double miliseconds = elapsed.count()*1000;
@@ -378,7 +387,7 @@ private:
     rcl_interfaces::msg::SetParametersResult param_callback(const std::vector<rclcpp::Parameter> &params){
         rcl_interfaces::msg::SetParametersResult result;
         for (const auto &param: params){
-            if (param.get_name() == "sm_gain_ku"){
+            if (param.get_name() == "ku"){
                 if(param.as_double() >= 0.0 and param.as_double() < 100.0){
                     RCLCPP_INFO(this->get_logger(), "changed param value");
                     sm_gain_ku = param.as_double();
@@ -389,7 +398,7 @@ private:
                     return result;
                 }
             }
-            if (param.get_name() == "sm_gain_ki"){
+            if (param.get_name() == "ki"){
                 if(param.as_double() >= 0.0 and param.as_double() < 100.0){
                     RCLCPP_INFO(this->get_logger(), "changed param value");
                     sm_gain_ki = param.as_double();
@@ -400,7 +409,7 @@ private:
                     return result;
                 }
             }
-            if (param.get_name() == "sm_gain_kpsi"){
+            if (param.get_name() == "kpsi"){
                 if(param.as_double() >= 0.0 and param.as_double() < 100.0){
                     RCLCPP_INFO(this->get_logger(), "changed param value");
                     sm_gain_kpsi = param.as_double();
@@ -411,7 +420,7 @@ private:
                     return result;
                 }
             }
-            if (param.get_name() == "sm_gain_kr"){
+            if (param.get_name() == "kr"){
                 if(param.as_double() >= 0.0 and param.as_double() < 100.0){
                     RCLCPP_INFO(this->get_logger(), "changed param value");
                     sm_gain_kr = param.as_double();
@@ -497,8 +506,7 @@ private:
     rclcpp::Publisher<asv_interfaces::msg::PwmValues>::SharedPtr publisher_pwm;
     rclcpp::TimerBase::SharedPtr timer_;
 
-    rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr publisher_IGu;
-    rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr publisher_IGr;
+    rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr publisher_IG;
 
     // mutex callback group: 
     std::mutex mutex_;

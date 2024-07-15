@@ -488,7 +488,7 @@ private:
         rcl_interfaces::msg::SetParametersResult result;
         for (const auto& param : params) {
             if (param.get_name() == "W_psi") {
-                if (param.as_double() >= 0.0 and param.as_double() < 1000.0) {
+                if (param.as_double() >= 0.0 and param.as_double() < 3000.0) {
                     RCLCPP_INFO(this->get_logger(), "changed param value");
                     W_psi = param.as_double();
                     fillSquareMatrix(Q, NP, ny, this->W_psi, this->W_u);
@@ -501,7 +501,7 @@ private:
                 }
             }
             if (param.get_name() == "W_u") {
-                if (param.as_double() >= 0.0 and param.as_double() < 1000.0) {
+                if (param.as_double() >= 0.0 and param.as_double() < 3000.0) {
                     RCLCPP_INFO(this->get_logger(), "changed param value");
                     W_u = param.as_double();
                     fillSquareMatrix(Q, NP, ny, this->W_psi, this->W_u);
@@ -514,7 +514,7 @@ private:
                 }
             }
             if (param.get_name() == "W_dL") {
-                if (param.as_double() >= 0.0 and param.as_double() < 1000.0) {
+                if (param.as_double() >= 0.0 and param.as_double() < 3000.0) {
                     RCLCPP_INFO(this->get_logger(), "changed param value");
                     W_dL = param.as_double();
                     fillSquareMatrix(R, NC, nu, this->W_dL, this->W_dR);
@@ -527,7 +527,7 @@ private:
                 }
             }
             if (param.get_name() == "W_dR") {
-                if (param.as_double() >= 0.0 and param.as_double() < 1000.0) {
+                if (param.as_double() >= 0.0 and param.as_double() < 3000.0) {
                     RCLCPP_INFO(this->get_logger(), "changed param value");
                     W_dR = param.as_double();
                     fillSquareMatrix(R, NC, nu, this->W_dL, this->W_dR);

@@ -85,10 +85,8 @@ public:
                 rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackVelocityLocalData, this, std::placeholders::_1));
         subscriber_xbee= this-> create_subscription<asv_interfaces::msg::XbeeObserver>("/comunication/xbee_observer",1,
                 std::bind(&BagRecordNode::callbackXbeeData, this, std::placeholders::_1));
-        subscriber_IGu = this-> create_subscription<geometry_msgs::msg::Vector3>("/control/IGu_ifac",1,
-                std::bind(&BagRecordNode::callbackIGu, this, std::placeholders::_1));
-        subscriber_IGr = this-> create_subscription<geometry_msgs::msg::Vector3>("/control/IGr_ifac",1,
-                std::bind(&BagRecordNode::callbackIGr, this, std::placeholders::_1));
+        subscriber_IG = this-> create_subscription<geometry_msgs::msg::Vector3>("/control/IG_ifac",1,
+                std::bind(&BagRecordNode::callbackIG, this, std::placeholders::_1));
         subscriber_ref_mlc = create_subscription<std_msgs::msg::Float64>("/control/reference_mlc", 1,
                 std::bind(&BagRecordNode::callbackRefMlc, this, std::placeholders::_1));
         subscriber_error_mlc = this-> create_subscription<geometry_msgs::msg::Vector3>("/control/error_mlc",1,
@@ -313,19 +311,11 @@ private:
         armed= msg->armed;
     }
 
-    void callbackIGu(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
+    void callbackIG(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
     {
         if(armed==true){
             rclcpp::Time time_stamp = this->now();
-            writer_->write(msg, "/control/IGu_ifac", "geometry_msgs/msg/Vector3", time_stamp);
-        }
-    }
-
-    void callbackIGr(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
-    {
-        if(armed==true){
-            rclcpp::Time time_stamp = this->now();
-            writer_->write(msg, "/control/IGr_ifac", "geometry_msgs/msg/Vector3", time_stamp);
+            writer_->write(msg, "/control/IG_ifac", "geometry_msgs/msg/Vector3", time_stamp);
         }
     }
 
@@ -384,8 +374,7 @@ private:
     rclcpp::Subscription<geometry_msgs::msg::TwistStamped>::SharedPtr subscriber_vel_body;
     rclcpp::Subscription<asv_interfaces::msg::XbeeObserver>::SharedPtr subscriber_xbee;
     rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr subscriber_ref_mlc;
-    rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr subscriber_IGu;
-    rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr subscriber_IGr;
+    rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr subscriber_IG;
     rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr subscriber_error_mlc;
     rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr subscriber_accel;
     
