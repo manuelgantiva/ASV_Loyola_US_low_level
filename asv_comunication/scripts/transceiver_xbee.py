@@ -18,7 +18,7 @@ class TransceiverXbeeNode(Node):
         self.count_ = 0
         self.xbee.open()
         self.xbee.add_data_received_callback(self.callback_received_data)  # Agregar el callback de recepción de datos
-        self.publisher_ = self.create_publisher(XbeeObserver, "xbee_observer", 1)
+        self.publisher_ = self.create_publisher(XbeeObserver, "/comunication/xbee_observer", 1)
         self.subscriber_ = self.create_subscription(StateObserver, "/control/state_observer",
                         self.callback_state_observer,qos_profile_sensor_data)
         self.timer_ = self.create_timer(0.1, self.publish_states)
