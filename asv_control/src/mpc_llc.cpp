@@ -22,7 +22,7 @@ using std::placeholders::_1;
 
 // Declaración de Limites MPC 
 const float u_max = 3.0;
-const float u_min = 0.01;
+const float u_min = -1.0;
 const float psi_max = 2 * M_PI;
 const float psi_min = 0.0;
 const float delta_d_max = 0.4;
@@ -220,17 +220,45 @@ private:
                     // Penalización del Error de Seguimiento
                     // (y(k+1) - yref(k+1))'*Q*(y(k+1) - yref(k+1))
 
+                    //for (int k = 0; k < NP; ++k) {
+                        //VectorXd Y_n (x.begin()+k*nx,x.begin()+1+k*nx);
+                        //VectorXd Yref_n (Y_ref_i.begin()+k*ny,Y_ref_i.begin()+1+k*ny);
+                        //MatrixXd Q_n (Q.block(k*ny,k*ny,ny,ny));
+                        //objective += (x[(k + 1) * nx + 0] - Y_ref_i[k * ny + 0]) * Q(k * ny + 0, k * ny + 0) * (x[(k + 1) * nx + 0] - Y_ref_i[k * ny + 0]);
+                        //objective += (x[(k + 1) * nx + 1] - Y_ref_i[k * ny + 1]) * Q(k * ny + 1, k * ny + 1) * (x[(k + 1) * nx + 1] - Y_ref_i[k * ny + 1]);
+                        //objective += (Y_n - Yref_n).transpose() * Q_n * (Y_n - Yref_n);
+                    //}
+
                     for (int k = 0; k < NP; ++k) {
-                        objective += (x[(k + 1) * nx + 0] - Y_ref_i[k * ny + 0]) * Q(k * ny + 0, k * ny + 0) * (x[(k + 1) * nx + 0] - Y_ref_i[k * ny + 0]);
-                        objective += (x[(k + 1) * nx + 1] - Y_ref_i[k * ny + 1]) * Q(k * ny + 1, k * ny + 1) * (x[(k + 1) * nx + 1] - Y_ref_i[k * ny + 1]);
+                        // Crear el subvector Y_n a partir de las variables de Gurobi
+                        Eigen::VectorXd Yref_n = Y_ref_i.segment(k * ny, ny);
+                        
+                        for (int i = 0; i < ny; ++i) {
+                            GRBVar Y_n_i = x[k * nx + i];  // Cada variable GRBVar en el vector x
+                            
+                            for (int j = 0; j < ny; ++j) {
+                                GRBVar Y_n_j = x[k * nx + j];
+                                // Penalización cuadrática (Y_n - Yref_n)^T * Q * (Y_n - Yref_n)
+                                objective += (Y_n_i - Yref_n(i)) * Q(k * ny + i, k * ny + j) * (Y_n_j - Yref_n(j));
+                            }
+                        }
                     }
 
                     // Penalizaión de las acciones de control
                     // (u(k)'*R*u(k)
 
+                    //for (int k = 0; k < NC; ++k) {
+                    //    objective += u[k * nu + 0] * R(k * nu + 0, k * nu + 0) * u[k * nu + 0];
+                    //    objective += u[k * nu + 1] * R(k * nu + 1, k * nu + 1) * u[k * nu + 1];
+                    //}
+
                     for (int k = 0; k < NC; ++k) {
-                        objective += u[k * nu + 0] * R(k * nu + 0, k * nu + 0) * u[k * nu + 0];
-                        objective += u[k * nu + 1] * R(k * nu + 1, k * nu + 1) * u[k * nu + 1];
+                        for (int i = 0; i < nu; ++i) {
+                            for (int j = 0; j < nu; ++j) {
+                                // Construimos la expresión cuadrática para la penalización del control
+                                objective += u[k * nu + i] * R(k * nu + i, k * nu + j) * u[k * nu + j];
+                            }
+                        }
                     }
 
                     model.setObjective(objective, GRB_MINIMIZE);

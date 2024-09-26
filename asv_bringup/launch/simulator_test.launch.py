@@ -482,9 +482,9 @@ def generate_launch_description():
     ld.add_action(mux_obs_node)
     ld.add_action(pwm_mapper_node)
     # ld.add_action(apm_llc_node)
-    ld.add_action(imu_fix_node)
-    ld.add_action(imu_fix_ext_node)
-    ld.add_action(imu_ext_node)
+    # ld.add_action(imu_fix_node)
+    #ld.add_action(imu_fix_ext_node)
+    #ld.add_action(imu_ext_node)
     
     ##----- ASV_nodes
     ld.add_action(observer_guille0)
@@ -507,7 +507,7 @@ def generate_launch_description():
     # ld.add_action(wang_mlc_node1)
     # ld.add_action(wang_mlc_node3)
     # ld.add_action(wang_mlc_node4)
-    ld.add_action(record)
-    ld.add_action(transceiver_xbee_node)
+    #ld.add_action(record)
+    #ld.add_action(transceiver_xbee_node)
 
     return ld

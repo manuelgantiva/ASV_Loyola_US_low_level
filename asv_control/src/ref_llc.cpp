@@ -77,6 +77,7 @@ private:
         {
             ref_vel = -1.0;
         }
+        ref_vel = ref_vel * 3.0;
         return ref_vel;
     }
 
@@ -101,6 +102,7 @@ private:
 
         // Cuantizar ref_vel a pasos de 0.05
         ref_vel = round(ref_vel / 0.08) * 0.08;
+        ref_vel = ref_vel * 3.0;
         return ref_vel;
     }
 

@@ -89,9 +89,9 @@ control:
   mpc_llc:
     ros__parameters:
       Ts: 100.0         #ms
-      W_psi: 3.0
-      W_u: 5.0
-      W_dL: 7.0
+      W_psi: 1.0
+      W_u: 1.0
+      W_dL: 1.0
       W_dR: 1.0
       NC: 3
       NP: 3
