@@ -43,25 +43,27 @@ public:
                 std::bind(&BagRecordNode::callbackImuData, this, std::placeholders::_1));
         subscriber_imu_raw = this-> create_subscription<sensor_msgs::msg::Imu>("/mavros/imu/data_raw",rclcpp::SensorDataQoS(),
                 std::bind(&BagRecordNode::callbackImuDataRaw, this, std::placeholders::_1));
+        subscriber_imu_ext = this-> create_subscription<sensor_msgs::msg::Imu>("/imu_ext/data",rclcpp::SensorDataQoS(),
+                std::bind(&BagRecordNode::callbackImuDataExt, this, std::placeholders::_1));
         subscriber_gps_global = this-> create_subscription<sensor_msgs::msg::NavSatFix>("/mavros/global_position/global",
                 rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackGpsGlobalData, this, std::placeholders::_1));
         subscriber_gps_local= this-> create_subscription<geometry_msgs::msg::PoseStamped>("/mavros/local_position/pose",
                 rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackGpsLocalData, this, std::placeholders::_1));
-        subscriber_rcout = this-> create_subscription<mavros_msgs::msg::RCOut>("/mavros/rc/out",10,
+        subscriber_rcout = this-> create_subscription<mavros_msgs::msg::RCOut>("/mavros/rc/out",1,
                 std::bind(&BagRecordNode::callbackRcoutData, this, std::placeholders::_1));
-        subscriber_rcin = this-> create_subscription<mavros_msgs::msg::RCIn>("/mavros/rc/in",10,
+        subscriber_rcin = this-> create_subscription<mavros_msgs::msg::RCIn>("/mavros/rc/in",1,
                 std::bind(&BagRecordNode::callbackRcinData, this, std::placeholders::_1));
-        subscriber_rc_over_in = this-> create_subscription<mavros_msgs::msg::OverrideRCIn>("/mavros/rc/override",10,
+        subscriber_rc_over_in = this-> create_subscription<mavros_msgs::msg::OverrideRCIn>("/mavros/rc/override",1,
                 std::bind(&BagRecordNode::callbackRcOverinData, this, std::placeholders::_1));
-        subscriber_reference = this-> create_subscription<geometry_msgs::msg::Vector3>("/control/reference_llc",10,
+        subscriber_reference = this-> create_subscription<geometry_msgs::msg::Vector3>("/control/reference_llc",1,
                 std::bind(&BagRecordNode::callbackReference, this, std::placeholders::_1));
         subscriber_cmd_vel = this-> create_subscription<geometry_msgs::msg::Twist>("/mavros/setpoint_velocity/cmd_vel_unstamped"
                 ,1, std::bind(&BagRecordNode::callbackCmdVel, this, std::placeholders::_1));
-        subscriber_ifac_pwm = this-> create_subscription<asv_interfaces::msg::PwmValues>("/control/pwm_value_ifac",10,
+        subscriber_ifac_pwm = this-> create_subscription<asv_interfaces::msg::PwmValues>("/control/pwm_value_ifac",1,
                 std::bind(&BagRecordNode::callbackIfacPwm, this, std::placeholders::_1));
-        subscriber_mpc_pwm = this-> create_subscription<asv_interfaces::msg::PwmValues>("/control/pwm_value_mpc",10,
+        subscriber_mpc_pwm = this-> create_subscription<asv_interfaces::msg::PwmValues>("/control/pwm_value_mpc",1,
                 std::bind(&BagRecordNode::callbackMpcPwm, this, std::placeholders::_1));
-        subscriber_pwm = this-> create_subscription<asv_interfaces::msg::PwmValues>("/control/pwm_values",10,
+        subscriber_pwm = this-> create_subscription<asv_interfaces::msg::PwmValues>("/control/pwm_values",1,
                 std::bind(&BagRecordNode::callbackPwms, this, std::placeholders::_1));
         subscriber_state_guille= this-> create_subscription<asv_interfaces::msg::StateObserver>("/control/state_observer_guille",
                 rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackStateGuilleData, this, std::placeholders::_1));
@@ -93,6 +95,8 @@ public:
                 std::bind(&BagRecordNode::callbackErrorMlc, this, std::placeholders::_1));
         subscriber_accel = this-> create_subscription<geometry_msgs::msg::Twist>("/control/accel_imu",1,
                 std::bind(&BagRecordNode::callbackAcceleration, this, std::placeholders::_1));
+        subscriber_accel_ext = this-> create_subscription<geometry_msgs::msg::Twist>("/control/accel_imu_ext",1,
+                std::bind(&BagRecordNode::callbackAccelerationExt, this, std::placeholders::_1));
 
     	RCLCPP_INFO(this->get_logger(), "Bag Record Node has been started.");
     }
@@ -282,6 +286,14 @@ private:
         }
     }
 
+    void callbackImuDataExt(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
+    {
+        if(armed==true){
+            rclcpp::Time time_stamp = this->now();
+            writer_->write(msg, "/imu_ext/data", "sensor_msgs/msg/Imu", time_stamp);
+        }
+    }
+
     void callbackMavrosState(const mavros_msgs::msg::State::SharedPtr msg)
     {
         if(armed != msg->armed){
@@ -343,6 +355,15 @@ private:
         }
     }
 
+    void callbackAccelerationExt(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
+    {
+        if(armed==true){
+            rclcpp::Time time_stamp = this->now();
+            writer_->write(msg, "/control/accel_imu_ext", "geometry_msgs/msg/Twist", time_stamp);
+        }
+    }
+    
+
     std::string my_id;
     std::string name_bag;
     bool armed = false;
@@ -352,6 +373,7 @@ private:
 
     rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr subscriber_imu;
     rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr subscriber_imu_raw;
+    rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr subscriber_imu_ext;
     rclcpp::Subscription<sensor_msgs::msg::NavSatFix>::SharedPtr subscriber_gps_global;
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr subscriber_gps_local;
     rclcpp::Subscription<mavros_msgs::msg::RCOut>::SharedPtr subscriber_rcout;
@@ -377,8 +399,8 @@ private:
     rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr subscriber_IG;
     rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr subscriber_error_mlc;
     rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr subscriber_accel;
+    rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr subscriber_accel_ext;
     
-
 };
 
 int main(int argc, char **argv)

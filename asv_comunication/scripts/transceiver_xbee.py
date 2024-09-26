@@ -13,7 +13,7 @@ from asv_interfaces.msg import StateObserver, XbeeObserver, StateNeighbor
 class TransceiverXbeeNode(Node):
     def __init__(self):
         super().__init__("xbee_node")
-        self.xbee = XBeeDevice("/dev/ttyUSB0", 115200)
+        self.xbee = XBeeDevice("/dev/xbee_usb", 115200)
         self.states = []
         self.count_ = 0
         self.xbee.open()

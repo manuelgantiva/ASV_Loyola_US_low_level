@@ -160,7 +160,7 @@ def generate_launch_description():
                     ("/control/accel_imu", "/control/accel_imu_ext")],
         condition=IfCondition(
             PythonExpression(
-                [my_id, ' == 4']
+                [my_id, ' == 0']
             )
         )
     )
@@ -170,7 +170,7 @@ def generate_launch_description():
         executable= "imu_driver.py",
         condition=IfCondition(
             PythonExpression(
-                [my_id, ' == 4']
+                [my_id, ' == 0']
             )
         )
     )
@@ -471,7 +471,7 @@ def generate_launch_description():
         namespace= 'comunication'
     )
 
-    ld.add_action(Mavros_launch)
+    # ld.add_action(Mavros_launch)
     ld.add_action(own_robot_state_publisher_node)
     # ld.add_action(neighbor_robot_state_publisher_node)
     ld.add_action(asv_tf_broadcast_node)
@@ -481,27 +481,28 @@ def generate_launch_description():
     ld.add_action(mux_llc_node)
     ld.add_action(mux_obs_node)
     ld.add_action(pwm_mapper_node)
-    ld.add_action(apm_llc_node)
+    # ld.add_action(apm_llc_node)
     ld.add_action(imu_fix_node)
     ld.add_action(imu_fix_ext_node)
     ld.add_action(imu_ext_node)
+    
     ##----- ASV_nodes
     ld.add_action(observer_guille0)
-    ld.add_action(observer_guille1)
-    ld.add_action(observer_guille3)
-    ld.add_action(observer_guille4)
-    ld.add_action(observer_liu0)
-    ld.add_action(observer_liu1)
-    ld.add_action(observer_liu3)
-    ld.add_action(observer_liu4)
-    ld.add_action(ifac_llc_node0)
-    ld.add_action(ifac_llc_node1)
-    ld.add_action(ifac_llc_node3)
-    ld.add_action(ifac_llc_node4)
+    # ld.add_action(observer_guille1)
+    # ld.add_action(observer_guille3)
+    # ld.add_action(observer_guille4)
+    # ld.add_action(observer_liu0)
+    # ld.add_action(observer_liu1)
+    # ld.add_action(observer_liu3)
+    # ld.add_action(observer_liu4)
+    # ld.add_action(ifac_llc_node0)
+    # ld.add_action(ifac_llc_node1)
+    # ld.add_action(ifac_llc_node3)
+    # ld.add_action(ifac_llc_node4)
     ld.add_action(mpc_llc_node0)
-    ld.add_action(mpc_llc_node1)
-    ld.add_action(mpc_llc_node3)
-    ld.add_action(mpc_llc_node4)
+    # ld.add_action(mpc_llc_node1)
+    # ld.add_action(mpc_llc_node3)
+    # ld.add_action(mpc_llc_node4)
     # ld.add_action(wang_mlc_node0)
     # ld.add_action(wang_mlc_node1)
     # ld.add_action(wang_mlc_node3)

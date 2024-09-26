@@ -14,7 +14,7 @@ public:
         t_left=1500;
         t_right=1500;
         count_pwm=25;
-        publisher_ = this-> create_publisher<mavros_msgs::msg::OverrideRCIn>("/mavros/rc/override",10);
+        publisher_ = this-> create_publisher<mavros_msgs::msg::OverrideRCIn>("/mavros/rc/override",1);
         timer_ = this -> create_wall_timer(std::chrono::milliseconds(100),
                                           std::bind(&PwmMapperNode::publishOverridePwm, this));
         server_ = this-> create_service<example_interfaces::srv::SetBool>(

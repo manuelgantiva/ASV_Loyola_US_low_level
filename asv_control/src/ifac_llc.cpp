@@ -127,6 +127,9 @@ public:
         auto options_sensors_ = rclcpp::SubscriptionOptions();
         options_sensors_.callback_group=cb_group_sensors_;
 
+        timer_ = this -> create_wall_timer(std::chrono::milliseconds(int(Ts*1000.0)),
+                std::bind(&IfacLlcNode::calculateLowLevelController, this), cb_group_obs_);
+
         params_callback_handle_ = this->add_on_set_parameters_callback(std::bind(&IfacLlcNode::param_callback, this, _1));
 
         subscriber_states_obs_ = this-> create_subscription<asv_interfaces::msg::StateObserver>(
@@ -141,9 +144,6 @@ public:
                 10);
 
         publisher_IG = this-> create_publisher<geometry_msgs::msg::Vector3>("/control/IG_ifac",1);
-
-        timer_ = this -> create_wall_timer(std::chrono::milliseconds(int(Ts*1000.0)),
-                std::bind(&IfacLlcNode::calculateLowLevelController, this), cb_group_obs_);
 
         RCLCPP_INFO(this->get_logger(), "Low Level Controller IFAC Node has been started.");
     	
@@ -298,9 +298,9 @@ private:
                 msg.t_righ= 1500; 
                 count=count+1;
             }
-            msg_Igr.x = IG_u;
-            msg_Igr.y = IG_r;
-            msg_Igr.z = zone;
+            msg_Ig.x = IG_u;
+            msg_Ig.y = IG_r;
+            msg_Ig.z = zone;
             publisher_pwm->publish(msg);
             publisher_IG->publish(msg_Ig);
             // auto end = std::chrono::high_resolution_clock::now();

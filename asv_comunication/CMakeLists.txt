@@ -35,6 +35,7 @@ install(PROGRAMS
   scripts/transceiver_xbee.py
   scripts/test_observer.py 
   scripts/test_xbee.py 
+  scripts/imu_driver.py 
   DESTINATION lib/${PROJECT_NAME}
 )
 

@@ -13,6 +13,7 @@ find_package(Eigen3 REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(geometry_msgs REQUIRED)      # msgs and srv to teleop_key and Local gps
 find_package(asv_interfaces REQUIRED)
+find_package(asv_library REQUIRED)
 find_package(example_interfaces REQUIRED) # msgs and srv to basis comunication
 find_package(std_msgs REQUIRED)           # msgs and srv to basis comunication
 find_package(mavros_msgs REQUIRED)        # msgs to comunicate with mavros
@@ -60,7 +61,7 @@ add_executable(observer_liu src/observer_liu.cpp)
 ament_target_dependencies(observer_liu rclcpp std_msgs sensor_msgs mavros_msgs asv_interfaces tf2 tf2_ros geometry_msgs)
 
 add_executable(observer_zono src/observer_zono.cpp)
-ament_target_dependencies(observer_zono rclcpp std_msgs sensor_msgs mavros_msgs asv_interfaces geometry_msgs)
+ament_target_dependencies(observer_zono rclcpp std_msgs sensor_msgs mavros_msgs asv_interfaces asv_library tf2 tf2_ros geometry_msgs)
 
 add_executable(asv_tf2_broadcaster src/asv_tf2_broadcaster.cpp)
 ament_target_dependencies(asv_tf2_broadcaster rclcpp tf2 tf2_ros geometry_msgs asv_interfaces)

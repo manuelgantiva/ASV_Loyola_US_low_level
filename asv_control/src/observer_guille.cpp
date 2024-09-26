@@ -131,7 +131,7 @@ public:
 
         subscriber_gps_local= this-> create_subscription<geometry_msgs::msg::PoseStamped>("/mavros/local_position/pose",
                 rclcpp::SensorDataQoS(), std::bind(&ObserverGuilleNode::callbackGpsLocalData, this, std::placeholders::_1), options_sensors_);
-        subscriber_rcout = this-> create_subscription<mavros_msgs::msg::RCOut>("/mavros/rc/out",10,
+        subscriber_rcout = this-> create_subscription<mavros_msgs::msg::RCOut>("/mavros/rc/out",1,
                 std::bind(&ObserverGuilleNode::callbackRcoutData, this, std::placeholders::_1), options_sensors_);
         subscriber_state = this-> create_subscription<mavros_msgs::msg::State>("/mavros/state",1,
                 std::bind(&ObserverGuilleNode::callbackStateData, this, std::placeholders::_1), options_sensors_);
@@ -282,50 +282,46 @@ private:
     void callbackGpsLocalData(const geometry_msgs::msg::PoseStamped::SharedPtr msg)
     {
         if(armed==true){
-            if (status_gps!=-1){
-                float y = msg->pose.position.x;
-                float x = msg->pose.position.y;
-                float psi_rad = quat2EulerAngles_XYZ(msg->pose.orientation.w, msg->pose.orientation.x,
-                                                    msg->pose.orientation.y, msg->pose.orientation.z);
-                psi_rad=-psi_rad+(M_PI/2);
-                if (psi_rad<0){
-                    psi_rad=psi_rad+(2*M_PI);
-                }
-
-                float dy = -0.2750;            //distancia de la antena del GPS al navio coordenada x
-                float dx = 0.2625;           //distancia de la antena del GPS al navio coordenada y
-                // 1) Xp = Xo + R(psi)*OP
-                x = x + cos(psi_rad)*dx - sin(psi_rad)*dy;
-                y = y + sin(psi_rad)*dx + cos(psi_rad)*dy;
-                if(armed_act==false){
-                    psi_ant = psi_rad;
-                    laps = 0;
-                    {
-                        std::lock_guard<std::mutex> lock(mutex_);
-                        Yp << x,
-                            y;
-                        psi = psi_rad;
-                    }
-                }else{
-                    psi_act = psi_rad;
-                    if((psi_act - psi_ant) > M_PI){
-                        laps = laps - 1;
-                    }else if((psi_act - psi_ant) < -M_PI){
-                        laps = laps + 1;
-                    }
-                    {
-                        std::lock_guard<std::mutex> lock(mutex_);
-                        Yp << x,
-                            y;
-                        psi = psi_act + 2*M_PI*laps;
-                    }
-                    psi_ant=psi_act;
-                }
-                //RCLCPP_INFO(this->get_logger(), "n is: %d", int(laps));
-                //RCLCPP_INFO(this->get_logger(), "Heading is: %f", psi);
-                //RCLCPP_INFO(this->get_logger(), "gps x is: %f, y is: %f", x, y);
+            float y = msg->pose.position.x;
+            float x = msg->pose.position.y;
+            float psi_rad = quat2EulerAngles_XYZ(msg->pose.orientation.w, msg->pose.orientation.x,
+                                                msg->pose.orientation.y, msg->pose.orientation.z);
+            psi_rad=-psi_rad+(M_PI/2);
+            if (psi_rad<0){
+                psi_rad=psi_rad+(2*M_PI);
             }
-            // RCLCPP_INFO(this->get_logger(), "Satus gps is: %d", int(status_gps));
+
+            float dy = -0.2750;            //distancia de la antena del GPS al navio coordenada x
+            float dx = 0.2625;           //distancia de la antena del GPS al navio coordenada y
+            // 1) Xp = Xo + R(psi)*OP
+            x = x + cos(psi_rad)*dx - sin(psi_rad)*dy;
+            y = y + sin(psi_rad)*dx + cos(psi_rad)*dy;
+            if(armed_act==false){
+                psi_ant = psi_rad;
+                laps = 0;
+                {
+                    std::lock_guard<std::mutex> lock(mutex_);
+                    Yp << x,
+                        y;
+                    psi = psi_rad;
+                }
+            }else{
+                psi_act = psi_rad;
+                if((psi_act - psi_ant) > M_PI){
+                    laps = laps - 1;
+                }else if((psi_act - psi_ant) < -M_PI){
+                    laps = laps + 1;
+                }
+                {
+                    std::lock_guard<std::mutex> lock(mutex_);
+                    Yp << x,
+                        y;
+                    psi = psi_act + 2*M_PI*laps;
+                }
+                psi_ant=psi_act;
+            }
+            //RCLCPP_INFO(this->get_logger(), "n is: %d", int(laps));
+            //RCLCPP_INFO(this->get_logger(), "Heading is: %f", psi);
         }else{
             psi_ant=0;
             laps=0;
@@ -448,8 +444,8 @@ private:
         return result;
     }
 
-    float yaw, lat, lon, alt, psi_act = 0.0, psi_ant = 0.0, psi_0 = 0.0, psi = 0.0;
-    int status_gps, laps=0;
+    float psi_act = 0.0, psi_ant = 0.0, psi_0 = 0.0, psi = 0.0;
+    int laps=0;
     bool armed = false, armed_act = false;
 
     //------Params-------//
