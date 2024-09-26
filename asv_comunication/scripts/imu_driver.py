@@ -119,13 +119,13 @@ class IMUDriverNode(Node):
         try:
             wt_imu = serial.Serial(port=self.port, baudrate=self.baud_rate, timeout=0.5)
             if wt_imu.isOpen():
-                self.get_logger().info("\033[32mSerial port opened successfully...\033[0m")
+                self.get_logger().info("\033[32mSerial Imu port opened successfully...\033[0m")
             else:
                 wt_imu.open()
-                self.get_logger().info("\033[32mSerial port opened successfully...\033[0m")
+                self.get_logger().info("\033[32mSerial Imu port opened successfully...\033[0m")
         except Exception as e:
             print(e)
-            self.get_logger().info("\033[31mSerial port opening failure\033[0m")
+            self.get_logger().info("\033[31mSerial Imu port opening failure\033[0m")
             exit(0)
         while True:
             try:

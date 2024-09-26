@@ -13,7 +13,11 @@ from asv_interfaces.msg import StateObserver, XbeeObserver, StateNeighbor
 class TransceiverXbeeNode(Node):
     def __init__(self):
         super().__init__("xbee_node")
-        self.xbee = XBeeDevice("/dev/xbee_usb", 115200)
+        try:
+            self.xbee = XBeeDevice("/dev/xbee_usb", 115200)
+            self.get_logger().info("\033[32mSerial Xbee port opened successfully...\033[0m")
+        except Exception as e:
+            self.get_logger().info("\033[31mSerial Xbbe port opening failure\033[0m")
         self.states = []
         self.count_ = 0
         self.xbee.open()
