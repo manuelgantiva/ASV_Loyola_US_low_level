@@ -220,46 +220,42 @@ private:
                     // Penalización del Error de Seguimiento
                     // (y(k+1) - yref(k+1))'*Q*(y(k+1) - yref(k+1))
 
-                    //for (int k = 0; k < NP; ++k) {
-                        //VectorXd Y_n (x.begin()+k*nx,x.begin()+1+k*nx);
-                        //VectorXd Yref_n (Y_ref_i.begin()+k*ny,Y_ref_i.begin()+1+k*ny);
-                        //MatrixXd Q_n (Q.block(k*ny,k*ny,ny,ny));
-                        //objective += (x[(k + 1) * nx + 0] - Y_ref_i[k * ny + 0]) * Q(k * ny + 0, k * ny + 0) * (x[(k + 1) * nx + 0] - Y_ref_i[k * ny + 0]);
-                        //objective += (x[(k + 1) * nx + 1] - Y_ref_i[k * ny + 1]) * Q(k * ny + 1, k * ny + 1) * (x[(k + 1) * nx + 1] - Y_ref_i[k * ny + 1]);
-                        //objective += (Y_n - Yref_n).transpose() * Q_n * (Y_n - Yref_n);
-                    //}
-
                     for (int k = 0; k < NP; ++k) {
-                        // Crear el subvector Y_n a partir de las variables de Gurobi
-                        Eigen::VectorXd Yref_n = Y_ref_i.segment(k * ny, ny);
-                        
-                        for (int i = 0; i < ny; ++i) {
-                            GRBVar Y_n_i = x[k * nx + i];  // Cada variable GRBVar en el vector x
-                            
-                            for (int j = 0; j < ny; ++j) {
-                                GRBVar Y_n_j = x[k * nx + j];
-                                // Penalización cuadrática (Y_n - Yref_n)^T * Q * (Y_n - Yref_n)
-                                objective += (Y_n_i - Yref_n(i)) * Q(k * ny + i, k * ny + j) * (Y_n_j - Yref_n(j));
-                            }
-                        }
+                        objective += (x[(k + 1) * nx + 0] - Y_ref_i[k * ny + 0]) * Q(k * ny + 0, k * ny + 0) * (x[(k + 1) * nx + 0] - Y_ref_i[k * ny + 0]);
+                        objective += (x[(k + 1) * nx + 1] - Y_ref_i[k * ny + 1]) * Q(k * ny + 1, k * ny + 1) * (x[(k + 1) * nx + 1] - Y_ref_i[k * ny + 1]);
                     }
+
+                    // for (int k = 0; k < NP; ++k) {
+                    //     // Crear el subvector Y_n a partir de las variables de Gurobi
+                    //     Eigen::VectorXd Yref_n = Y_ref_i.segment(k * ny, ny);
+                    //     
+                    //     for (int i = 0; i < ny; ++i) {
+                    //         GRBVar Y_n_i = x[k * nx + i];  // Cada variable GRBVar en el vector x
+                    //         
+                    //         for (int j = 0; j < ny; ++j) {
+                    //             GRBVar Y_n_j = x[k * nx + j];
+                    //             // Penalización cuadrática (Y_n - Yref_n)^T * Q * (Y_n - Yref_n)
+                    //             objective += (Y_n_i - Yref_n(i)) * Q(k * ny + i, k * ny + j) * (Y_n_j - Yref_n(j));
+                    //         }
+                    //     }
+                    // }
 
                     // Penalizaión de las acciones de control
                     // (u(k)'*R*u(k)
 
-                    //for (int k = 0; k < NC; ++k) {
-                    //    objective += u[k * nu + 0] * R(k * nu + 0, k * nu + 0) * u[k * nu + 0];
-                    //    objective += u[k * nu + 1] * R(k * nu + 1, k * nu + 1) * u[k * nu + 1];
-                    //}
-
                     for (int k = 0; k < NC; ++k) {
-                        for (int i = 0; i < nu; ++i) {
-                            for (int j = 0; j < nu; ++j) {
-                                // Construimos la expresión cuadrática para la penalización del control
-                                objective += u[k * nu + i] * R(k * nu + i, k * nu + j) * u[k * nu + j];
-                            }
-                        }
+                        objective += u[k * nu + 0] * R(k * nu + 0, k * nu + 0) * u[k * nu + 0];
+                        objective += u[k * nu + 1] * R(k * nu + 1, k * nu + 1) * u[k * nu + 1];
                     }
+
+                    // for (int k = 0; k < NC; ++k) {
+                    //     for (int i = 0; i < nu; ++i) {
+                    //         for (int j = 0; j < nu; ++j) {
+                    //             // Construimos la expresión cuadrática para la penalización del control
+                    //             objective += u[k * nu + i] * R(k * nu + i, k * nu + j) * u[k * nu + j];
+                    //         }
+                    //     }
+                    // }
 
                     model.setObjective(objective, GRB_MINIMIZE);
 
@@ -312,19 +308,41 @@ private:
                     // Optimizar el modelo
                     model.optimize();
 
-                    // Extraer las soluciones y aplicarlas al sistema
-                    VectorXd optimal_u1 = VectorXd::Zero(NC);
-                    VectorXd optimal_u2 = VectorXd::Zero(NC);
+                    // Verificación del cumplimiento de restricciones
+                    if (model.get(GRB_IntAttr_Status) == GRB_INFEASIBLE) {
+                        RCLCPP_ERROR(this->get_logger(), "El modelo es infeasible, generando reporte IIS...");
 
-                    for (int k = 0; k < NC; ++k) {
-                        optimal_u1[k] = u[k * nu + 0].get(GRB_DoubleAttr_X);
-                        optimal_u2[k] = u[k * nu + 1].get(GRB_DoubleAttr_X);
+                        // Computar el IIS (Infeasibility Irreducible Subsystem)
+                        model.computeIIS();
+
+                        // Guardar el reporte IIS en un archivo
+                        model.write("infeasibility_report.ilp");
+                        msg.t_left = 1500;
+                        msg.t_righ = 1500;
+                        publisher_pwm->publish(msg);
+
                     }
+                    else if (model.get(GRB_IntAttr_Status) == GRB_OPTIMAL || model.get(GRB_IntAttr_Status) == GRB_SUBOPTIMAL) {
+                        // Si el modelo encontró una solución óptima o subóptima
 
-                    // Asignar valores PWM
-                    dL = optimal_u1[0];
-                    dR = optimal_u2[0];
+                        // Extraer las soluciones y aplicarlas al sistema
 
+                        VectorXd optimal_u1 = VectorXd::Zero(NC);
+                        VectorXd optimal_u2 = VectorXd::Zero(NC);
+
+                        for (int k = 0; k < NC; ++k) {
+                            optimal_u1[k] = u[k * nu + 0].get(GRB_DoubleAttr_X);
+                            optimal_u2[k] = u[k * nu + 1].get(GRB_DoubleAttr_X);
+                        }
+
+                        // Aplicar las soluciones óptimas (dL y dR)
+                        dL = optimal_u1[0];
+                        dR = optimal_u2[0];
+
+                    }
+                    else {
+                        RCLCPP_ERROR(this->get_logger(), "El modelo no pudo encontrar una solución óptima.");
+                    }
                     // -----------------------------------------------------------------------------------------// 
 
                     if (dL > 0) {
@@ -448,12 +466,12 @@ private:
         x_next[0] = Psi + Ts * r_var;
 
         x_next[1] = u_var + Ts * ( Parameters_.Xu6 * (Delta_mean_square + Delta_diff_square/4) +
-                                Parameters_.Xu7 * Delta_mean + sigma_u_i);
+                                Parameters_.Xu7 * Delta_mean); // + sigma_u_i);
     
         x_next[2] = r_var + Ts * ( Parameters_.Xr10 * alfaxbeta * (Delta_mean_square + Delta_diff_square/4) +
                                 Parameters_.Xr11 * Delta_mean * Delta_diff +
                                 Parameters_.Xr12 * alfaxbeta * Delta_mean +
-                                Parameters_.Xr13 * Delta_diff/2 + sigma_r_i);
+                                Parameters_.Xr13 * Delta_diff/2); // + sigma_r_i);
     }
 
     //--------------------------------------------------------------------------------------------------------------------//
@@ -571,7 +589,6 @@ private:
                 if (param.as_int() >= 1 and param.as_int() < 30) {
                     RCLCPP_INFO(this->get_logger(), "changed param value");
                     NC = param.as_int();
-
                     R.resize(NC * nu, NC * nu);
                     R.setZero();
                     fillSquareMatrix(R, NC, nu, this->W_dL, this->W_dR);
