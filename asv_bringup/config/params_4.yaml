@@ -48,10 +48,10 @@ control:
   ifac_llc:
     ros__parameters:
       Ts: 100.0         #ms
-      ku: 0.4
-      ki: 0.02
-      kpsi: 0.3
-      kr: 1.2
+      ku: 4.0
+      ki: 0.2
+      kpsi: 1.0
+      kr: 8.0
       taud: 200
       Su_en: 1.0
       Sr_en: 1.0

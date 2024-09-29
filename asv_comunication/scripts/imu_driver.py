@@ -144,12 +144,8 @@ class IMUDriverNode(Node):
 
     def imu_data(self):
         accel_x, accel_y, accel_z = acceleration[0], acceleration[1], acceleration[2]
-        gyro_x, gyro_y, gyro_z = angularVelocity[0], angularVelocity[1], angularVelocity[
-            2]
-        gyro_scale = 2000 / 32768.0
-        gyro_x, gyro_y, gyro_z = math.radians(gyro_x * gyro_scale), math.radians(gyro_y * gyro_scale), math.radians(
-            gyro_z * gyro_scale)
-
+        gyro_x, gyro_y, gyro_z = angularVelocity[0], angularVelocity[1], angularVelocity[2]
+        
         self.imu_msg.header.stamp = self.get_clock().now().to_msg()
         self.imu_msg.linear_acceleration.x = accel_x
         self.imu_msg.linear_acceleration.y = accel_y

@@ -23,6 +23,8 @@ using std::placeholders::_1;
 // Declaración de Limites MPC 
 const float u_max = 3.0;
 const float u_min = -1.0;
+const float r_max = 1.5;
+const float r_min = -1.5;
 const float psi_max = 2 * M_PI;
 const float psi_min = 0.0;
 const float delta_d_max = 0.4;
@@ -32,7 +34,7 @@ float d_min = -1.0;
 
 // Declaración dimención matrices MPC 
 const int nx = 3;
-const int ny = 2;
+const int ny = 3;
 const int nu = 2;
 
 // Estructura para los parámetros del modelo
@@ -55,6 +57,7 @@ public:
         this->declare_parameter("Ts", 100.0);
         this->declare_parameter("W_psi", 200.0);
         this->declare_parameter("W_u", 200.0);
+        this->declare_parameter("W_r", 200.0);
         this->declare_parameter("W_dL", 1.0);
         this->declare_parameter("W_dR", 1.0);
         this->declare_parameter("NC", 3);
@@ -74,6 +77,7 @@ public:
         Ts = this->get_parameter("Ts").as_double() / 1000.0;
         W_psi = this->get_parameter("W_psi").as_double();
         W_u = this->get_parameter("W_u").as_double();
+        W_r = this->get_parameter("W_r").as_double();
         W_dL = this->get_parameter("W_dL").as_double();
         W_dR = this->get_parameter("W_dR").as_double();
         NC = this->get_parameter("NC").as_int();
@@ -100,7 +104,7 @@ public:
         R.setZero();
         Y_ref.setZero();
 
-        fillSquareMatrix(Q, NP, ny, W_psi, W_u);
+        fillSquareMatrix3(Q, NP, ny, W_psi, W_u, W_r);
         fillSquareMatrix(R, NC, nu, W_dL, W_dR);
 
         // Print the resulting matrix o vector
@@ -202,7 +206,7 @@ private:
                     for (int k = 1; k <= NP; ++k) {
                         x[k * nx + 0] = model.addVar(psi_min, psi_max, 0.0, GRB_CONTINUOUS, "psi_" + std::to_string(k));
                         x[k * nx + 1] = model.addVar(u_min, u_max, 0.0, GRB_CONTINUOUS, "u_" + std::to_string(k));
-                        x[k * nx + 2] = model.addVar(-GRB_INFINITY, GRB_INFINITY, 0.0, GRB_CONTINUOUS, "r_" + std::to_string(k));  // Sin límites para r
+                        x[k * nx + 2] = model.addVar(r_min, r_max, 0.0, GRB_CONTINUOUS, "r_" + std::to_string(k));
                     }
 
                     // Definir variables de control a lo largo del horizonte de control
@@ -223,6 +227,7 @@ private:
                     for (int k = 0; k < NP; ++k) {
                         objective += (x[(k + 1) * nx + 0] - Y_ref_i[k * ny + 0]) * Q(k * ny + 0, k * ny + 0) * (x[(k + 1) * nx + 0] - Y_ref_i[k * ny + 0]);
                         objective += (x[(k + 1) * nx + 1] - Y_ref_i[k * ny + 1]) * Q(k * ny + 1, k * ny + 1) * (x[(k + 1) * nx + 1] - Y_ref_i[k * ny + 1]);
+                        objective += (x[(k + 1) * nx + 2] - Y_ref_i[k * ny + 2]) * Q(k * ny + 2, k * ny + 2) * (x[(k + 1) * nx + 2] - Y_ref_i[k * ny + 2]);
                     }
 
                     // for (int k = 0; k < NP; ++k) {
@@ -317,9 +322,8 @@ private:
 
                         // Guardar el reporte IIS en un archivo
                         model.write("infeasibility_report.ilp");
-                        msg.t_left = 1500;
-                        msg.t_righ = 1500;
-                        publisher_pwm->publish(msg);
+                        dL = 0.0;
+                        dR = 0.0;
 
                     }
                     else if (model.get(GRB_IntAttr_Status) == GRB_OPTIMAL || model.get(GRB_IntAttr_Status) == GRB_SUBOPTIMAL) {
@@ -498,7 +502,7 @@ private:
 
             // Fill the y_ref vector
             for (int i = 0; i < ny * NP; i += ny) {
-                Y_ref.segment(i, ny) << msg->z, msg->x;
+                Y_ref.segment(i, ny) << msg->z, msg->x, msg->y;
             }
         }
     }
@@ -530,6 +534,18 @@ private:
         }
     }
 
+    void fillSquareMatrix3(MatrixXd& M, int const size, int const sub_size, float const W1, float const W2, float const W3) {
+        // Loop to fill the matrix Q with diagonal blocks
+        for (int i = 0; i < size; ++i) {
+            // Create the diagonal 
+            VectorXd diag_block(sub_size);
+            diag_block << W1, W2, W3;      // Adjust based on the actual ny value and the values you want to set
+
+            // Set the diagonal block in the matrix Q       
+            M.block(i * sub_size, i * sub_size, sub_size, sub_size) = diag_block.asDiagonal();
+        }
+    }
+
     rcl_interfaces::msg::SetParametersResult param_callback(const std::vector<rclcpp::Parameter>& params) {
         rcl_interfaces::msg::SetParametersResult result;
         for (const auto& param : params) {
@@ -537,7 +553,7 @@ private:
                 if (param.as_double() >= 0.0 and param.as_double() < 3000.0) {
                     RCLCPP_INFO(this->get_logger(), "changed param value");
                     W_psi = param.as_double();
-                    fillSquareMatrix(Q, NP, ny, this->W_psi, this->W_u);
+                    fillSquareMatrix3(Q, NP, ny, this->W_psi, this->W_u, this->W_r);
                 }
                 else {
                     RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-100");
@@ -550,7 +566,20 @@ private:
                 if (param.as_double() >= 0.0 and param.as_double() < 3000.0) {
                     RCLCPP_INFO(this->get_logger(), "changed param value");
                     W_u = param.as_double();
-                    fillSquareMatrix(Q, NP, ny, this->W_psi, this->W_u);
+                    fillSquareMatrix3(Q, NP, ny, this->W_psi, this->W_u, this->W_r);
+                }
+                else {
+                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-100");
+                    result.successful = false;
+                    result.reason = "Value out of range";
+                    return result;
+                }
+            }
+            if (param.get_name() == "W_r") {
+                if (param.as_double() >= 0.0 and param.as_double() < 3000.0) {
+                    RCLCPP_INFO(this->get_logger(), "changed param value");
+                    W_r = param.as_double();
+                    fillSquareMatrix3(Q, NP, ny, this->W_psi, this->W_u, this->W_r);
                 }
                 else {
                     RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-100");
@@ -641,7 +670,7 @@ private:
 
     //Parámetros del controlador MPC
 
-    float W_psi, W_u, W_dL, W_dR;
+    float W_psi, W_u, W_r, W_dL, W_dR;
     int NC, NP;
 
     /* Definicion Matrices y Vectores*/

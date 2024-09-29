@@ -77,7 +77,7 @@ private:
         {
             ref_vel = -1.0;
         }
-        ref_vel = ref_vel * 3.0;
+        ref_vel = ref_vel * 1.5;
         return ref_vel;
     }
 
@@ -90,19 +90,19 @@ private:
             PWM = PWM - 50;
         }else if(PWM < 1450){
             PWM = PWM + 50;
-            
         }
-        ref_vel = ((PWM*0.001142857)-1.7248545);     
-        if(ref_vel>0.4){
-            ref_vel = 0.4;
-        }else if (ref_vel<=-0.4)
+        PWM = PWM - 1150;
+        ref_vel = ((PWM*3.0/1750.0)-0.6);     
+        if(ref_vel>0.6){
+            ref_vel = 0.6;
+        }else if (ref_vel<=-0.6)
         {
-            ref_vel = -0.4;
+            ref_vel = -0.6;
         }
 
-        // Cuantizar ref_vel a pasos de 0.05
+        // Cuantizar 16 pasos
         ref_vel = round(ref_vel / 0.08) * 0.08;
-        ref_vel = ref_vel * 3.0;
+        //ref_vel = ref_vel * 3.0;
         return ref_vel;
     }
 
