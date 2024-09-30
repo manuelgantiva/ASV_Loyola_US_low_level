@@ -459,6 +459,54 @@ def generate_launch_description():
         )
     )
 
+    observer_zono1 = Node (
+        package= "asv_control",
+        executable= "observer_zono",
+        name= "observer_zono",
+        namespace= 'control',
+        parameters = [
+            {'my_id': LaunchConfiguration('my_id')},
+            config_1
+        ],
+        condition=IfCondition(
+            PythonExpression(
+                [my_id, ' == 1']
+            )
+        )
+    )
+
+    observer_zono3 = Node (
+        package= "asv_control",
+        executable= "observer_zono",
+        name= "observer_zono",
+        namespace= 'control',
+        parameters = [
+            {'my_id': LaunchConfiguration('my_id')},
+            config_3
+        ],
+        condition=IfCondition(
+            PythonExpression(
+                [my_id, ' == 3']
+            )
+        )
+    )
+
+    observer_zono4 = Node (
+        package= "asv_control",
+        executable= "observer_zono",
+        name= "observer_zono",
+        namespace= 'control',
+        parameters = [
+            {'my_id': LaunchConfiguration('my_id')},
+            config_4
+        ],
+        condition=IfCondition(
+            PythonExpression(
+                [my_id, ' == 4']
+            )
+        )
+    )
+
     pwm_mapper_node = Node (
         package= "asv_control",
         executable= "pwm_mapper",
@@ -494,6 +542,9 @@ def generate_launch_description():
     ld.add_action(observer_liu1)
     ld.add_action(observer_liu3)
     ld.add_action(observer_liu4)
+    ld.add_action(observer_zono1)
+    ld.add_action(observer_zono3)
+    ld.add_action(observer_zono4)
     ld.add_action(ifac_llc_node0)
     ld.add_action(ifac_llc_node1)
     ld.add_action(ifac_llc_node3)
