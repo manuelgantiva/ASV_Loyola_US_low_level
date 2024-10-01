@@ -48,6 +48,10 @@ public:
 
         this-> declare_parameter("q", 300);
 
+        this-> declare_parameter("Wpsi_di", std::vector<float>{1.0, 1.0, 1.0});
+        this-> declare_parameter("Wp_di", std::vector<float>{1.0, 1.0, 1.0, 1.0, 1.0, 1.0});
+        
+
         my_id = std::to_string(this->get_parameter("my_id").as_int());
         Ts = this->get_parameter("Ts").as_double();
         t_s = Ts/1000; // En segundos
@@ -66,17 +70,20 @@ public:
         Dz_up  = this->get_parameter("Dz_up").as_double();
         Dz_down = this->get_parameter("Dz_down").as_double();
 
-        Max_n_r = this->get_parameter("Max_n_r").as_double();
+        Max_n_r = this->get_parameter("Max_n_r").as_double(); // pequeños Metodo 2
         Max_n_p = this->get_parameter("Max_n_p").as_double();
 
         q = this->get_parameter("q").as_int();
 
-        Max_w_r = 2*Max_n_r + 0.1;
+        std::vector<double> Wpsi_di = this->get_parameter("Wpsi_di").as_double_array();
+        std::vector<double> Wp_di = this->get_parameter("Wp_di").as_double_array();
+
+        Max_w_r = 2*Max_n_r + 0.01;
         Max_w_p = 2*Max_n_p + 0.02;
 
-        Apsi << 0.0, t_s, 0.0,
-                0.0, 0.0, t_s,
-                0.0, 0.0, 0.0; 
+        Apsi << 1.0, t_s, 0.0,
+                0.0, 1.0, t_s,
+                0.0, 0.0, 1.0; 
 
         Cpsi << 1.0, 0.0, 0.0; 
 
@@ -84,12 +91,12 @@ public:
                  0.0,
                  t_s; 
         
-        Ap << 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-              0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-              0.0, 0.0, 0.0, 0.0, t_s, 0.0,
-              0.0, 0.0, 0.0, 0.0, 0.0, t_s,
-              0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-              0.0, 0.0, 0.0, 0.0, 0.0, 0.0;
+        Ap << 1.0, 0.0, t_s, 0.0, 0.0, 0.0,
+              0.0, 1.0, 0.0, t_s, 0.0, 0.0,
+              0.0, 0.0, 1.0, 0.0, t_s, 0.0,
+              0.0, 0.0, 0.0, 1.0, 0.0, t_s,
+              0.0, 0.0, 0.0, 0.0, 1.0, 0.0,
+              0.0, 0.0, 0.0, 0.0, 0.0, 1.0;
 
         Cp << 1.0, 0.0, 0.0, 0.0, 0.0, 0.0,
               0.0, 1.0, 0.0, 0.0, 0.0, 0.0;
@@ -124,26 +131,27 @@ public:
         Qp << Max_w_p, 0.0,
               0.0, Max_w_p;
  
-        Wpsi << 1, 0, 0,
-                0, 1, 0,
-                0, 0, 1;
+        Wpsi << Wpsi_di[0], 0, 0,
+                0, Wpsi_di[1], 0,
+                0, 0, Wpsi_di[2];
 
-        Wp << 1, 0, 0, 0, 0, 0,
-              0, 1, 0, 0, 0, 0,
-              0, 0, 1, 0, 0, 0,
-              0, 0, 0, 1, 0, 0,
-              0, 0, 0, 0, 1, 0,
-              0, 0, 0, 0, 0, 1;
+        Wp << Wp_di[0], 0, 0, 0, 0, 0,
+              0, Wp_di[1], 0, 0, 0, 0,
+              0, 0, Wp_di[2], 0, 0, 0,
+              0, 0, 0, Wp_di[3], 0, 0,
+              0, 0, 0, 0, Wp_di[4], 0,
+              0, 0, 0, 0, 0, Wp_di[5];
 
         R2T.setZero();
         Yp.setZero();
-        Xp_hat.setZero();
-        Xpsi_hat.setZero();
     
         cb_group_sensors_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
         cb_group_obs_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
         auto options_sensors_ = rclcpp::SubscriptionOptions();
         options_sensors_.callback_group=cb_group_sensors_;
+
+        timer_ = this -> create_wall_timer(std::chrono::milliseconds(int(Ts)),
+                                          std::bind(&ObserverZonoNode::calculateState, this), cb_group_obs_);
 
         params_callback_handle_ = this->add_on_set_parameters_callback(std::bind(&ObserverZonoNode::param_callback, this, _1));
 
@@ -155,10 +163,13 @@ public:
                 std::bind(&ObserverZonoNode::callbackStateData, this, std::placeholders::_1), options_sensors_);
         publisher_state = this-> create_publisher<asv_interfaces::msg::StateObserver>("/control/state_observer_zono",
                 rclcpp::SensorDataQoS());
+        publisher_state_min = this-> create_publisher<asv_interfaces::msg::StateObserver>("/control/state_observer_zono_min",
+                rclcpp::SensorDataQoS());
+        publisher_state_max = this-> create_publisher<asv_interfaces::msg::StateObserver>("/control/state_observer_zono_max",
+                rclcpp::SensorDataQoS());
         publisher_obs = this-> create_publisher<geometry_msgs::msg::PoseStamped>("pose_zono",
                 rclcpp::SensorDataQoS());
-        timer_ = this -> create_wall_timer(std::chrono::milliseconds(int(Ts)),
-                                          std::bind(&ObserverZonoNode::calculateState, this), cb_group_obs_);
+        
                                         
         RCLCPP_INFO(this->get_logger(), "Observer Zonotopos Node has been started.");
     }
@@ -170,18 +181,19 @@ private:
         if(armed==false){ 
             R2T.setZero();
             Yp.setZero();
-            Xp_hat.setZero();
-            Xpsi_hat.setZero();
+            Zpsi_prior= Zonotopo(VectorXd::Zero(3), MatrixXd::Identity(3,3));
+            Zp_prior = Zonotopo(VectorXd::Zero(6), MatrixXd::Identity(6,6));
             {
                 std::lock_guard<std::mutex> lock(mutex_);
                 Yp.setZero();
                 delta_diff=0;
                 delta_mean=0;
                 beta=0;
+                psi = 0.0;
             }
         }else{
             if(count > 5){
-                //auto start = std::chrono::high_resolution_clock::now();
+                //ssauto start = std::chrono::high_resolution_clock::now();
                 Vector <double, 2> Yp_i;
                 Vector <double, 1> Ypsi_i;
                 float delta_diff_i;
@@ -195,11 +207,6 @@ private:
                     delta_mean_i = delta_mean;
                     beta_i=beta;
                 }
-                float cospsi= cos(Ypsi_i(0));
-                float senpsi= sin(Ypsi_i(0));
-
-                R2T << cospsi, senpsi,
-                    -senpsi, cospsi;
 
                 float delta_mean_i_2 = delta_mean_i*delta_mean_i;
                 float delta_diff_i_2 = delta_diff_i*delta_diff_i;
@@ -220,56 +227,109 @@ private:
                 IGpsi(1,0) = IGpsi(1,0)*0.1;
 
                 if(count==6){
-                    
+                    Eigen::VectorXd cr0(3);
+                    cr0 << Ypsi_i(0), 0.0, 0.0;  
+                    Eigen::VectorXd cp0(6);
+                    cp0 << Yp_i(0), Yp_i(1), 0.0, 0.0, 0.0, 0.0;  
+                    Zpsi_prior = Zonotopo(cr0, Eigen::MatrixXd::Identity(3, 3));  // Amplia Zonotopo si no estoy seguro
+                    Zp_prior = Zonotopo(cp0, Eigen::MatrixXd::Identity(6, 6));  // Amplia Zonotopo si no estoy seguro
                     count=count+1;
                 }
 
                 // Llamar al método de filtrado
-                Zpsi_next = Zonotopo::filteringPsi(Zpsi_prior, Ypsi_i, Cpsi, Rpsi, Wpsi);
+                Zpsi_next = Zonotopo::filteringPsi(Zpsi_prior, Ypsi_i, Cpsi, Rpsi, Eigen::MatrixXd::Identity(3, 3));
 
-                
+                //Calcular bandas psi
+                MatrixXd br = rs_z(Zpsi_next);
+                int nr = br.rows();
+                std::vector<double> min_psi(nr), max_psi(nr);
+                for (int oo = 0; oo < nr; ++oo) {
+                    min_psi[oo] = br(oo, 0);  // Primera columna de br (mínimos)
+                    max_psi[oo] = br(oo, 1);  // Segunda columna de br (máximos)
+                }
+    
+                Zpsi_next.reduccionOrden(q,Wpsi);
+
+                Zp_next = Zonotopo::filteringP(Zp_prior, Yp_i, Cp, Rp, Eigen::MatrixXd::Identity(6, 6));
+                //Calcular bandas
+                MatrixXd bp = rs_z(Zp_next);
+                int np = bp.rows();             
+                std::vector<double> min_p(np), max_p(np);
+                for (int oo = 0; oo < np; ++oo) {
+                    min_p[oo] = bp(oo, 0);  // Primera columna de bp (mínimos)
+                    max_p[oo] = bp(oo, 1);  // Segunda columna de bp (máximos)
+                }
+
+                Zp_next.reduccionOrden(2*q,Wp);
+
+                VectorXd qr = Apsi * Zpsi_next.c + IGpsi;
+                MatrixXd Hr1 = Apsi * Zpsi_next.H;
+                MatrixXd Hr2 = Bwpsi * Qpsi;
+                MatrixXd Hr(Hr1.rows(), Hr1.cols() + Hr2.cols());
+                Hr << Hr1, Hr2;
+                Zpsi_prior = Zonotopo(qr, Hr);
+
+                Zp_prior = Zonotopo::prediction_Y(Ap,Zp_next,Ypsi_i(0)-Max_n_r,Ypsi_i(0)+Max_n_r,Bwp,Qp,IGp);
 
                 msg.header.stamp = this->now();
                 msg.header.frame_id = my_id; 
 
-                msg.point.x=Xp_hat(0,0);
-                msg.point.y=Xp_hat(1,0);
-                msg.point.z=Xpsi_hat(0,0);
-                msg.velocity.x=Xp_hat(2,0);
-                msg.velocity.y=Xp_hat(3,0);
-                msg.velocity.z=Xpsi_hat(1,0);
-                msg.disturbances.x=Xp_hat(4,0);
-                msg.disturbances.y=Xp_hat(5,0);
-                msg.disturbances.z=Xpsi_hat(2,0);
-
+                msg.point.x=Zp_next.c(0);
+                msg.point.y=Zp_next.c(1);
+                msg.point.z=Zpsi_next.c(0);
+                msg.velocity.x=Zp_next.c(2);
+                msg.velocity.y=Zp_next.c(3);
+                msg.velocity.z=Zpsi_next.c(1);
+                msg.disturbances.x=Zp_next.c(4);
+                msg.disturbances.y=Zp_next.c(5);
+                msg.disturbances.z=Zpsi_next.c(2);
                 publisher_state->publish(msg);
+
+                msg.point.x=min_p[0];
+                msg.point.y=min_p[1];
+                msg.point.z=min_psi[0];
+                msg.velocity.x=min_p[2];
+                msg.velocity.y=min_p[3];
+                msg.velocity.z=min_psi[1];
+                msg.disturbances.x=min_p[4];
+                msg.disturbances.y=min_p[5];
+                msg.disturbances.z=min_psi[2];
+                publisher_state_min->publish(msg);
+
+                msg.point.x=max_p[0];
+                msg.point.y=max_p[1];
+                msg.point.z=max_psi[0];
+                msg.velocity.x=max_p[2];
+                msg.velocity.y=max_p[3];
+                msg.velocity.z=max_psi[1];
+                msg.disturbances.x=max_p[4];
+                msg.disturbances.y=max_p[5];
+                msg.disturbances.z=max_psi[2];
+                publisher_state_max->publish(msg);
 
                 auto msg_obs = geometry_msgs::msg::PoseStamped();
 
                 msg_obs.header.stamp = this->now();
                 msg_obs.header.frame_id = "map_ned";
-                msg_obs.pose.position.x= Xp_hat(0,0);
-                msg_obs.pose.position.y= Xp_hat(1,0);
+                msg_obs.pose.position.x= Zp_next.c(0);
+                msg_obs.pose.position.y= Zp_next.c(1);
                 msg_obs.pose.position.z= 0.0;
                 tf2::Quaternion q;
-                q.setRPY(0, 0, Xpsi_hat(0,0));
+                q.setRPY(0, 0, Zpsi_next.c(0));
                 msg_obs.pose.orientation.x = q.x();
                 msg_obs.pose.orientation.y = q.y();
                 msg_obs.pose.orientation.z = q.z();
                 msg_obs.pose.orientation.w = q.w();
                 publisher_obs->publish(msg_obs); 
 
-                // auto end = std::chrono::high_resolution_clock::now();
-                // std::chrono::duration<double> elapsed = end - start;
-                // double miliseconds = elapsed.count()*1000;
-                // RCLCPP_INFO(this->get_logger(), "Exec time: %f", miliseconds);
+                //auto end = std::chrono::high_resolution_clock::now();
+                //std::chrono::duration<double> elapsed = end - start;
+                //double miliseconds = elapsed.count()*1000;
+                //RCLCPP_INFO(this->get_logger(), "Exec time: %f", miliseconds);
             }else{
                 count=count+1;
             }
         }
-    
-
-        publisher_state->publish(msg);
     }
 
     void callbackGpsLocalData(const geometry_msgs::msg::PoseStamped::SharedPtr msg)
@@ -374,6 +434,33 @@ private:
         return delta;
     }
 
+    // Función que calcula los mínimos y máximos de las variables de estado
+    MatrixXd rs_z(const Zonotopo& z) {
+        VectorXd q = z.c;     // Vector central
+        MatrixXd H = z.H;     // Matriz generadora
+
+        int fil = H.rows();   // Número de filas de H
+        int col = H.cols();   // Número de columnas de H
+
+        // Inicialización de los vectores de mínimos y máximos
+        VectorXd mini(fil);
+        VectorXd maxi(fil);
+
+        for (int i = 0; i < fil; ++i) {
+            double aux = 0;
+            for (int j = 0; j < col; ++j) {
+                aux += std::abs(H(i, j));  // Sumar el valor absoluto de cada elemento
+            }
+            mini(i) = q(i) - aux;  // Cálculo del mínimo
+            maxi(i) = q(i) + aux;  // Cálculo del máximo
+        }
+
+        // Concatenar mínimos y máximos en una sola matriz
+        MatrixXd rs(fil, 2);
+        rs << mini, maxi;
+        return rs;
+    }
+
     void callbackStateData(const mavros_msgs::msg::State::SharedPtr msg)
     {
         armed= msg->armed;
@@ -424,6 +511,37 @@ private:
                     return result;
                 }
             }
+            if (param.get_name() == "Wpsi_di"){
+                if(param.as_double_array().size() == 3){
+                    RCLCPP_INFO(this->get_logger(), "changed param value");
+                    std::vector<double> Wpsi_di = param.as_double_array();
+                    Wpsi << Wpsi_di[0], 0, 0,
+                            0, Wpsi_di[1], 0,
+                            0, 0, Wpsi_di[2];
+                }else{
+                    RCLCPP_INFO(this->get_logger(), "could not change parameter value, array size must be 3");
+                    result.successful = false;
+                    result.reason = "Value out of range";
+                    return result;
+                }
+            }
+            if (param.get_name() == "Wp_di"){
+                if(param.as_double_array().size() == 6){
+                    RCLCPP_INFO(this->get_logger(), "changed param value");
+                    std::vector<double> Wp_di = param.as_double_array();
+                    Wp << Wp_di[0], 0, 0, 0, 0, 0,
+                          0, Wp_di[1], 0, 0, 0, 0,
+                          0, 0, Wp_di[2], 0, 0, 0,
+                          0, 0, 0, Wp_di[3], 0, 0,
+                          0, 0, 0, 0, Wp_di[4], 0,
+                          0, 0, 0, 0, 0, Wp_di[5];
+                }else{
+                    RCLCPP_INFO(this->get_logger(), "could not change parameter value, array size must be 6");
+                    result.successful = false;
+                    result.reason = "Value out of range";
+                    return result;
+                }
+            }
         }
         result.successful = true;
         result.reason = "Success";
@@ -461,8 +579,6 @@ private:
     Matrix <double, 2,2> Qp;
     Matrix <double, 3,3> Wpsi;
     Matrix <double, 6,6> Wp;
-    Matrix <double, 6,1> Xp_hat; 
-    Matrix <double, 3,1> Xpsi_hat; 
     
     Zonotopo Zp_prior, Zpsi_prior, Zp_next, Zpsi_next;
 
@@ -472,6 +588,8 @@ private:
 
     rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr publisher_obs;
     rclcpp::Publisher<asv_interfaces::msg::StateObserver>::SharedPtr publisher_state;
+    rclcpp::Publisher<asv_interfaces::msg::StateObserver>::SharedPtr publisher_state_min;
+    rclcpp::Publisher<asv_interfaces::msg::StateObserver>::SharedPtr publisher_state_max;
     rclcpp::TimerBase::SharedPtr timer_;
 
     // mutex callback group: 

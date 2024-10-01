@@ -22,11 +22,11 @@ public:
         subscriber_state_liu_ = this-> create_subscription<asv_interfaces::msg::StateObserver>(
             "/control/state_observer_liu", rclcpp::SensorDataQoS(), 
             std::bind(&MuxObsNode::callbackStatesLiu, this, std::placeholders::_1));
+        subscriber_state_zono_ = this-> create_subscription<asv_interfaces::msg::StateObserver>(
+            "/control/state_observer_zono", rclcpp::SensorDataQoS(), 
+            std::bind(&MuxObsNode::callbackStatesZono, this, std::placeholders::_1));
         publisher_state_ = this-> create_publisher<asv_interfaces::msg::StateObserver>("/control/state_observer",
                 rclcpp::SensorDataQoS());
-        subscriber_vel_body= this-> create_subscription<geometry_msgs::msg::TwistStamped>(
-            "/mavros/local_position/velocity_body", rclcpp::SensorDataQoS(), 
-            std::bind(&MuxObsNode::callbackVelocityBodyData, this, std::placeholders::_1)); 
 
         RCLCPP_INFO(this->get_logger(), "Mux state observer Node has been started.");
     }
@@ -46,18 +46,15 @@ private:
         if(liu_enable){
             auto msg_p = asv_interfaces::msg::StateObserver();
             msg_p=*msg;
-            /*msg_p.header = msg->header;
-            msg_p.point = msg->point;
-            msg_p.velocity = msg->velocity;
-            msg_p.disturbances = msg->disturbances;*/
             publisher_state_ ->publish(msg_p);
         }
+    }
+
+    void callbackStatesZono(const asv_interfaces::msg::StateObserver::SharedPtr msg)
+    {
         if(zono_enable){
             auto msg_p = asv_interfaces::msg::StateObserver();
-            msg_p.header = msg->header;
-            msg_p.point = msg->point;
-            msg_p.velocity = Velocity;
-            msg_p.disturbances = msg->disturbances;
+            msg_p=*msg;
             publisher_state_ ->publish(msg_p);
         }
     }
@@ -94,16 +91,6 @@ private:
         }
     }
 
-    void callbackVelocityBodyData(const geometry_msgs::msg::TwistStamped::SharedPtr msg)
-    {
-        if (armed == true)
-        {
-            Velocity.x = msg->twist.linear.x;
-            Velocity.y = -1*msg->twist.linear.y;
-            Velocity.z = -1*msg->twist.angular.z;
-        }
-    }
-
     void callbackMavrosState(const mavros_msgs::msg::State::SharedPtr msg)
     {
         if(msg->armed == false && msg->armed!=armed){
@@ -120,8 +107,8 @@ private:
     rclcpp::Service<asv_interfaces::srv::SetObs>::SharedPtr server_set_obs_;
     rclcpp::Subscription<asv_interfaces::msg::StateObserver>::SharedPtr subscriber_state_guille_;
     rclcpp::Subscription<asv_interfaces::msg::StateObserver>::SharedPtr subscriber_state_liu_;
+    rclcpp::Subscription<asv_interfaces::msg::StateObserver>::SharedPtr subscriber_state_zono_;
     rclcpp::Publisher<asv_interfaces::msg::StateObserver>::SharedPtr publisher_state_;
-    rclcpp::Subscription<geometry_msgs::msg::TwistStamped>::SharedPtr subscriber_vel_body;
 
     geometry_msgs::msg::Vector3 Velocity;
     bool guille_enable = false, liu_enable = false, zono_enable = false;

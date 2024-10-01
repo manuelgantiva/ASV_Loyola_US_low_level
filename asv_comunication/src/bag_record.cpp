@@ -69,6 +69,12 @@ public:
                 rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackStateGuilleData, this, std::placeholders::_1));
         subscriber_state_liu= this-> create_subscription<asv_interfaces::msg::StateObserver>("/control/state_observer_liu",
                 rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackStateLiulData, this, std::placeholders::_1));
+        subscriber_state_zono= this-> create_subscription<asv_interfaces::msg::StateObserver>("/control/state_observer_zono",
+                rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackStateZonoData, this, std::placeholders::_1));
+        subscriber_state_zono_min= this-> create_subscription<asv_interfaces::msg::StateObserver>("/control/state_observer_zono_min",
+                rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackStateZonoMinData, this, std::placeholders::_1));
+        subscriber_state_zono_max= this-> create_subscription<asv_interfaces::msg::StateObserver>("/control/state_observer_zono_max",
+                rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackStateZonoMaxData, this, std::placeholders::_1));
         subscriber_states= this-> create_subscription<asv_interfaces::msg::StateObserver>("/control/state_observer",
                 rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackStateData, this, std::placeholders::_1));
         subscriber_pose= this-> create_subscription<geometry_msgs::msg::PoseStamped>("/control/pose",
@@ -79,6 +85,8 @@ public:
                 rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackPoseGuilleData, this, std::placeholders::_1));
         subscriber_pose_liu= this-> create_subscription<geometry_msgs::msg::PoseStamped>("/control/pose_liu",
                 rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackPoseLiuData, this, std::placeholders::_1));
+        subscriber_pose_zono= this-> create_subscription<geometry_msgs::msg::PoseStamped>("/control/pose_zono",
+                rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackPoseZonoData, this, std::placeholders::_1));
         subscriber_compass= this-> create_subscription<std_msgs::msg::Float64>("/mavros/global_position/compass_hdg",
                 rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackCompassData, this, std::placeholders::_1));
         subscriber_vel_body= this-> create_subscription<geometry_msgs::msg::TwistStamped>("/mavros/local_position/velocity_body",
@@ -166,6 +174,14 @@ private:
         }
     }
 
+    void callbackPoseZonoData(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
+    {
+        if(armed==true){
+            rclcpp::Time time_stamp = this->now();
+            writer_->write(msg, "/control/pose_zono", "geometry_msgs/msg/PoseStamped", time_stamp);
+        }
+    }
+
     void callbackStateGuilleData(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
     {
         if(armed==true){
@@ -179,6 +195,30 @@ private:
         if(armed==true){
             rclcpp::Time time_stamp = this->now();
             writer_->write(msg, "/control/state_observer_liu", "asv_interfaces/msg/StateObserver", time_stamp);
+        }
+    }
+
+    void callbackStateZonoData(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
+    {
+        if(armed==true){
+            rclcpp::Time time_stamp = this->now();
+            writer_->write(msg, "/control/state_observer_zono", "asv_interfaces/msg/StateObserver", time_stamp);
+        }
+    }
+
+    void callbackStateZonoMinData(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
+    {
+        if(armed==true){
+            rclcpp::Time time_stamp = this->now();
+            writer_->write(msg, "/control/state_observer_zono_min", "asv_interfaces/msg/StateObserver", time_stamp);
+        }
+    }
+
+    void callbackStateZonoMaxData(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
+    {
+        if(armed==true){
+            rclcpp::Time time_stamp = this->now();
+            writer_->write(msg, "/control/state_observer_zono_max", "asv_interfaces/msg/StateObserver", time_stamp);
         }
     }
 
@@ -387,6 +427,10 @@ private:
     rclcpp::Subscription<asv_interfaces::msg::StateObserver>::SharedPtr subscriber_states;
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr subscriber_pose_liu;
     rclcpp::Subscription<asv_interfaces::msg::StateObserver>::SharedPtr subscriber_state_liu;
+    rclcpp::Subscription<asv_interfaces::msg::StateObserver>::SharedPtr subscriber_state_zono;
+    rclcpp::Subscription<asv_interfaces::msg::StateObserver>::SharedPtr subscriber_state_zono_min;
+    rclcpp::Subscription<asv_interfaces::msg::StateObserver>::SharedPtr subscriber_state_zono_max;
+    rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr subscriber_pose_zono;
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr subscriber_pose_guille;
     rclcpp::Subscription<asv_interfaces::msg::StateObserver>::SharedPtr subscriber_state_guille;
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr subscriber_pose;
