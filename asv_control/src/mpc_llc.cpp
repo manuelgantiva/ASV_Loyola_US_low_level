@@ -476,7 +476,6 @@ private:
                                 Parameters_.Xr11 * Delta_mean * Delta_diff +
                                 Parameters_.Xr12 * alfaxbeta * Delta_mean +
                                 Parameters_.Xr13 * Delta_diff/2); // + sigma_r_i);
-        sigma_u_i = sigma_u_i + sigma_r_i; // warning error
     }
 
     //--------------------------------------------------------------------------------------------------------------------//
