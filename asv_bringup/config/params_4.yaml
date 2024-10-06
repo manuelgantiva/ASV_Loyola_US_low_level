@@ -59,6 +59,8 @@ control:
       Dz_down: -0.0625
       Max_n_r: 0.01
       Max_n_p: 0.02
+      Max_w_r: 0.01
+      Max_w_p: 0.02
       q: 300
       Wpsi_di: [1.0, 1.0, 1.0]
       Wp_di: [1.0, 1.0, 100.0, 100.0, 1.0, 1.0]
@@ -68,13 +70,12 @@ control:
   ifac_llc:
     ros__parameters:
       Ts: 100.0         #ms
-      ku: 4.0
-      ki: 0.2
-      kpsi: 1.0
-      kr: 8.0
+      ku: 0.4
+      ki: 0.02
+      kpsi: 0.1
+      kr: 0.8
       taud: 200
-      Su_en: 1.0
-      Sr_en: 1.0
+      Ts_en: 0.0
       mf0: 0.0018443
       mf1: 1.3476
       mf2: 0.0

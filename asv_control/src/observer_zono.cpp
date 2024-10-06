@@ -45,6 +45,8 @@ public:
 
         this-> declare_parameter("Max_n_r", 0.01);
         this-> declare_parameter("Max_n_p", 0.02);
+        this-> declare_parameter("Max_w_r", 0.01);
+        this-> declare_parameter("Max_w_p", 0.02);
 
         this-> declare_parameter("q", 300);
 
@@ -72,14 +74,13 @@ public:
 
         Max_n_r = this->get_parameter("Max_n_r").as_double(); // pequeños Metodo 2
         Max_n_p = this->get_parameter("Max_n_p").as_double();
+        Max_w_r = this->get_parameter("Max_w_r").as_double();
+        Max_w_p = this->get_parameter("Max_w_p").as_double();
 
         q = this->get_parameter("q").as_int();
 
         std::vector<double> Wpsi_di = this->get_parameter("Wpsi_di").as_double_array();
         std::vector<double> Wp_di = this->get_parameter("Wp_di").as_double_array();
-
-        Max_w_r = 2*Max_n_r + 0.01;
-        Max_w_p = 2*Max_n_p + 0.02;
 
         Apsi << 1.0, t_s, 0.0,
                 0.0, 1.0, t_s,
@@ -474,11 +475,8 @@ private:
                 if(param.as_double() >= 0.0 and param.as_double() < 100.0){
                     RCLCPP_INFO(this->get_logger(), "changed param value");
                     Max_n_p = param.as_double();
-                    Max_w_p = 2*Max_n_p + 0.02;
                     Rp << Max_n_p, 0.0,
                         0.0, Max_n_p;
-                    Qp << Max_w_p, 0.0,
-                        0.0, Max_w_p;
                 }else{
                     RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-100");
                     result.successful = false;
@@ -490,8 +488,31 @@ private:
                 if(param.as_double() >= 0.0 and param.as_double() < 100.0){
                     RCLCPP_INFO(this->get_logger(), "changed param value");
                     Max_n_r = param.as_double();
-                    Max_w_r = 2*Max_n_r + 0.1;
                     Rpsi <<  Max_n_r;        
+                }else{
+                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-100");
+                    result.successful = false;
+                    result.reason = "Value out of range";
+                    return result;
+                }
+            }
+            if (param.get_name() == "Max_w_p"){
+                if(param.as_double() >= 0.0 and param.as_double() < 100.0){
+                    RCLCPP_INFO(this->get_logger(), "changed param value");
+                    Max_w_p = param.as_double();
+                    Qp << Max_w_p, 0.0,
+                        0.0, Max_w_p;
+                }else{
+                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-100");
+                    result.successful = false;
+                    result.reason = "Value out of range";
+                    return result;
+                }
+            }
+            if (param.get_name() == "Max_w_r"){
+                if(param.as_double() >= 0.0 and param.as_double() < 100.0){
+                    RCLCPP_INFO(this->get_logger(), "changed param value");
+                    Max_w_r = param.as_double();      
                     Qpsi << Max_w_r;
                 }else{
                     RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-100");

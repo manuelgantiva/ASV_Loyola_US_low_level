@@ -27,8 +27,8 @@ const float r_max = 1.5;
 const float r_min = -1.5;
 const float psi_max = 2 * M_PI;
 const float psi_min = 0.0;
-const float delta_d_max = 0.4;
-const float delta_d_min = -0.4;
+const float delta_d_max = 1.0;
+const float delta_d_min = -1.0;
 float d_max = 1.0;
 float d_min = -1.0;
 

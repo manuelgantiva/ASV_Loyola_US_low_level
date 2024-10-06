@@ -34,8 +34,7 @@ public:
         this-> declare_parameter("kpsi", 1.0);
         this-> declare_parameter("kr", 4.0);
         this-> declare_parameter("taud", 350); // Taud = #*Ts Est es #
-        this-> declare_parameter("Su_en", 1.0);
-        this-> declare_parameter("Sr_en", 1.0);
+        this-> declare_parameter("Ts_en", 1.0);
 
         this-> declare_parameter("mf0", 0.0013545);
         this-> declare_parameter("mf1", 6.0977);
@@ -77,8 +76,7 @@ public:
         sm_gain_kpsi = this->get_parameter("kpsi").as_double();
         sm_gain_kr = this->get_parameter("kr").as_double();
         taud = this->get_parameter("taud").as_int();
-        Su_en = this->get_parameter("Su_en").as_double();
-        Sr_en = this->get_parameter("Sr_en").as_double();
+        Ts_en = this->get_parameter("Ts_en").as_double();
 
         mf0 = this->get_parameter("mf0").as_double();
         mf1 = this->get_parameter("mf1").as_double();
@@ -194,20 +192,23 @@ private:
 
             float error = (u_hat_i-u_ref_i);
             integral_error += error;
-            msg_Igu.x = Ts*u_dot_ref_i;
-            msg_Igu.y = Ts*sm_gain_ku*error;
-            msg_Igu.z = Ts*sm_gain_ki*integral_error;
-            float sg = Su_en*Ts*sig_u_i;
-
-            float IG_u = msg_Igu.x - msg_Igu.y - msg_Igu.z - sg;
-            //float IG_u = Ts*(u_dot_ref_i-sm_gain_ku*(u_hat_i-u_ref_i)-sig_u_i);
+            msg_Igu.x = u_dot_ref_i;
+            msg_Igu.y = sm_gain_ku*error;
+            msg_Igu.z = sm_gain_ki*integral_error;
 
             float c_ref=r_ref_i-sm_gain_kpsi*(psi_hat_i-psi_ref_i);
-            msg_Igr.x = Ts*sm_gain_kr*(r_hat_i-c_ref);
-            msg_Igr.y = Ts*sm_gain_kpsi*(r_hat_i-r_ref_i);
-            msg_Igr.z = Ts*r_dot_ref_i;
-            float sr = Sr_en*Ts*sig_r_i;
-            float IG_r = msg_Igr.z-msg_Igr.x-msg_Igr.y-sr;
+            msg_Igr.x = sm_gain_kr*(r_hat_i-c_ref);
+            msg_Igr.y = sm_gain_kpsi*(r_hat_i-r_ref_i);
+            msg_Igr.z = r_dot_ref_i;
+            float IG_u;
+            float IG_r;
+            if(Ts_en == 1.0){
+                IG_u = Ts*(msg_Igu.x - msg_Igu.y - msg_Igu.z - sig_u_i);
+                IG_r = Ts*(msg_Igr.z-msg_Igr.x-msg_Igr.y-sig_r_i);
+            }else{
+                IG_u = (msg_Igu.x - msg_Igu.y - msg_Igu.z - sig_u_i);
+                IG_r = (msg_Igr.z-msg_Igr.x-msg_Igr.y-sig_r_i);
+            }
 
             // New Code
             float m, d;
@@ -444,21 +445,10 @@ private:
                     return result;
                 }
             }
-            if (param.get_name() == "Su_en"){
+            if (param.get_name() == "Ts_en"){
                 if(param.as_double() == 0.0 or param.as_double() == 1.0){
                     RCLCPP_INFO(this->get_logger(), "changed param value");
-                    Su_en = param.as_double();
-                }else{
-                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be 0.0 or 1.0");
-                    result.successful = false;
-                    result.reason = "Value out of range";
-                    return result;
-                }
-            }
-            if (param.get_name() == "Sr_en"){
-                if(param.as_double() == 0.0 or param.as_double() == 1.0){
-                    RCLCPP_INFO(this->get_logger(), "changed param value");
-                    Sr_en = param.as_double();
+                    Ts_en = param.as_double();
                 }else{
                     RCLCPP_INFO(this->get_logger(), "could not change param value, should be 0.0 or 1.0");
                     result.successful = false;
@@ -487,7 +477,7 @@ private:
     
     float taud; /*Constante tau del filtro derivativo*/
     float a ,b; /*Constantes del filtro derivativo*/
-    float Su_en, Sr_en; /*Enable IGr y Sigmas surge y yaw*/
+    float Ts_en; /*Enable IGr y Sigmas surge y yaw*/
 
     float mf0, mf1, mf2, mf3, mf4, mf5;
     float mr0, mr1, mr2, mr3, mr4, mr5;

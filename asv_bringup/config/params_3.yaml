@@ -59,6 +59,8 @@ control:
       Dz_down: -0.08
       Max_n_r: 0.01
       Max_n_p: 0.02
+      Max_w_r: 0.01
+      Max_w_p: 0.02
       q: 300
       Wpsi_di: [1.0, 1.0, 1.0]
       Wp_di: [1.0, 1.0, 100.0, 100.0, 1.0, 1.0]
@@ -70,11 +72,10 @@ control:
       Ts: 100.0         #ms
       ku: 0.4
       ki: 0.02
-      kpsi: 0.3
-      kr: 1.2
+      kpsi: 0.1
+      kr: 0.8
       taud: 200
-      Su_en: 1.0
-      Sr_en: 1.0
+      Ts_en: 0.0
       mf0: 0.00037063
       mf1: 1.409
       mf2: 0.0
