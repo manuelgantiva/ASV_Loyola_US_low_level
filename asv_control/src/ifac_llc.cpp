@@ -34,7 +34,8 @@ public:
         this-> declare_parameter("kpsi", 1.0);
         this-> declare_parameter("kr", 4.0);
         this-> declare_parameter("taud", 350); // Taud = #*Ts Est es #
-        this-> declare_parameter("Ts_en", 1.0);
+        this-> declare_parameter("Su_en", 1.0);
+        this-> declare_parameter("Sr_en", 1.0);
 
         this-> declare_parameter("mf0", 0.0013545);
         this-> declare_parameter("mf1", 6.0977);
@@ -76,7 +77,8 @@ public:
         sm_gain_kpsi = this->get_parameter("kpsi").as_double();
         sm_gain_kr = this->get_parameter("kr").as_double();
         taud = this->get_parameter("taud").as_int();
-        Ts_en = this->get_parameter("Ts_en").as_double();
+        Su_en = this->get_parameter("Su_en").as_double();
+        Sr_en = this->get_parameter("Sr_en").as_double();
 
         mf0 = this->get_parameter("mf0").as_double();
         mf1 = this->get_parameter("mf1").as_double();
@@ -202,13 +204,10 @@ private:
             msg_Igr.z = r_dot_ref_i;
             float IG_u;
             float IG_r;
-            if(Ts_en == 1.0){
-                IG_u = Ts*(msg_Igu.x - msg_Igu.y - msg_Igu.z - sig_u_i);
-                IG_r = Ts*(msg_Igr.z-msg_Igr.x-msg_Igr.y-sig_r_i);
-            }else{
-                IG_u = (msg_Igu.x - msg_Igu.y - msg_Igu.z - sig_u_i);
-                IG_r = (msg_Igr.z-msg_Igr.x-msg_Igr.y-sig_r_i);
-            }
+
+            IG_u = msg_Igu.x - msg_Igu.y - msg_Igu.z - (Su_en*sig_u_i);
+            IG_r = msg_Igr.z - msg_Igr.x - msg_Igr.y - (Sr_en*sig_r_i);
+            
 
             // New Code
             float m, d;
@@ -445,12 +444,23 @@ private:
                     return result;
                 }
             }
-            if (param.get_name() == "Ts_en"){
-                if(param.as_double() == 0.0 or param.as_double() == 1.0){
+            if (param.get_name() == "Sr_en"){
+                if(param.as_double() >= 0.0 or param.as_double() <= 1.0){
                     RCLCPP_INFO(this->get_logger(), "changed param value");
-                    Ts_en = param.as_double();
+                    Sr_en = param.as_double();
                 }else{
-                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be 0.0 or 1.0");
+                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-1");
+                    result.successful = false;
+                    result.reason = "Value out of range";
+                    return result;
+                }
+            }
+            if (param.get_name() == "Su_en"){
+                if(param.as_double() >= 0.0 or param.as_double() <= 2.0){
+                    RCLCPP_INFO(this->get_logger(), "changed param value");
+                    Su_en = param.as_double();
+                }else{
+                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-2");
                     result.successful = false;
                     result.reason = "Value out of range";
                     return result;
@@ -477,7 +487,7 @@ private:
     
     float taud; /*Constante tau del filtro derivativo*/
     float a ,b; /*Constantes del filtro derivativo*/
-    float Ts_en; /*Enable IGr y Sigmas surge y yaw*/
+    float Su_en, Sr_en; /*Enable IGr y Sigmas surge y yaw*/
 
     float mf0, mf1, mf2, mf3, mf4, mf5;
     float mr0, mr1, mr2, mr3, mr4, mr5;

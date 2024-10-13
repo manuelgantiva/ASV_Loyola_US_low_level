@@ -25,6 +25,9 @@ public:
         subscriber_state_zono_ = this-> create_subscription<asv_interfaces::msg::StateObserver>(
             "/control/state_observer_zono", rclcpp::SensorDataQoS(), 
             std::bind(&MuxObsNode::callbackStatesZono, this, std::placeholders::_1));
+        subscriber_vel_body= this-> create_subscription<geometry_msgs::msg::TwistStamped>(
+            "/mavros/local_position/velocity_body", rclcpp::SensorDataQoS(), 
+            std::bind(&MuxObsNode::callbackVelocityBodyData, this, std::placeholders::_1)); 
         publisher_state_ = this-> create_publisher<asv_interfaces::msg::StateObserver>("/control/state_observer",
                 rclcpp::SensorDataQoS());
 
@@ -39,15 +42,24 @@ private:
             msg_p=*msg;
             publisher_state_ ->publish(msg_p);
         }
+        if(liu_enable){
+            auto msg_p = asv_interfaces::msg::StateObserver();
+            msg_p=*msg;
+            msg_p.velocity.z = Velocity.z;
+            msg_p.disturbances.z = 0.0;
+            publisher_state_ ->publish(msg_p);
+
+        }
     }
 
     void callbackStatesLiu(const asv_interfaces::msg::StateObserver::SharedPtr msg)
     {
-        if(liu_enable){
+        (void) msg;
+        /*if(liu_enable){
             auto msg_p = asv_interfaces::msg::StateObserver();
             msg_p=*msg;
             publisher_state_ ->publish(msg_p);
-        }
+        }*/
     }
 
     void callbackStatesZono(const asv_interfaces::msg::StateObserver::SharedPtr msg)
@@ -56,6 +68,16 @@ private:
             auto msg_p = asv_interfaces::msg::StateObserver();
             msg_p=*msg;
             publisher_state_ ->publish(msg_p);
+        }
+    }
+
+    void callbackVelocityBodyData(const geometry_msgs::msg::TwistStamped::SharedPtr msg)
+    {
+        if (armed == true)
+        {
+            Velocity.x = msg->twist.linear.x;
+            Velocity.y = -1*msg->twist.linear.y;
+            Velocity.z = -1*msg->twist.angular.z;
         }
     }
 
@@ -109,6 +131,7 @@ private:
     rclcpp::Subscription<asv_interfaces::msg::StateObserver>::SharedPtr subscriber_state_liu_;
     rclcpp::Subscription<asv_interfaces::msg::StateObserver>::SharedPtr subscriber_state_zono_;
     rclcpp::Publisher<asv_interfaces::msg::StateObserver>::SharedPtr publisher_state_;
+    rclcpp::Subscription<geometry_msgs::msg::TwistStamped>::SharedPtr subscriber_vel_body;
 
     geometry_msgs::msg::Vector3 Velocity;
     bool guille_enable = false, liu_enable = false, zono_enable = false;

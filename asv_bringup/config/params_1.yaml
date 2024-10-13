@@ -57,10 +57,10 @@ control:
       Xr13: 2.0723
       Dz_up: 0.0775
       Dz_down: -0.0925
-      Max_n_r: 0.01
-      Max_n_p: 0.02
-      Max_w_r: 0.01
-      Max_w_p: 0.02
+      Max_n_r: 0.1
+      Max_n_p: 0.2
+      Max_w_r: 1.2
+      Max_w_p: 0.4
       q: 300
       Wpsi_di: [1.0, 1.0, 1.0]
       Wp_di: [1.0, 1.0, 100.0, 100.0, 1.0, 1.0]
@@ -75,7 +75,8 @@ control:
       kpsi: 0.1
       kr: 0.8
       taud: 200
-      Ts_en: 0.0
+      Su_en: 1.0
+      Sr_en: 0.1
       mf0: 0.00098059
       mf1: 1.2358
       mf2: 0.0
@@ -110,10 +111,11 @@ control:
   mpc_llc:
     ros__parameters:
       Ts: 100.0         #ms
-      W_psi: 0.00001
-      W_u: 0.00001
-      W_dL: 0.000001
-      W_dR: 0.000001
+      W_psi: 100.0
+      W_u: 100.0
+      W_r: 100.0
+      W_media: 100.0
+      W_dif: 100.0
       NC: 3
       NP: 3
       Xu6: -0.0754

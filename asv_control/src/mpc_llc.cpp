@@ -17,27 +17,32 @@ using namespace Eigen;
 using std::placeholders::_1;
 
 //------------------------------------------------------------------------------------//
-//                        DECLARACIÓN DE PARÁMETROS GLOBALES                          //
+//                        DECLARACI�N DE PAR�METROS GLOBALES                          //
 //------------------------------------------------------------------------------------//
 
-// Declaración de Limites MPC 
-const float u_max = 3.0;
-const float u_min = -1.0;
+// Declaraci�n de Limites MPC 
+const float u_max = 5.0;
+const float u_min = -5.0;
 const float r_max = 1.5;
 const float r_min = -1.5;
 const float psi_max = 2 * M_PI;
 const float psi_min = 0.0;
-const float delta_d_max = 1.0;
-const float delta_d_min = -1.0;
-float d_max = 1.0;
-float d_min = -1.0;
-
-// Declaración dimención matrices MPC 
+// L�mites Incremetos de las acciones de control
+const float delta_media_max = 1.0;
+const float delta_media_min = -1.0;
+const float delta_dif_max = 1.0;
+const float delta_dif_min = -1.0;
+// L�mites acciones de control
+float d_media_max = 1.0;
+float d_media_min = -1.0;
+float d_dif_max = 2.0;
+float d_dif_min = -2.0;
+// Declaraci�n dimenci�n matrices MPC 
 const int nx = 3;
 const int ny = 3;
 const int nu = 2;
 
-// Estructura para los parámetros del modelo
+// Estructura para los par�metros del modelo
 struct Model_Parameters {
     double Xu6;
     double Xu7;
@@ -53,17 +58,17 @@ class MpcLlcNode : public rclcpp::Node
 public:
     MpcLlcNode() : Node("mpc_llc")
     {
-        //--------- Parámetros del LLC MPC-------------------//
+        //--------- Par�metros del LLC MPC-------------------//
         this->declare_parameter("Ts", 100.0);
         this->declare_parameter("W_psi", 200.0);
         this->declare_parameter("W_u", 200.0);
         this->declare_parameter("W_r", 200.0);
-        this->declare_parameter("W_dL", 1.0);
-        this->declare_parameter("W_dR", 1.0);
+        this->declare_parameter("W_med", 1.0);
+        this->declare_parameter("W_dif", 1.0);
         this->declare_parameter("NC", 3);
         this->declare_parameter("NP", 3);
 
-        //----------- Parámetros Modelo --------------------------//
+        //----------- Par�metros Modelo --------------------------//
         this->declare_parameter("Xu6", 0.015655833255439);
         this->declare_parameter("Xu7", 0.162285711090086);
         this->declare_parameter("Xr10", -0.082872491904003);
@@ -71,19 +76,19 @@ public:
         this->declare_parameter("Xr12", 0.065979938580103);
         this->declare_parameter("Xr13", 0.311856792874191);
 
-        this-> declare_parameter("Dz_up", 0.0750);
-        this-> declare_parameter("Dz_down", -0.08);
-        //--------- Obtener parámetros -------------------//
+        this->declare_parameter("Dz_up", 0.0750);
+        this->declare_parameter("Dz_down", -0.08);
+        //--------- Obtener par�metros -------------------//
         Ts = this->get_parameter("Ts").as_double() / 1000.0;
         W_psi = this->get_parameter("W_psi").as_double();
         W_u = this->get_parameter("W_u").as_double();
         W_r = this->get_parameter("W_r").as_double();
-        W_dL = this->get_parameter("W_dL").as_double();
-        W_dR = this->get_parameter("W_dR").as_double();
+        W_media = this->get_parameter("W_med").as_double();
+        W_dif = this->get_parameter("W_dif").as_double();
         NC = this->get_parameter("NC").as_int();
         NP = this->get_parameter("NP").as_int();
 
-        // Inicialización de la estructura de parámetros del modelo
+        // Inicializaci�n de la estructura de par�metros del modelo
         Parameters_.Xu6 = this->get_parameter("Xu6").as_double();
         Parameters_.Xu7 = this->get_parameter("Xu7").as_double();
         Parameters_.Xr10 = this->get_parameter("Xr10").as_double();
@@ -91,10 +96,14 @@ public:
         Parameters_.Xr12 = this->get_parameter("Xr12").as_double();
         Parameters_.Xr13 = this->get_parameter("Xr13").as_double();
 
-        Dz_up  = this->get_parameter("Dz_up").as_double();
+        Dz_up = this->get_parameter("Dz_up").as_double();
         Dz_down = this->get_parameter("Dz_down").as_double();
-        d_max = d_max - Dz_up;
-        d_min = d_min - Dz_down;
+
+        d_media_max = d_media_max - Dz_up;
+        d_media_min = (d_media_min - Dz_down)/2; 
+        d_dif_max = d_dif_max - Dz_up + Dz_down;
+        d_dif_min = d_dif_min + Dz_up - Dz_down;
+
         //----------- Crear Matrices MPC ------------------------//
         Q.resize(NP * ny, NP * ny);
         R.resize(NC * nu, NC * nu);
@@ -105,7 +114,7 @@ public:
         Y_ref.setZero();
 
         fillSquareMatrix3(Q, NP, ny, W_psi, W_u, W_r);
-        fillSquareMatrix(R, NC, nu, W_dL, W_dR);
+        fillSquareMatrix(R, NC, nu, W_media, W_dif);
 
         // Print the resulting matrix o vector
         //std::cout << "A matrix:\n" << Umin << std::endl;
@@ -130,13 +139,12 @@ public:
             std::bind(&MpcLlcNode::callbackStateData, this, std::placeholders::_1), options_sensors_);
         publisher_pwm = this->create_publisher<asv_interfaces::msg::PwmValues>("/control/pwm_value_mpc",
             10);
-        timer_ = this -> create_wall_timer(std::chrono::milliseconds(int(Ts*1000.0)),
-                std::bind(&MpcLlcNode::calculateLowLevelController, this), cb_group_obs_);
+        timer_ = this->create_wall_timer(std::chrono::milliseconds(int(Ts * 1000.0)),
+            std::bind(&MpcLlcNode::calculateLowLevelController, this), cb_group_obs_);
 
         RCLCPP_INFO(this->get_logger(), "Low Level Controller MPC Node has been started.");
 
     }
-
 
 private:
     void calculateLowLevelController()
@@ -145,8 +153,8 @@ private:
         if (armed == false) {
             Y_ref.setZero();
             count = 0;
-            dL = 0.0;
-            dR = 0.0;
+            d_media = 0.0;
+            d_dif = 0.0;
             {
                 std::lock_guard<std::mutex> lock(mutex_);
 
@@ -183,18 +191,18 @@ private:
                 }
 
                 //------------------------------------------------------------------------------------//
-                //                           CÓDIGO MPC LOW LEVEL                                     //
+                //                           C�DIGO MPC LOW LEVEL                                     //
                 //------------------------------------------------------------------------------------//
-               
-                try {
-                    // Inicialización de Gurobi 
-                    GRBEnv env = GRBEnv(true);  
-                    env.set("LogFile", "mpc.log");  
-                    env.start();  
-                    GRBModel model = GRBModel(env); 
 
-                    // Definir las Variables de optimización como vectores columna 
-                    std::vector<GRBVar> x((NP + 1) * nx); // vector de los estados del sistema a lo largo del horizonte de predicción
+                try {
+                    // Inicializaci�n de Gurobi 
+                    GRBEnv env = GRBEnv(true);
+                    env.set("LogFile", "mpc.log");
+                    env.start();
+                    GRBModel model = GRBModel(env);
+
+                    // Definir las Variables de optimizaci�n como vectores columna 
+                    std::vector<GRBVar> x((NP + 1) * nx); // vector de los estados del sistema a lo largo del horizonte de predicci�n
                     std::vector<GRBVar> u(NC * nu);       // vector de las entradas del sistema a lo largo del horizonte de control
 
                     // Definir variables de estado inicial
@@ -202,26 +210,32 @@ private:
                     x[1] = model.addVar(u_hat_i, u_hat_i, 0.0, GRB_CONTINUOUS, "u_estado_inicial");
                     x[2] = model.addVar(r_hat_i, r_hat_i, 0.0, GRB_CONTINUOUS, "r_estado_inicial");
 
-                    // Definir variables de estado a lo largo del horizonte de predicción
+                    // Definir variables de estado a lo largo del horizonte de predicci�n
                     for (int k = 1; k <= NP; ++k) {
-                        x[k * nx + 0] = model.addVar(psi_min, psi_max, 0.0, GRB_CONTINUOUS, "psi_" + std::to_string(k));
-                        x[k * nx + 1] = model.addVar(u_min, u_max, 0.0, GRB_CONTINUOUS, "u_" + std::to_string(k));
-                        x[k * nx + 2] = model.addVar(r_min, r_max, 0.0, GRB_CONTINUOUS, "r_" + std::to_string(k));
+                        x[k * nx + 0] = model.addVar(-GRB_INFINITY, GRB_INFINITY, 0.0, GRB_CONTINUOUS, "psi_" + std::to_string(k));
+                        x[k * nx + 1] = model.addVar(-GRB_INFINITY, GRB_INFINITY, 0.0, GRB_CONTINUOUS, "u_" + std::to_string(k));
+                        x[k * nx + 2] = model.addVar(-GRB_INFINITY, GRB_INFINITY, 0.0, GRB_CONTINUOUS, "r_" + std::to_string(k));
                     }
-
+                    double M = 1000;
                     // Definir variables de control a lo largo del horizonte de control
                     for (int k = 0; k < NC; ++k) {
-                        u[k * nu + 0] = model.addVar(d_min, d_max, 0.0, GRB_CONTINUOUS, "dL_" + std::to_string(k));
-                        u[k * nu + 1] = model.addVar(d_min, d_max, 0.0, GRB_CONTINUOUS, "dR_" + std::to_string(k));
+                        u[k * nu + 0] = model.addVar(d_media_min, d_media_max, 0.0, GRB_CONTINUOUS, "d_media_" + std::to_string(k));
+                        u[k * nu + 1] = model.addVar(d_dif_min, d_dif_max, 0.0, GRB_CONTINUOUS, "d_diff_" + std::to_string(k));
+
+                        // Definir una variable binaria
+                        GRBVar z = model.addVar(0.0, 1.0, 0.0, GRB_BINARY, "z_" + std::to_string(k));
+                        // Agregar la restriccion de reverse 
+                        model.addConstr(u[k * nu + 0] >= u[k * nu + 1]/2 - M * (1 - z), "Restriccion_rr2_" + std::to_string(k));
+                        model.addConstr(u[k * nu + 0] >= u[k * nu + 1]/2 - M * z, "Restriccion_rr1_" + std::to_string(k));
                     }
 
                     // -----------------------------------------------------------------------------------------//
-                    //                                    FUNCIÓN OBJETIVO                                      //
+                    //                                    FUNCI�N OBJETIVO                                      //
                     // -----------------------------------------------------------------------------------------//
 
                     GRBQuadExpr objective = 0;
 
-                    // Penalización del Error de Seguimiento
+                    // Penalizaci�n del Error de Seguimiento
                     // (y(k+1) - yref(k+1))'*Q*(y(k+1) - yref(k+1))
 
                     for (int k = 0; k < NP; ++k) {
@@ -230,22 +244,7 @@ private:
                         objective += (x[(k + 1) * nx + 2] - Y_ref_i[k * ny + 2]) * Q(k * ny + 2, k * ny + 2) * (x[(k + 1) * nx + 2] - Y_ref_i[k * ny + 2]);
                     }
 
-                    // for (int k = 0; k < NP; ++k) {
-                    //     // Crear el subvector Y_n a partir de las variables de Gurobi
-                    //     Eigen::VectorXd Yref_n = Y_ref_i.segment(k * ny, ny);
-                    //     
-                    //     for (int i = 0; i < ny; ++i) {
-                    //         GRBVar Y_n_i = x[k * nx + i];  // Cada variable GRBVar en el vector x
-                    //         
-                    //         for (int j = 0; j < ny; ++j) {
-                    //             GRBVar Y_n_j = x[k * nx + j];
-                    //             // Penalización cuadrática (Y_n - Yref_n)^T * Q * (Y_n - Yref_n)
-                    //             objective += (Y_n_i - Yref_n(i)) * Q(k * ny + i, k * ny + j) * (Y_n_j - Yref_n(j));
-                    //         }
-                    //     }
-                    // }
-
-                    // Penalizaión de las acciones de control
+                    // Penalizai�n de las acciones de control
                     // (u(k)'*R*u(k)
 
                     for (int k = 0; k < NC; ++k) {
@@ -253,30 +252,21 @@ private:
                         objective += u[k * nu + 1] * R(k * nu + 1, k * nu + 1) * u[k * nu + 1];
                     }
 
-                    // for (int k = 0; k < NC; ++k) {
-                    //     for (int i = 0; i < nu; ++i) {
-                    //         for (int j = 0; j < nu; ++j) {
-                    //             // Construimos la expresión cuadrática para la penalización del control
-                    //             objective += u[k * nu + i] * R(k * nu + i, k * nu + j) * u[k * nu + j];
-                    //         }
-                    //     }
-                    // }
-
                     model.setObjective(objective, GRB_MINIMIZE);
 
                     // -----------------------------------------------------------------------------------------//
                     //                                  RESTRICCIONES  
                     // -----------------------------------------------------------------------------------------// 
 
-                    // Restricciones salidas a lo largo del horizonte de predicción 
+                    // Restricciones salidas a lo largo del horizonte de predicci�n 
 
                     for (int k = 0; k < NP; ++k) {
                         std::vector<GRBQuadExpr> x_next(nx);
                         Modelo(model, x_next, { x[k * nx], x[k * nx + 1], x[k * nx + 2] }, { u[k * nu], u[k * nu + 1] }, sig_u_i, sig_r_i);
 
-                        // ----------------- Restricciones de actualización de estados --------------------------
-                        // Con este bucle estamos imponiendo que x(k+1) se igual a x_next (es decir los estados siguientes calculados con la función modelo).
-                     
+                        // ----------------- Restricciones de actualizaci�n de estados --------------------------
+                        // Con este bucle estamos imponiendo que x(k+1) se igual a x_next (es decir los estados siguientes calculados con la funci�n modelo).
+
                         for (int i = 0; i < nx; ++i) {
                             model.addQConstr(x[(k + 1) * nx + i] == x_next[i]);
                         }
@@ -285,35 +275,35 @@ private:
                     // -----------------------------------------------------------------------------------------// 
 
                      // Restricciones entradas a lo largo del horizonte de control
-                     
+
 
                     for (int k = 0; k < NC; ++k) {
 
                         // ------------------ Restricciones de incremento de las entradas ---------------------------
 
                         if (k == 0) {
-                            model.addConstr(u[0] - dL >= delta_d_min);
-                            model.addConstr(u[0] - dL <= delta_d_max);
-                            model.addConstr(u[1] - dR >= delta_d_min);
-                            model.addConstr(u[1] - dR <= delta_d_max);
+                            model.addConstr(u[0] - d_media >= delta_media_min);
+                            model.addConstr(u[0] - d_media <= delta_media_max);
+                            model.addConstr(u[1] - d_dif >= delta_dif_min);
+                            model.addConstr(u[1] - d_dif <= delta_dif_max);
                         }
                         else {
-                            model.addConstr(u[k * nu] - u[(k - 1) * nu] >= delta_d_min);
-                            model.addConstr(u[k * nu] - u[(k - 1) * nu] <= delta_d_max);
-                            model.addConstr(u[k * nu + 1] - u[(k - 1) * nu + 1] >= delta_d_min);
-                            model.addConstr(u[k * nu + 1] - u[(k - 1) * nu + 1] <= delta_d_max);
+                            model.addConstr(u[k * nu] - u[(k - 1) * nu] >= delta_media_min);
+                            model.addConstr(u[k * nu] - u[(k - 1) * nu] <= delta_media_max);
+                            model.addConstr(u[k * nu + 1] - u[(k - 1) * nu + 1] >= delta_dif_min);
+                            model.addConstr(u[k * nu + 1] - u[(k - 1) * nu + 1] <= delta_dif_max);
                         }
                     }
 
                     // -----------------------------------------------------------------------------------------//
-                    //        OPTIMIZACIÓN DEL MODELO Y APLICACIÓN DE LAS MEJORES ACCIONES DE CONTROL           //
+                    //        OPTIMIZACI�N DEL MODELO Y APLICACI�N DE LAS MEJORES ACCIONES DE CONTROL           //
                     // -----------------------------------------------------------------------------------------// 
 
 
                     // Optimizar el modelo
                     model.optimize();
 
-                    // Verificación del cumplimiento de restricciones
+                    // Verificaci�n del cumplimiento de restricciones
                     if (model.get(GRB_IntAttr_Status) == GRB_INFEASIBLE) {
                         RCLCPP_ERROR(this->get_logger(), "El modelo es infeasible, generando reporte IIS...");
 
@@ -322,12 +312,12 @@ private:
 
                         // Guardar el reporte IIS en un archivo
                         model.write("infeasibility_report.ilp");
-                        dL = 0.0;
-                        dR = 0.0;
+                        d_media = 0.0;
+                        d_dif = 0.0;
 
                     }
                     else if (model.get(GRB_IntAttr_Status) == GRB_OPTIMAL || model.get(GRB_IntAttr_Status) == GRB_SUBOPTIMAL) {
-                        // Si el modelo encontró una solución óptima o subóptima
+                        // Si el modelo encontr� una soluci�n �ptima o sub�ptima
 
                         // Extraer las soluciones y aplicarlas al sistema
 
@@ -339,27 +329,34 @@ private:
                             optimal_u2[k] = u[k * nu + 1].get(GRB_DoubleAttr_X);
                         }
 
-                        // Aplicar las soluciones óptimas (dL y dR)
-                        dL = optimal_u1[0];
-                        dR = optimal_u2[0];
+                        // Aplicar las soluciones �ptimas (dL y dR)
+                        d_media = optimal_u1[0];
+                        d_dif = optimal_u2[0];
 
                     }
                     else {
-                        RCLCPP_ERROR(this->get_logger(), "El modelo no pudo encontrar una solución óptima.");
+                        RCLCPP_ERROR(this->get_logger(), "El modelo no pudo encontrar una soluci�n �ptima.");
                     }
                     // -----------------------------------------------------------------------------------------// 
 
+                    // Convertimos la media y la diferencia a pwm derecho e izquierdo 
+                    float dL = ((2 * d_media + d_dif) / 2);
+                    float dR = ((2 * d_media - d_dif) / 2);
+
                     if (dL > 0) {
-                        dL = dL + Dz_up;
-                    } else if (dL < 0){
+                       dL = dL + Dz_up;
+                    }
+                    else if (dL < 0) {
                         dL = dL + Dz_down;
                     }
 
                     if (dR > 0) {
                         dR = dR + Dz_up;;
-                    } else if (dR < 0){
+                    }
+                    else if (dR < 0) {
                         dR = dR + Dz_down;
                     }
+                   
                     // Publicar valores PWM
                     msg.t_left = 400 * dL + 1500;
                     msg.t_righ = 400 * dR + 1500;
@@ -411,71 +408,59 @@ private:
         }
     }
 
-   //--------------------------------------------------------------------------------------------------------------------//
-   //                                              FUNCIÓN MODELO
-   //--------------------------------------------------------------------------------------------------------------------//
+    //--------------------------------------------------------------------------------------------------------------------//
+    //                                              FUNCI�N MODELO
+    //--------------------------------------------------------------------------------------------------------------------//
 
-    void Modelo(GRBModel& model, std::vector<GRBQuadExpr>& x_next, const std::vector<GRBVar>& x, const std::vector<GRBVar>& u,const double sigma_u_i, const double sigma_r_i) {
-        // Descomposición del vector de estados
+    void Modelo(GRBModel& model, std::vector<GRBQuadExpr>& x_next, const std::vector<GRBVar>& x, const std::vector<GRBVar>& u, const double sigma_u_i, const double sigma_r_i) {
+        // Descomposici�n del vector de estados
         GRBVar Psi = x[0];
         GRBVar u_var = x[1];
         GRBVar r_var = x[2];
 
-        // Descomposición del vector de entradas
-        GRBVar Delta_L = u[0];
-        GRBVar Delta_R = u[1];
+        // Descomposici�n del vector de entradas
+        GRBVar media = u[0];
+        GRBVar diff = u[1];
 
-        // Crear la variable binaria Beta
+        // Variable binaria Beta
+
         GRBVar Beta = model.addVar(0.0, 1.0, 0.0, GRB_BINARY, "Beta");
-
-        // Crear variables binarias auxiliares
-        GRBVar zL = model.addVar(0.0, 1.0, 0.0, GRB_BINARY, "zL");
-        GRBVar zR = model.addVar(0.0, 1.0, 0.0, GRB_BINARY, "zR");
-
-        // Si Delta_L >= 0, entonces zL = 0
-        model.addGenConstrIndicator(zL, 0, Delta_L, GRB_GREATER_EQUAL, 0);
-        // Si Delta_L < 0, entonces zL = 1
-        model.addGenConstrIndicator(zL, 1, Delta_L, GRB_LESS_EQUAL, -1e-12);
-        // Si Delta_R >= 0, entonces zR = 0
-        model.addGenConstrIndicator(zR, 0, Delta_R, GRB_GREATER_EQUAL, 0);
-        // Si Delta_R < 0, entonces zR = 1
-        model.addGenConstrIndicator(zR, 1, Delta_R, GRB_LESS_EQUAL, -1e-12);
-        // Si zL = 0 y zR = 0, entonces Beta = 1
-        model.addGenConstrIndicator(Beta, 1, zL + zR, GRB_EQUAL, 0);
-        // Si zL = 1 o zR = 1, entonces Beta = 0
-        model.addGenConstrIndicator(Beta, 0, zL + zR, GRB_GREATER_EQUAL, 1);
-
-        // Variables auxiliares para términos cuadrados y cúbicos
-        GRBVar Delta_mean = model.addVar(-GRB_INFINITY, GRB_INFINITY, 0.0, GRB_CONTINUOUS, "Delta_mean");
-        GRBVar Delta_mean_square = model.addVar(0.0, GRB_INFINITY, 0.0, GRB_CONTINUOUS, "Delta_mean_square");
-        GRBVar Delta_diff = model.addVar(-GRB_INFINITY, GRB_INFINITY, 0.0, GRB_CONTINUOUS, "Delta_diff");
-        GRBVar Delta_diff_square = model.addVar(0.0, GRB_INFINITY, 0.0, GRB_CONTINUOUS, "Delta_diff_square");
-    
-        // Restricciones para las variables auxiliares
-        model.addConstr(Delta_mean == (Delta_R + Delta_L)/2, "Delta_mean_constr");
-        model.addQConstr(Delta_mean_square == Delta_mean * Delta_mean, "Delta_mean_square_constr");
-        model.addConstr(Delta_diff == Delta_R - Delta_L, "Delta_diff_constr");
-        model.addQConstr(Delta_diff_square == Delta_diff * Delta_diff, "Delta_diff_square_constr");
+        
+        GRBVar z1 = model.addVar(0.0, 1.0, 0.0, GRB_BINARY, "z1");
+        GRBVar z2 = model.addVar(0.0, 1.0, 0.0, GRB_BINARY, "z2");
+        model.addGenConstrIndicator(z1, 1, 2 * media + diff, GRB_GREATER_EQUAL, 0);    // 2 * media + diff >= 0   z1 = 1
+        model.addGenConstrIndicator(z1, 0, 2 * media + diff, GRB_LESS_EQUAL, -1e-12);  // 2 * media + diff < 0 z1 = 0
+        model.addGenConstrIndicator(z2, 1, 2 * media - diff, GRB_GREATER_EQUAL, 0);    // 2 * media - diff >= 0   z2 = 1
+        model.addGenConstrIndicator(z2, 0, 2 * media - diff, GRB_LESS_EQUAL, -1e-12);  // 2 * media - diff < 0   z2 = 0
+        
+        model.addGenConstrIndicator(Beta, 1, z1 + z2, GRB_EQUAL, 2);         // Si z1 = 0 y z2 = 0, entonces Beta = 1
+        model.addGenConstrIndicator(Beta, 0, z1 + z2, GRB_LESS_EQUAL, 1); // Si z1 = 1 o z2 = 1, entonces Beta = 0
 
         // Crear variable Alpha que varía entre -1 y 1
         GRBVar Alpha = model.addVar(-1.0, 1.0, 0.0, GRB_CONTINUOUS, "Alpha");       
         GRBVar Alpha_aux = model.addVar(0.0, 1.0, 0.0, GRB_BINARY, "Alpha_aux");// Crear la variable binaria auxiliar Alpha_aux
         model.addConstr(Alpha == 2 * Alpha_aux - 1, "Definir_Alpha"); // Definir Alpha en términos de Alpha_aux     
-        model.addGenConstrIndicator(Alpha_aux, 1, Delta_diff, GRB_GREATER_EQUAL, 0);// Si Delta_diff >= 0 Alpha_aux = 1 (Alpha = 1)
-        model.addGenConstrIndicator(Alpha_aux, 0, Delta_diff, GRB_LESS_EQUAL, -1e-6); // Si Delta_diff < 0 Alpha_aux = 0 (Alpha = -1)
-        GRBVar alfaxbeta = model.addVar(-GRB_INFINITY, GRB_INFINITY, 0.0, GRB_CONTINUOUS, "Alfa_beta");
-        model.addQConstr(alfaxbeta == (1-Beta) * Alpha , "Alfa_beta_constr");
+        model.addGenConstrIndicator(Alpha_aux, 1, diff, GRB_GREATER_EQUAL, 0);// Si Delta_diff >= 0 Alpha_aux = 1 (Alpha = 1)
+        model.addGenConstrIndicator(Alpha_aux, 0, diff, GRB_LESS_EQUAL, -1e-12); // Si Delta_diff < 0 Alpha_aux = 0 (Alpha = -1)
 
-        // Aplicación de las ecuaciones del modelo para calcular los siguientes estados
+        // Restricciones auxiliares para los t�rminos al cuadrado
+        GRBVar media_cuadrado = model.addVar(0.0, GRB_INFINITY, 0.0, GRB_CONTINUOUS, "media_cuadrado");
+        GRBVar diff_cuadrado = model.addVar(0.0, GRB_INFINITY, 0.0, GRB_CONTINUOUS, "diff_cuadrado");
+        GRBVar alfaxbeta = model.addVar(-10.0, 10.0, 0.0, GRB_CONTINUOUS, "Alfa_beta");
+        model.addQConstr(media_cuadrado == media * media, "Restriccion cuadritica media");
+        model.addQConstr(diff_cuadrado == diff * diff, "Restriccion cuadritica diff");
+        model.addQConstr(alfaxbeta == (1 - Beta) * Alpha, "Alfa_beta_constr");
+        
+        // Aplicaci�n de las ecuaciones del modelo para calcular los siguientes estados
         x_next[0] = Psi + Ts * r_var;
 
-        x_next[1] = u_var + Ts * ( Parameters_.Xu6 * (Delta_mean_square + Delta_diff_square/4) +
-                                Parameters_.Xu7 * Delta_mean); // + sigma_u_i);
-    
-        x_next[2] = r_var + Ts * ( Parameters_.Xr10 * alfaxbeta * (Delta_mean_square + Delta_diff_square/4) +
-                                Parameters_.Xr11 * Delta_mean * Delta_diff +
-                                Parameters_.Xr12 * alfaxbeta * Delta_mean +
-                                Parameters_.Xr13 * Delta_diff/2); // + sigma_r_i);
+        x_next[1] = u_var + Ts * (Parameters_.Xu6 * (media_cuadrado + diff_cuadrado / 4) +
+            Parameters_.Xu7 * media); // + sigma_u_i);
+
+        x_next[2] = r_var + Ts * (Parameters_.Xr10 * alfaxbeta * (media_cuadrado + diff_cuadrado / 4) +
+            Parameters_.Xr11 * diff +
+            Parameters_.Xr12 * alfaxbeta * media +
+            Parameters_.Xr13 * diff / 2); // + sigma_r_i);
     }
 
     //--------------------------------------------------------------------------------------------------------------------//
@@ -491,10 +476,6 @@ private:
         }
     }
 
-    //  u_ref = msg->x;
-    //  r_ref = msg->y;
-    //  psi_ref = msg->z;
-
     void callbackVelReference(const geometry_msgs::msg::Vector3::SharedPtr msg)
     {
         {
@@ -507,10 +488,10 @@ private:
         }
     }
 
-    // Función para calcular la salida del filtro de derivación
+    // Funci�n para calcular la salida del filtro de derivaci�n
     float derivationFilter(float input, std::vector<float>& memory, float a, float b) {
         float output = (a * memory[0]) + b * (input - memory[1]);
-        // Actualizar memoria para la próxima iteración
+        // Actualizar memoria para la pr�xima iteraci�n
         memory[0] = output;
         memory[1] = input;
         return output;
@@ -588,11 +569,11 @@ private:
                     return result;
                 }
             }
-            if (param.get_name() == "W_dL") {
+            if (param.get_name() == "W_media") {
                 if (param.as_double() >= 0.0 and param.as_double() < 3000.0) {
                     RCLCPP_INFO(this->get_logger(), "changed param value");
-                    W_dL = param.as_double();
-                    fillSquareMatrix(R, NC, nu, this->W_dL, this->W_dR);
+                    W_media = param.as_double();
+                    fillSquareMatrix(R, NC, nu, this->W_media, this->W_dif);
                 }
                 else {
                     RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-100");
@@ -601,11 +582,11 @@ private:
                     return result;
                 }
             }
-            if (param.get_name() == "W_dR") {
+            if (param.get_name() == "W_dif") {
                 if (param.as_double() >= 0.0 and param.as_double() < 3000.0) {
                     RCLCPP_INFO(this->get_logger(), "changed param value");
-                    W_dR = param.as_double();
-                    fillSquareMatrix(R, NC, nu, this->W_dL, this->W_dR);
+                    W_dif = param.as_double();
+                    fillSquareMatrix(R, NC, nu, this->W_media, this->W_dif);
                 }
                 else {
                     RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-100");
@@ -620,7 +601,7 @@ private:
                     NC = param.as_int();
                     R.resize(NC * nu, NC * nu);
                     R.setZero();
-                    fillSquareMatrix(R, NC, nu, this->W_dL, this->W_dR);
+                    fillSquareMatrix(R, NC, nu, this->W_media, this->W_dif);
 
                 }
                 else {
@@ -661,16 +642,16 @@ private:
 
     //------Params-------//
     float Ts;
-    float dL, dR;
+    float d_media, d_dif;
     float Dz_up, Dz_down;
 
     // Instancia de la estructura Model_Parameters
 
     Model_Parameters Parameters_;
 
-    //Parámetros del controlador MPC
+    //Par�metros del controlador MPC
 
-    float W_psi, W_u, W_r, W_dL, W_dR;
+    float W_psi, W_u, W_r, W_media, W_dif;
     int NC, NP;
 
     /* Definicion Matrices y Vectores*/
