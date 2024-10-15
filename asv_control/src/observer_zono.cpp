@@ -49,6 +49,7 @@ public:
         this-> declare_parameter("Max_w_p", 0.02);
 
         this-> declare_parameter("q", 300);
+        this-> declare_parameter("met", 1);
 
         this-> declare_parameter("Wpsi_di", std::vector<float>{1.0, 1.0, 1.0});
         this-> declare_parameter("Wp_di", std::vector<float>{1.0, 1.0, 1.0, 1.0, 1.0, 1.0});
@@ -78,6 +79,7 @@ public:
         Max_w_p = this->get_parameter("Max_w_p").as_double();
 
         q = this->get_parameter("q").as_int();
+        met = this->get_parameter("met").as_int();
 
         std::vector<double> Wpsi_di = this->get_parameter("Wpsi_di").as_double_array();
         std::vector<double> Wp_di = this->get_parameter("Wp_di").as_double_array();
@@ -270,7 +272,11 @@ private:
                 Hr << Hr1, Hr2;
                 Zpsi_prior = Zonotopo(qr, Hr);
 
-                Zp_prior = Zonotopo::prediction_Y(Ap,Zp_next,Ypsi_i(0)-Max_n_r,Ypsi_i(0)+Max_n_r,Bwp,Qp,IGp);
+                if(met == 1){
+                    Zp_prior = Zonotopo::prediction_Y(Ap,Zp_next,Ypsi_i(0)-Max_n_r,Ypsi_i(0)+Max_n_r,Bwp,Qp,IGp);
+                }else{
+                    Zp_prior = Zonotopo::prediction2_Y(Ap, t_s, Zp_next,Ypsi_i(0)-Max_n_r,Ypsi_i(0)+Max_n_r,Bwp,Qp,IGp,1);
+                }
 
                 msg.header.stamp = this->now();
                 msg.header.frame_id = my_id; 
@@ -532,6 +538,17 @@ private:
                     return result;
                 }
             }
+            if (param.get_name() == "met"){
+                if(param.as_int() == 1 or param.as_int() == 2){
+                    RCLCPP_INFO(this->get_logger(), "changed param value");
+                    met = this->get_parameter("met").as_int();
+                }else{
+                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be 1 or 2");
+                    result.successful = false;
+                    result.reason = "Value out of range";
+                    return result;
+                }
+            }
             if (param.get_name() == "Wpsi_di"){
                 if(param.as_double_array().size() == 3){
                     RCLCPP_INFO(this->get_logger(), "changed param value");
@@ -582,7 +599,7 @@ private:
 
     float delta_diff;
     float delta_mean;
-    int beta, count=0, q;  
+    int beta, count=0, q, met;  
 
     Matrix <double, 3,1> IGpsi; 
     Matrix <double, 6,1> IGp;

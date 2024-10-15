@@ -62,6 +62,7 @@ control:
       Max_w_r: 1.2
       Max_w_p: 0.4
       q: 300
+      met: 1
       Wpsi_di: [1.0, 1.0, 1.0]
       Wp_di: [1.0, 1.0, 100.0, 100.0, 1.0, 1.0]
   ref_llc:
