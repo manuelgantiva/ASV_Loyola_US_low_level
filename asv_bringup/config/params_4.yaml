@@ -41,7 +41,7 @@ control:
       Dz_down: -0.0625
       PpWp_c1: [30.0, 0.0, 300.0, 0.0, 1000.0, 0.0]
       PpWp_c2: [0.0, 30.0, 0.0, 300.0, 0.0, 1000.0]
-      Lpsi: [30, 300, 1000]
+      Lpsi: [30.0, 300.0, 1000.0]
   observer_zono:
     ros__parameters:
       Ts: 100.0         #ms
@@ -72,12 +72,12 @@ control:
     ros__parameters:
       Ts: 100.0         #ms
       ku: 0.4
-      ki: 0.02
+      ki: 0.0
       kpsi: 0.1
       kr: 0.8
       taud: 200
       Su_en: 1.0
-      Sr_en: 0.1
+      Sr_en: 1.0
       mf0: 0.0025071
       mf1: 1.605
       mf2: 0.0
