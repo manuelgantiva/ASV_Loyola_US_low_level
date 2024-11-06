@@ -14,8 +14,10 @@ class FramePublisher : public rclcpp::Node
 public:
     FramePublisher() : Node("asv_tf2_broadcaster")
     {
-        // Declare and acquire 'asv_id' parameter
-        asv_id_= this-> declare_parameter<std::string>("asv_id", "asv0");
+        // Declare and acquire 'asv_id' parameter 
+        this-> declare_parameter("my_id", "ASV0");
+
+        my_id = (this->get_parameter("my_id").as_string());
 
         // Initialize the transform broadcaster
         tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
@@ -23,16 +25,16 @@ public:
         // Subscribe to a turtle{1}{2}/pose topic and call handle_turtle_pose
         // callback function on each message
         subscriber_gps_local= this-> create_subscription<geometry_msgs::msg::PoseStamped>(
-            "/mavros/local_position/pose",rclcpp::SensorDataQoS(), 
+            "/" + my_id + "/mavros/local_position/pose",rclcpp::SensorDataQoS(), 
             std::bind(&FramePublisher::callbackGpsLocalData, this, std::placeholders::_1));
         subscriber_xbee = this-> create_subscription<asv_interfaces::msg::XbeeObserver>(
-            "/comunication/xbee_observer",1, 
+            "/" + my_id + "/comunication/xbee_observer",1, 
             std::bind(&FramePublisher::callbackXbeeData, this, std::placeholders::_1));
-        publisher_pose_neighbor = this-> create_publisher<geometry_msgs::msg::PoseStamped>("/control/pose_neighbor",
+        publisher_pose_neighbor = this-> create_publisher<geometry_msgs::msg::PoseStamped>("/" + my_id + "/control/pose_neighbor",
                 rclcpp::SensorDataQoS());
-        publisher_pose = this-> create_publisher<geometry_msgs::msg::PoseStamped>("/control/pose",
+        publisher_pose = this-> create_publisher<geometry_msgs::msg::PoseStamped>("/" + my_id + "/control/pose",
                 rclcpp::SensorDataQoS());
-    	RCLCPP_INFO(this->get_logger(), "Frame Publisher Node has been started.");
+    	RCLCPP_INFO(this->get_logger(), "Frame Publisher Node in %s has been started.", my_id.c_str());
 
     }
 
@@ -46,7 +48,7 @@ private:
             // corresponding tf variables
             t.header.stamp = this->get_clock()->now();
             t.header.frame_id = "map";
-            t.child_frame_id = "gps_link";
+            t.child_frame_id = my_id + "/gps_link";
 
             // asv only exists in 2D, thus we get x and y translation
             // coordinates from the message and set the z coordinate to 0
@@ -100,7 +102,7 @@ private:
             // corresponding tf variables
             t.header.stamp = this->get_clock()->now();
             t.header.frame_id = "map_ned";
-            t.child_frame_id = "ASV0";
+            t.child_frame_id = "ASVn";
             //t.child_frame_id.append(msg->states[0].id);
 
             // asv only exists in 2D, thus we get x and y translation
@@ -152,7 +154,7 @@ private:
         return static_cast<float>(psi);
     }
 
-
+    std::string my_id;
     int status_gps;
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr subscriber_gps_local;
     rclcpp::Subscription<asv_interfaces::msg::XbeeObserver>::SharedPtr subscriber_xbee;
@@ -161,8 +163,6 @@ private:
     rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr publisher_pose;
 
     std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
-    std::string asv_id_;
-
 };
 
 int main(int argc, char **argv)

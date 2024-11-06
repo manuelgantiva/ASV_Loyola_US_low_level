@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
-  <xacro:macro name="base_asv">
+  <xacro:macro name="base_asv" params="name">
     <link
-      name="base_link">
+      name="${name}/base_link">
       <visual>
         <origin
           xyz="0 0 0"
@@ -62,7 +62,7 @@
     </link>
 
     <link
-      name="Motor_izquierda_link">
+      name="${name}/Motor_izquierda_link">
       <visual>
         <origin
           xyz="0 0 0"
@@ -88,7 +88,7 @@
       </collision>
     </link>
     <link
-      name="Motor_derecha_link">
+      name="${name}/Motor_derecha_link">
       <visual>
         <origin
           xyz="0 0 0"
@@ -115,15 +115,15 @@
     </link>
 
     <joint
-      name="left_motor_joint"
+      name="${name}/left_motor_joint"
       type="fixed">
       <origin
         xyz="-0.44372 0.3375 -0.20667"
         rpy="-1.5708 0.0 -1.5708" />
       <parent
-        link="base_link" />
+        link="${name}/base_link" />
       <child
-        link="Motor_izquierda_link" />
+        link="${name}/Motor_izquierda_link" />
       <axis
         xyz="0 0 1" />
       <limit
@@ -135,15 +135,15 @@
     </joint>
   
   <joint
-      name="right_motor_joint"
+      name="${name}/right_motor_joint"
           type="fixed">
           <origin
           xyz="-0.44372 -0.3375 -0.20667"
           rpy="-1.5708 0.0 -1.5708" />
           <parent
-          link="base_link" />
+          link="${name}/base_link" />
           <child
-          link="Motor_derecha_link" />
+          link="${name}/Motor_derecha_link" />
           <axis
           xyz="0 0 1" />
           <limit

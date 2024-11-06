@@ -1,141 +1,129 @@
-control:
-  rc_handler:
-    ros__parameters:
-      origin: [37.307689, -5.940203, 85.37814771871618] #Lago de la vida Grande
-      # origin: [37.3047028, -5.9404694, 85.37814771871618] #Lago de la vida Pequeño
-      # origin: [37.3088513, -5.9398486, 85.37814771871618] #Lago de la vida Alto
-      # origin: [37.4191583,  -5.9989917, 63.49701432163044] #Lago de Alamillo Izq
-      # origin: [37.4190694, -5.9984778, 63.49701432163044] #Lago de Alamillo Der
-  observer_guille:
-    ros__parameters:
-      Ts: 100.0         #ms
-      Xu6: 0.7793
-      Xu7: 8.7028
-      Xv10: 0.4966
-      Xv11: 0.0956
-      Xv12: -0.4317
-      Xv13: -1.2376
-      Xr10: -1.1696
-      Xr11: -0.7568
-      Xr12: 1.1641
-      Xr13: 4.3686
-      Dz_up: 0.022
-      Dz_down: -0.022
-      PpWp_c1: [6.7189695799299, 0.0, 5.10273077523022, 0.0, 1.56374424601122, 0.0]
-      PpWp_c2: [0.0, 6.7189695799299, 0.0, 5.10273077523022, 0.0, 1.56374424601122]
-      Lpsi: [10.3703722644616, 42.7624634299732, 76.0083201484121]
-  observer_liu:
-    ros__parameters:
-      Ts: 100.0         #ms
-      Xu6: 0.7793
-      Xu7: 8.7028
-      Xv10: 0.4966
-      Xv11: 0.0956
-      Xv12: -0.4317
-      Xv13: -1.2376
-      Xr10: -1.1696
-      Xr11: -0.7568
-      Xr12: 1.1641
-      Xr13: 4.3686
-      Dz_up: 0.022
-      Dz_down: -0.022
-      PpWp_c1: [6.65069285238785, 0.0, 9.40914064150192, 0.0, 4.5999936111014, 0.0]
-      PpWp_c2: [0.0, 6.65069285238867, 0.0, 9.40914064149671, 0.0, 4.59999396110901]
-      Lpsi: [10.3703722644616, 42.7624634299732, 76.0083201484121]
-  observer_zono:
-    ros__parameters:
-      Ts: 100.0         #ms
-      Xu6: 0.7793
-      Xu7: 8.7028
-      Xv10: 0.4966
-      Xv11: 0.0956
-      Xv12: -0.4317
-      Xv13: -1.2376
-      Xr10: -1.1696
-      Xr11: -0.7568
-      Xr12: 1.1641
-      Xr13: 4.3686
-      Dz_up: 0.022
-      Dz_down: -0.022
-      Max_n_r: 0.1
-      Max_n_p: 0.2
-      Max_w_r: 1.2
-      Max_w_p: 0.4
-      q: 300
-      met: 1
-      Wpsi_di: [1.0, 1.0, 1.0]
-      Wp_di: [1.0, 1.0, 100.0, 100.0, 1.0, 1.0]
-  ref_llc:
-    ros__parameters:
-      reference_mode: True     #False sin mode and True lineal mode
-  ifac_llc:
-    ros__parameters:
-      Ts: 100.0         #ms
-      ku: 0.4
-      ki: 0.02
-      kpsi: 0.1
-      kr: 0.8
-      taud: 200
-      Su_en: 1.0
-      Sr_en: 1.0
-      mf0: 0.0014409
-      mf1: 0.1138
-      mf2: 0.0
-      mf3: -0.00091222
-      mf4: 0.0
-      mf5: -0.0061814
-      mr0: -0.0046462
-      mr1: 0.11645
-      mr2: 0.011707
-      mr3: -0.0015825
-      mr4: 0.00025995
-      mr5: -0.011367
-      df0: 0.0
-      df1: 0.0
-      df2: 0.44326
-      df3: 0.0
-      df4: 0.024164
-      df5: 0.0
-      dr0: 0.022449
-      dr1: -0.073702
-      dr2: 0.39731
-      dr3: 0.008688
-      dr4: 0.022944
-      dr5: 0.065252
-      IGumax_ff: 9.25673
-      IGumax_rf: 4.62836
-      IGumin_rf: -3.88302
-      IGrmax_ff: 1.77433
-      IGrmax_rf: 3.15384
-      Dz_up: 0.022
-      Dz_down: -0.022
-  mpc_llc:
-    ros__parameters:
-      Ts: 100.0         #ms
-      W_psi: 100.0
-      W_u: 100.0
-      W_r: 100.0
-      W_media: 100.0
-      W_dif: 100.0
-      NC: 3
-      NP: 3 
-      Xu6: 0.7793
-      Xu7: 8.7028
-      Xr10: -1.1696
-      Xr11: -0.7568
-      Xr12: 1.1641
-      Xr13: 4.3686
-      Dz_up: 0.022
-      Dz_down: -0.022
-  wang_mlc:
-    ros__parameters:
-      Ts: 100.0         #ms
-      delta_SGLOS: 1.0
-      k_u_tar: 2.0
-      taud: 5.0
-      path_d: 0 
-      flag: False     #True signo igual False invertido
-  ref_mlc:
-    ros__parameters:
-      Dis_ref: True     #Referencia por escalones o continua
-  
+ASV0:
+  observer:
+    observer_guille:
+      ros__parameters:
+        Ts: 100.0         #ms
+        Xu6: 0.7793
+        Xu7: 8.7028
+        Xv10: 0.4966
+        Xv11: 0.0956
+        Xv12: -0.4317
+        Xv13: -1.2376
+        Xr10: -1.1696
+        Xr11: -0.7568
+        Xr12: 1.1641
+        Xr13: 4.3686
+        Dz_up: 0.022
+        Dz_down: -0.022
+        PpWp_c1: [6.7189695799299, 0.0, 5.10273077523022, 0.0, 1.56374424601122, 0.0]
+        PpWp_c2: [0.0, 6.7189695799299, 0.0, 5.10273077523022, 0.0, 1.56374424601122]
+        Lpsi: [10.3703722644616, 42.7624634299732, 76.0083201484121]
+    observer_liu:
+      ros__parameters:
+        Ts: 100.0         #ms
+        Xu6: 0.7793
+        Xu7: 8.7028
+        Xv10: 0.4966
+        Xv11: 0.0956
+        Xv12: -0.4317
+        Xv13: -1.2376
+        Xr10: -1.1696
+        Xr11: -0.7568
+        Xr12: 1.1641
+        Xr13: 4.3686
+        Dz_up: 0.022
+        Dz_down: -0.022
+        PpWp_c1: [6.65069285238785, 0.0, 9.40914064150192, 0.0, 4.5999936111014, 0.0]
+        PpWp_c2: [0.0, 6.65069285238867, 0.0, 9.40914064149671, 0.0, 4.59999396110901]
+        Lpsi: [10.3703722644616, 42.7624634299732, 76.0083201484121]
+    observer_zono:
+      ros__parameters:
+        Ts: 100.0         #ms
+        Xu6: 0.7793
+        Xu7: 8.7028
+        Xv10: 0.4966
+        Xv11: 0.0956
+        Xv12: -0.4317
+        Xv13: -1.2376
+        Xr10: -1.1696
+        Xr11: -0.7568
+        Xr12: 1.1641
+        Xr13: 4.3686
+        Dz_up: 0.022
+        Dz_down: -0.022
+        Max_n_r: 0.1
+        Max_n_p: 0.2
+        Max_w_r: 1.2
+        Max_w_p: 0.4
+        q: 300
+        met: 1
+        Wpsi_di: [1.0, 1.0, 1.0]
+        Wp_di: [1.0, 1.0, 100.0, 100.0, 1.0, 1.0]
+  control:
+    ifac_llc:
+      ros__parameters:
+        Ts: 100.0         #ms
+        ku: 2.0
+        ki: 0.0
+        kpsi: 0.5
+        kr: 2.0
+        taud: 200
+        Su_en: 1.0
+        Sr_en: 1.0
+        mf0: 0.0014409
+        mf1: 0.1138
+        mf2: 0.0
+        mf3: -0.00091222
+        mf4: 0.0
+        mf5: -0.0061814
+        mr0: -0.0046462
+        mr1: 0.11645
+        mr2: 0.011707
+        mr3: -0.0015825
+        mr4: 0.00025995
+        mr5: -0.011367
+        df0: 0.0
+        df1: 0.0
+        df2: 0.44326
+        df3: 0.0
+        df4: 0.024164
+        df5: 0.0
+        dr0: 0.022449
+        dr1: -0.073702
+        dr2: 0.39731
+        dr3: 0.008688
+        dr4: 0.022944
+        dr5: 0.065252
+        IGumax_ff: 9.25673
+        IGumax_rf: 4.62836
+        IGumin_rf: -3.88302
+        IGrmax_ff: 1.77433
+        IGrmax_rf: 3.15384
+        Dz_up: 0.022
+        Dz_down: -0.022
+    mpc_llc:
+      ros__parameters:
+        Ts: 100.0         #ms
+        W_psi: 100.0
+        W_u: 100.0
+        W_r: 100.0
+        W_media: 100.0
+        W_dif: 100.0
+        NC: 3
+        NP: 3 
+        Xu6: 0.7793
+        Xu7: 8.7028
+        Xr10: -1.1696
+        Xr11: -0.7568
+        Xr12: 1.1641
+        Xr13: 4.3686
+        Dz_up: 0.022
+        Dz_down: -0.022
+    wang_mlc:
+      ros__parameters:
+        Ts: 100.0         #ms
+        delta_SGLOS: 2.0
+        k_u_tar: 2.0
+        taud: 5.0
+        path_d: 0
+        flag: False     #True signo igual False invertido  

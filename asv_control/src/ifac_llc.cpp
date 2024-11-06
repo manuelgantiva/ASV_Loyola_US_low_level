@@ -26,7 +26,8 @@ class IfacLlcNode : public rclcpp::Node
 public:
     IfacLlcNode() : Node("ifac_llc")
     {     
-        
+        std::string my_id; 
+        this-> declare_parameter("my_id", "ASV0");
         //---------Parámetros del LLC-------------------//
         this-> declare_parameter("Ts", 100.0);
         this-> declare_parameter("ku", 2.0);
@@ -70,6 +71,8 @@ public:
 
         this-> declare_parameter("Dz_up", 0.0750);
         this-> declare_parameter("Dz_down", -0.08);
+
+        my_id = (this->get_parameter("my_id").as_string());
         
         Ts = this->get_parameter("Ts").as_double()/1000.0;
         sm_gain_ku = this->get_parameter("ku").as_double();
@@ -133,19 +136,19 @@ public:
         params_callback_handle_ = this->add_on_set_parameters_callback(std::bind(&IfacLlcNode::param_callback, this, _1));
 
         subscriber_states_obs_ = this-> create_subscription<asv_interfaces::msg::StateObserver>(
-            "/control/state_observer",rclcpp::SensorDataQoS(), std::bind(&IfacLlcNode::callbackStates,
+            "/" + my_id + "/observer/state_observer",rclcpp::SensorDataQoS(), std::bind(&IfacLlcNode::callbackStates,
             this, std::placeholders::_1), options_sensors_);
         subscriber_references_ = this-> create_subscription<geometry_msgs::msg::Vector3>(
-            "/control/reference_llc", 1, std::bind(&IfacLlcNode::callbackVelReference,
+            "/" + my_id + "/control/reference_llc", 1, std::bind(&IfacLlcNode::callbackVelReference,
             this, std::placeholders::_1), options_sensors_);
-        subscriber_state = this-> create_subscription<mavros_msgs::msg::State>("/mavros/state",1,
+        subscriber_state = this-> create_subscription<mavros_msgs::msg::State>("/" + my_id + "/mavros/state",1,
                 std::bind(&IfacLlcNode::callbackStateData, this, std::placeholders::_1), options_sensors_);
-        publisher_pwm = this-> create_publisher<asv_interfaces::msg::PwmValues>("/control/pwm_value_ifac",
+        publisher_pwm = this-> create_publisher<asv_interfaces::msg::PwmValues>("/" + my_id + "/control/pwm_value_ifac",
                 10);
 
-        publisher_IG = this-> create_publisher<geometry_msgs::msg::Vector3>("/control/IG_ifac",1);
+        publisher_IG = this-> create_publisher<geometry_msgs::msg::Vector3>("/" + my_id + "/control/IG_ifac",1);
 
-        RCLCPP_INFO(this->get_logger(), "Low Level Controller IFAC Node has been started.");
+        RCLCPP_INFO(this->get_logger(), "Low Level Controller IFAC Node in %s has been started.", my_id.c_str());
     	
     }
 

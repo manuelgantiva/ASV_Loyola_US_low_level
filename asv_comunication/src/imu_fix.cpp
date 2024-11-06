@@ -18,48 +18,30 @@ class ImuFixNode : public rclcpp::Node
 public:
     ImuFixNode() : Node("imu_fix")
     {     
+        std::string my_id; 
+        this-> declare_parameter("my_id", "ASV0");
         //---------Parámetros del ASV-------------------//
         this-> declare_parameter("alpha", 0.15);
-        
+
+        my_id = (this->get_parameter("my_id").as_string());
         alpha = this->get_parameter("alpha").as_double();
 
         params_callback_handle_ = this->add_on_set_parameters_callback(std::bind(&ImuFixNode::param_callback, this, _1));
 
-        subscriber_imu = this-> create_subscription<sensor_msgs::msg::Imu>("/mavros/imu/data",rclcpp::SensorDataQoS(),
+        subscriber_imu = this-> create_subscription<sensor_msgs::msg::Imu>("/" + my_id + "/mavros/imu/data",rclcpp::SensorDataQoS(),
                 std::bind(&ImuFixNode::callbackImuData, this, std::placeholders::_1));
-        //subscriber_gps_local= this-> create_subscription<geometry_msgs::msg::PoseStamped>("/mavros/local_position/pose",
-        //       rclcpp::SensorDataQoS(), std::bind(&ImuFixNode::callbackGpsLocalData, this, std::placeholders::_1));
-        subscriber_state = this-> create_subscription<mavros_msgs::msg::State>("/mavros/state",1,
+        subscriber_state = this-> create_subscription<mavros_msgs::msg::State>("/" + my_id + "/mavros/state",1,
                 std::bind(&ImuFixNode::callbackStateData, this, std::placeholders::_1));
         
-        publisher_accel = this-> create_publisher<geometry_msgs::msg::Twist>("/control/accel_imu",1);
+        publisher_accel = this-> create_publisher<geometry_msgs::msg::Twist>("/" + my_id + "/control/accel_imu",1);
         
         ema_previous << 0.0, 0.0, -9.7;
                                 
-        RCLCPP_INFO(this->get_logger(), "Imu Fix Node has been started.");
-    	
+        RCLCPP_INFO(this->get_logger(), "Imu Fix Node in %s has been started.", my_id.c_str());    	
     }
 
 private:
     
-    /*void callbackGpsLocalData(const geometry_msgs::msg::PoseStamped::SharedPtr msg)
-    {
-        if(armed==true){
-            if (status_gps!=-1){
-                float psi_rad = quat2EulerAngles_XYZ(msg->pose.orientation.w, msg->pose.orientation.x,
-                                                    msg->pose.orientation.y, msg->pose.orientation.z);
-                psi_rad=-psi_rad+(M_PI/2);
-                if (psi_rad<0){
-                    psi_rad=psi_rad+(2*M_PI);
-                }
-                RCLCPP_INFO(this->get_logger(), "Heading is: %f", psi_rad);
-            }
-        }else{
-            psi_ant=0;
-        }
-        armed_act=armed;
-    }*/
-
     void callbackImuData(const sensor_msgs::msg::Imu::SharedPtr msg) 
     {
         if(armed==true){
@@ -169,7 +151,6 @@ private:
     void callbackStateData(const mavros_msgs::msg::State::SharedPtr msg)
     {
         armed= msg->armed;
-        // RCLCPP_INFO(this->get_logger(), "PWM left: %d and PWM right:%d", pwm_left, pwm_right);
     }
 
     rcl_interfaces::msg::SetParametersResult param_callback(const std::vector<rclcpp::Parameter> &params){

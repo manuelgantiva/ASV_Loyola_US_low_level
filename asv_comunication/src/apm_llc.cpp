@@ -10,22 +10,23 @@ class ApmLlcNode : public rclcpp::Node
 {
 public:
     ApmLlcNode() : Node("apm_llc")
-    {     
-        
+    {    
+        std::string my_id; 
+        this-> declare_parameter("my_id", "ASV0");
         //---------Parámetros del LLC-------------------//
         this-> declare_parameter("Ts", 100.0);
-
         Ts = this->get_parameter("Ts").as_double();
+        my_id = (this->get_parameter("my_id").as_string());
 
         subscriber_references_ = this-> create_subscription<geometry_msgs::msg::Vector3>(
-            "/control/reference_llc", 1, std::bind(&ApmLlcNode::callbackVelReference,
+            "/" + my_id + "/control/reference_llc", 1, std::bind(&ApmLlcNode::callbackVelReference,
             this, std::placeholders::_1));
-        subscriber_state = this-> create_subscription<mavros_msgs::msg::State>("/mavros/state",1,
+        subscriber_state = this-> create_subscription<mavros_msgs::msg::State>("/" + my_id + "/mavros/state",1,
                 std::bind(&ApmLlcNode::callbackStateData, this, std::placeholders::_1));
         publisher_cmd_vel_ = this-> create_publisher<geometry_msgs::msg::Twist>(
-                "/mavros/setpoint_velocity/cmd_vel_unstamped", 1);
+                "/" + my_id + "/mavros/setpoint_velocity/cmd_vel_unstamped", 1);
 
-        RCLCPP_INFO(this->get_logger(), "Low Level Controller APM Node has been started.");
+        RCLCPP_INFO(this->get_logger(), "Low Level Controller APM Node in %s has been started.", my_id.c_str());
     	
     }
 

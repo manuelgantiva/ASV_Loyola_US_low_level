@@ -11,17 +11,20 @@ class PwmMapperNode : public rclcpp::Node
 public:
     PwmMapperNode() : Node("pwm_mapper")
     {
+        std::string my_id; 
+        this-> declare_parameter("my_id", "ASV0");
+        my_id = (this->get_parameter("my_id").as_string());
         t_left=1500;
         t_right=1500;
         count_pwm=25;
-        publisher_ = this-> create_publisher<mavros_msgs::msg::OverrideRCIn>("/mavros/rc/override",1);
+        publisher_ = this-> create_publisher<mavros_msgs::msg::OverrideRCIn>("/" + my_id + "/mavros/rc/override",1);
         timer_ = this -> create_wall_timer(std::chrono::milliseconds(100),
                                           std::bind(&PwmMapperNode::publishOverridePwm, this));
         server_ = this-> create_service<example_interfaces::srv::SetBool>(
-                "/control/on_off_pwm", std::bind(&PwmMapperNode::callbackOnOffPwm, this, _1, _2));
-        subscriber_ = this-> create_subscription<asv_interfaces::msg::PwmValues>("/control/pwm_values",10,
+                "/" + my_id + "/control/on_off_pwm", std::bind(&PwmMapperNode::callbackOnOffPwm, this, _1, _2));
+        subscriber_ = this-> create_subscription<asv_interfaces::msg::PwmValues>("/" + my_id + "/control/pwm_values",10,
                 std::bind(&PwmMapperNode::callbackPwmValues, this, std::placeholders::_1));
-        RCLCPP_INFO(this->get_logger(), "Pwm Mapper Node has been started.");
+        RCLCPP_INFO(this->get_logger(), "Pwm Mapper Node in %s has been started.", my_id.c_str());
 
     }
 

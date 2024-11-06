@@ -58,6 +58,8 @@ class MpcLlcNode : public rclcpp::Node
 public:
     MpcLlcNode() : Node("mpc_llc")
     {
+        std::string my_id; 
+        this-> declare_parameter("my_id", "ASV0");
         //--------- Par�metros del LLC MPC-------------------//
         this->declare_parameter("Ts", 100.0);
         this->declare_parameter("W_psi", 200.0);
@@ -79,6 +81,8 @@ public:
         this->declare_parameter("Dz_up", 0.0750);
         this->declare_parameter("Dz_down", -0.08);
         //--------- Obtener par�metros -------------------//
+        my_id = (this->get_parameter("my_id").as_string());
+
         Ts = this->get_parameter("Ts").as_double() / 1000.0;
         W_psi = this->get_parameter("W_psi").as_double();
         W_u = this->get_parameter("W_u").as_double();
@@ -126,23 +130,22 @@ public:
 
         params_callback_handle_ = this->add_on_set_parameters_callback(std::bind(&MpcLlcNode::param_callback, this, _1));
 
+        timer_ = this->create_wall_timer(std::chrono::milliseconds(int(Ts * 1000.0)),
+            std::bind(&MpcLlcNode::calculateLowLevelController, this), cb_group_obs_);
         // Suscripciones
         subscriber_states_obs_ = this->create_subscription<asv_interfaces::msg::StateObserver>(
-            "/control/state_observer", rclcpp::SensorDataQoS(), std::bind(&MpcLlcNode::callbackStates,
+            "/" + my_id + "/observer/state_observer", rclcpp::SensorDataQoS(), std::bind(&MpcLlcNode::callbackStates,
                 this, std::placeholders::_1), options_sensors_);
 
         subscriber_references_ = this->create_subscription<geometry_msgs::msg::Vector3>(
-            "/control/reference_llc", 1, std::bind(&MpcLlcNode::callbackVelReference,
+            "/" + my_id + "/control/reference_llc", 1, std::bind(&MpcLlcNode::callbackVelReference,
                 this, std::placeholders::_1), options_sensors_);
 
-        subscriber_state = this->create_subscription<mavros_msgs::msg::State>("/mavros/state", 1,
+        subscriber_state = this->create_subscription<mavros_msgs::msg::State>("/" + my_id + "/mavros/state", 1,
             std::bind(&MpcLlcNode::callbackStateData, this, std::placeholders::_1), options_sensors_);
-        publisher_pwm = this->create_publisher<asv_interfaces::msg::PwmValues>("/control/pwm_value_mpc",
+        publisher_pwm = this->create_publisher<asv_interfaces::msg::PwmValues>("/" + my_id + "/control/pwm_value_mpc",
             10);
-        timer_ = this->create_wall_timer(std::chrono::milliseconds(int(Ts * 1000.0)),
-            std::bind(&MpcLlcNode::calculateLowLevelController, this), cb_group_obs_);
-
-        RCLCPP_INFO(this->get_logger(), "Low Level Controller MPC Node has been started.");
+        RCLCPP_INFO(this->get_logger(), "Low Level Controller MPC Node in %s has been started.", my_id.c_str());
 
     }
 

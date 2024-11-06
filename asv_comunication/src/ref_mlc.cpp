@@ -11,18 +11,22 @@ class RefMlcNode : public rclcpp::Node
 public:
     RefMlcNode() : Node("ref_mlc") 
     {
+        std::string my_id; 
+        this-> declare_parameter("my_id", "ASV0");
+        
         this-> declare_parameter("Dis_ref", true);
     
+        my_id = (this->get_parameter("my_id").as_string());
         Dis_ref = this->get_parameter("Dis_ref").as_bool();
 
         params_callback_handle_ = this->add_on_set_parameters_callback(std::bind(&RefMlcNode::param_callback, this, _1));
 
-        subscriber_rc_in = this-> create_subscription<mavros_msgs::msg::RCIn>("/mavros/rc/in",1,
+        subscriber_rc_in = this-> create_subscription<mavros_msgs::msg::RCIn>("/" + my_id + "/mavros/rc/in",1,
                 std::bind(&RefMlcNode::callbackRcIn, this, std::placeholders::_1));
-        subscriber_mavros_state = this-> create_subscription<mavros_msgs::msg::State>("/mavros/state",1,
+        subscriber_mavros_state = this-> create_subscription<mavros_msgs::msg::State>("/" + my_id + "/mavros/state",1,
                 std::bind(&RefMlcNode::callbackMavrosState, this, std::placeholders::_1));
-        publisher_ref = this-> create_publisher<std_msgs::msg::Float64>("/control/reference_mlc",1);
-    	RCLCPP_INFO(this->get_logger(), "Reference Vel Mid Level Node has been started.");
+        publisher_ref = this-> create_publisher<std_msgs::msg::Float64>("/" + my_id + "/control/reference_mlc",1);
+    	RCLCPP_INFO(this->get_logger(), "Reference Vel Mid Level Node in %s has been started.", my_id.c_str());
     }
 
 private:
@@ -70,6 +74,7 @@ private:
             {
                 ref_vel = -1.0;
             }
+            ref_vel = ref_vel * 0.5;
         } 
         return ref_vel;
     }

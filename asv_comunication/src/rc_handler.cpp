@@ -22,24 +22,28 @@ class RcHandlerNode : public rclcpp::Node
 public:
     RcHandlerNode() : Node("rc_handler") 
     {
+        std::string my_id; 
+        this-> declare_parameter("my_id", "ASV0");
+        my_id = (this->get_parameter("my_id").as_string());
+
         this-> declare_parameter("origin", std::vector<float>{37.30769, -5.94021, 89.95863749032833});
 
         origin= this->get_parameter("origin").as_double_array();
 
         params_callback_handle_ = this->add_on_set_parameters_callback(std::bind(&RcHandlerNode::param_callback, this, _1));
 
-        this->client_set_mode_ = this->create_client<mavros_msgs::srv::SetMode>("/mavros/set_mode");
-        this->client_set_llc_ = this->create_client<asv_interfaces::srv::SetLlc>("/control/set_llc");
-        this->client_set_obs_ = this->create_client<asv_interfaces::srv::SetObs>("/control/set_obs");
-        this->client_set_param = this->create_client<mavros_msgs::srv::ParamSetV2>("/mavros/param/set");
-        this->client_enable_pwm = this->create_client<example_interfaces::srv::SetBool>("/control/on_off_pwm");
-        this->client_set_home = this->create_client<mavros_msgs::srv::CommandHome>("/mavros/cmd/set_home");
-        this->client_arming = this->create_client<mavros_msgs::srv::CommandBool>("/mavros/cmd/arming");
-        subscriber_ = this-> create_subscription<mavros_msgs::msg::RCIn>("/mavros/rc/in",10,
+        this->client_set_mode_ = this->create_client<mavros_msgs::srv::SetMode>("/" + my_id + "/mavros/set_mode");
+        this->client_set_llc_ = this->create_client<asv_interfaces::srv::SetLlc>("/" + my_id + "/control/set_llc");
+        this->client_set_obs_ = this->create_client<asv_interfaces::srv::SetObs>("/" + my_id + "/observer/set_obs");
+        this->client_set_param = this->create_client<mavros_msgs::srv::ParamSetV2>("/" + my_id + "/mavros/param/set");
+        this->client_enable_pwm = this->create_client<example_interfaces::srv::SetBool>("/" + my_id + "/control/on_off_pwm");
+        this->client_set_home = this->create_client<mavros_msgs::srv::CommandHome>("/" + my_id + "/mavros/cmd/set_home");
+        this->client_arming = this->create_client<mavros_msgs::srv::CommandBool>("/" + my_id + "/mavros/cmd/arming");
+        subscriber_ = this-> create_subscription<mavros_msgs::msg::RCIn>("/" + my_id + "/mavros/rc/in",10,
                 std::bind(&RcHandlerNode::callbackRcIn, this, std::placeholders::_1));
-        subscriber_2 = this-> create_subscription<mavros_msgs::msg::State>("/mavros/state",10,
+        subscriber_2 = this-> create_subscription<mavros_msgs::msg::State>("/" + my_id + "/mavros/state",10,
                 std::bind(&RcHandlerNode::callbackMavrosState, this, std::placeholders::_1));
-    	RCLCPP_INFO(this->get_logger(), "Rc Handler Node has been started.");
+    	RCLCPP_INFO(this->get_logger(), "Rc Handler Node in %s has been started.", my_id.c_str());
     }
 
 private:

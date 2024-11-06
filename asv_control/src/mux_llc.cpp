@@ -11,16 +11,19 @@ class MuxLlcNode : public rclcpp::Node
 public:
     MuxLlcNode() : Node("mux_llc") 
     {
-        subscriber_pwm_mpc_ = this-> create_subscription<asv_interfaces::msg::PwmValues>("/control/pwm_value_mpc",
+        std::string my_id; 
+        this-> declare_parameter("my_id", "ASV0");
+        my_id = (this->get_parameter("my_id").as_string());
+        subscriber_pwm_mpc_ = this-> create_subscription<asv_interfaces::msg::PwmValues>("/" + my_id + "/control/pwm_value_mpc",
             10, std::bind(&MuxLlcNode::callbackPwmValueMpc, this, std::placeholders::_1));
-        subscriber_pwm_ifac_ = this-> create_subscription<asv_interfaces::msg::PwmValues>("/control/pwm_value_ifac",
+        subscriber_pwm_ifac_ = this-> create_subscription<asv_interfaces::msg::PwmValues>("/" + my_id + "/control/pwm_value_ifac",
             10, std::bind(&MuxLlcNode::callbackPwmValueIfac, this, std::placeholders::_1));
-        publisher_pwm_ = this-> create_publisher<asv_interfaces::msg::PwmValues>("/control/pwm_values", 10);
+        publisher_pwm_ = this-> create_publisher<asv_interfaces::msg::PwmValues>("/" + my_id + "/control/pwm_values", 10);
         server_set_llc_ = this-> create_service<asv_interfaces::srv::SetLlc>(
-                "/control/set_llc", std::bind(&MuxLlcNode::callbackSetLowLevelControl, this, _1, _2));  
-        subscriber_state_mavros_ = this-> create_subscription<mavros_msgs::msg::State>("/mavros/state",1,
+                "/" + my_id + "/control/set_llc", std::bind(&MuxLlcNode::callbackSetLowLevelControl, this, _1, _2));  
+        subscriber_state_mavros_ = this-> create_subscription<mavros_msgs::msg::State>("/" + my_id + "/mavros/state",1,
                 std::bind(&MuxLlcNode::callbackMavrosState, this, std::placeholders::_1));   
-        RCLCPP_INFO(this->get_logger(), "Mux Low Level Controler Node has been started.");
+        RCLCPP_INFO(this->get_logger(), "Mux Low Level Controler Node in %s has been started.", my_id.c_str());
     }
 
 private:

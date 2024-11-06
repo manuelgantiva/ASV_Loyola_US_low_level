@@ -10,10 +10,10 @@
   <xacro:include filename="base_neighbor.xacro"/>
 
   <xacro:if value="$(arg own)">
-    <xacro:base_asv/>
-    <xacro:asv_camera/>
-    <xacro:asv_gps/>
-    <xacro:asv_imu/>
+    <xacro:base_asv name="ASV$(arg id)"/>
+    <xacro:asv_camera name="ASV$(arg id)"/>
+    <xacro:asv_gps name="ASV$(arg id)"/>
+    <xacro:asv_imu name="ASV$(arg id)"/>
   </xacro:if>
 
   <xacro:unless value="$(arg own)">

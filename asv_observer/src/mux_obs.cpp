@@ -12,26 +12,30 @@ class MuxObsNode : public rclcpp::Node
 public:
     MuxObsNode() : Node("mux_obs") 
     {
+        std::string my_id; 
+        this-> declare_parameter("my_id", "ASV0");
+        my_id = (this->get_parameter("my_id").as_string());
+
         server_set_obs_ = this-> create_service<asv_interfaces::srv::SetObs>(
-                "/control/set_obs", std::bind(&MuxObsNode::callbackSetStateObserver, this, _1, _2)); 
-        subscriber_state_mavros_ = this-> create_subscription<mavros_msgs::msg::State>("/mavros/state",1,
+                "/" + my_id + "/observer/set_obs", std::bind(&MuxObsNode::callbackSetStateObserver, this, _1, _2)); 
+        subscriber_state_mavros_ = this-> create_subscription<mavros_msgs::msg::State>("/" + my_id + "/mavros/state",1,
                 std::bind(&MuxObsNode::callbackMavrosState, this, std::placeholders::_1));   
         subscriber_state_guille_ = this-> create_subscription<asv_interfaces::msg::StateObserver>(
-            "/control/state_observer_guille", rclcpp::SensorDataQoS(), 
+            "/" + my_id + "/observer/state_observer_guille", rclcpp::SensorDataQoS(), 
             std::bind(&MuxObsNode::callbackStatesGuille, this, std::placeholders::_1));
         subscriber_state_liu_ = this-> create_subscription<asv_interfaces::msg::StateObserver>(
-            "/control/state_observer_liu", rclcpp::SensorDataQoS(), 
+            "/" + my_id + "/observer/state_observer_liu", rclcpp::SensorDataQoS(), 
             std::bind(&MuxObsNode::callbackStatesLiu, this, std::placeholders::_1));
         subscriber_state_zono_ = this-> create_subscription<asv_interfaces::msg::StateObserver>(
-            "/control/state_observer_zono", rclcpp::SensorDataQoS(), 
+            "/" + my_id + "/observer/state_observer_zono", rclcpp::SensorDataQoS(), 
             std::bind(&MuxObsNode::callbackStatesZono, this, std::placeholders::_1));
         subscriber_vel_body= this-> create_subscription<geometry_msgs::msg::TwistStamped>(
-            "/mavros/local_position/velocity_body", rclcpp::SensorDataQoS(), 
+            "/" + my_id + "/mavros/local_position/velocity_body", rclcpp::SensorDataQoS(), 
             std::bind(&MuxObsNode::callbackVelocityBodyData, this, std::placeholders::_1)); 
-        publisher_state_ = this-> create_publisher<asv_interfaces::msg::StateObserver>("/control/state_observer",
+        publisher_state_ = this-> create_publisher<asv_interfaces::msg::StateObserver>("/" + my_id + "/observer/state_observer",
                 rclcpp::SensorDataQoS());
 
-        RCLCPP_INFO(this->get_logger(), "Mux state observer Node has been started.");
+        RCLCPP_INFO(this->get_logger(), "Mux state observer Node in %s has been started.", my_id.c_str());
     }
 
 private:

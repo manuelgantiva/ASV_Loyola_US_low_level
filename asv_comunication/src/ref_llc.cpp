@@ -16,17 +16,22 @@ class RefLlcNode : public rclcpp::Node
 public:
     RefLlcNode() : Node("ref_llc") 
     {
+        std::string my_id; 
+        this-> declare_parameter("my_id", "ASV0");
+       
         this-> declare_parameter("reference_mode", false);
+
+        my_id = (this->get_parameter("my_id").as_string());
         reference_mode_ = this->get_parameter("reference_mode").as_bool();
 
-        subscriber_compass = this-> create_subscription<std_msgs::msg::Float64>("/mavros/global_position/compass_hdg",rclcpp::SensorDataQoS(),
+        subscriber_compass = this-> create_subscription<std_msgs::msg::Float64>("/" + my_id + "/mavros/global_position/compass_hdg",rclcpp::SensorDataQoS(),
                 std::bind(&RefLlcNode::callbackCompassData, this, std::placeholders::_1));
-        subscriber_rc_in = this-> create_subscription<mavros_msgs::msg::RCIn>("/mavros/rc/in",10,
+        subscriber_rc_in = this-> create_subscription<mavros_msgs::msg::RCIn>("/" + my_id + "/mavros/rc/in",10,
                 std::bind(&RefLlcNode::callbackRcIn, this, std::placeholders::_1));
-        subscriber_mavros_state = this-> create_subscription<mavros_msgs::msg::State>("/mavros/state",1,
+        subscriber_mavros_state = this-> create_subscription<mavros_msgs::msg::State>("/" + my_id + "/mavros/state",1,
                 std::bind(&RefLlcNode::callbackMavrosState, this, std::placeholders::_1));
-        publisher_ref = this-> create_publisher<geometry_msgs::msg::Vector3>("/control/reference_llc",1);
-    	RCLCPP_INFO(this->get_logger(), "Reference Vel Node has been started.");
+        publisher_ref = this-> create_publisher<geometry_msgs::msg::Vector3>("/" + my_id + "/control/reference_llc",1);
+    	RCLCPP_INFO(this->get_logger(), "Reference Vel Node in %s has been started.", my_id.c_str());
     }
 
 private:
@@ -104,7 +109,7 @@ private:
 
         // Cuantizar 16 pasos
         ref_vel = round(ref_vel / 0.08) * 0.08;
-        //ref_vel = ref_vel * 3.0;
+        ref_vel = ref_vel * 0.6;
         return ref_vel;
     }
 

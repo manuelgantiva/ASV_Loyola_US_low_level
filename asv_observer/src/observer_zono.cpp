@@ -25,7 +25,7 @@ class ObserverZonoNode : public rclcpp::Node
 public:
     ObserverZonoNode() : Node("observer_zono")
     {
-        this-> declare_parameter("my_id", 0);
+        this-> declare_parameter("my_id", "ASV0");
           //---------Parámetros del ASV-------------------//
         this-> declare_parameter("Ts", 100.0);
         
@@ -55,7 +55,7 @@ public:
         this-> declare_parameter("Wp_di", std::vector<float>{1.0, 1.0, 1.0, 1.0, 1.0, 1.0});
         
 
-        my_id = std::to_string(this->get_parameter("my_id").as_int());
+        my_id = (this->get_parameter("my_id").as_string());
         Ts = this->get_parameter("Ts").as_double();
         t_s = Ts/1000; // En segundos
 
@@ -158,23 +158,23 @@ public:
 
         params_callback_handle_ = this->add_on_set_parameters_callback(std::bind(&ObserverZonoNode::param_callback, this, _1));
 
-        subscriber_gps_local= this-> create_subscription<geometry_msgs::msg::PoseStamped>("/mavros/local_position/pose",
+        subscriber_gps_local= this-> create_subscription<geometry_msgs::msg::PoseStamped>("/" + my_id + "/mavros/local_position/pose",
                 rclcpp::SensorDataQoS(), std::bind(&ObserverZonoNode::callbackGpsLocalData, this, std::placeholders::_1), options_sensors_);
-        subscriber_rcout = this-> create_subscription<mavros_msgs::msg::RCOut>("/mavros/rc/out",1,
+        subscriber_rcout = this-> create_subscription<mavros_msgs::msg::RCOut>("/" + my_id + "/mavros/rc/out",1,
                 std::bind(&ObserverZonoNode::callbackRcoutData, this, std::placeholders::_1), options_sensors_);
-        subscriber_state = this-> create_subscription<mavros_msgs::msg::State>("/mavros/state",1,
+        subscriber_state = this-> create_subscription<mavros_msgs::msg::State>("/" + my_id + "/mavros/state",1,
                 std::bind(&ObserverZonoNode::callbackStateData, this, std::placeholders::_1), options_sensors_);
-        publisher_state = this-> create_publisher<asv_interfaces::msg::StateObserver>("/control/state_observer_zono",
+        publisher_state = this-> create_publisher<asv_interfaces::msg::StateObserver>("/" + my_id + "/observer/state_observer_zono",
                 rclcpp::SensorDataQoS());
-        publisher_state_min = this-> create_publisher<asv_interfaces::msg::StateObserver>("/control/state_observer_zono_min",
+        publisher_state_min = this-> create_publisher<asv_interfaces::msg::StateObserver>("/" + my_id + "/observer/state_observer_zono_min",
                 rclcpp::SensorDataQoS());
-        publisher_state_max = this-> create_publisher<asv_interfaces::msg::StateObserver>("/control/state_observer_zono_max",
+        publisher_state_max = this-> create_publisher<asv_interfaces::msg::StateObserver>("/" + my_id + "/observer/state_observer_zono_max",
                 rclcpp::SensorDataQoS());
-        publisher_obs = this-> create_publisher<geometry_msgs::msg::PoseStamped>("pose_zono",
+        publisher_obs = this-> create_publisher<geometry_msgs::msg::PoseStamped>("/" + my_id + "/observer/pose_zono",
                 rclcpp::SensorDataQoS());
         
                                         
-        RCLCPP_INFO(this->get_logger(), "Observer Zonotopos Node has been started.");
+        RCLCPP_INFO(this->get_logger(), "Observer Zonotopos Node in %s has been started.", my_id.c_str());
     }
 
 private:

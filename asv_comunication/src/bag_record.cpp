@@ -30,6 +30,7 @@ public:
         // Obtener la fecha y hora actual
         this-> declare_parameter("my_id", 0);
         my_id = std::to_string(this->get_parameter("my_id").as_int());
+        name_id =  "ASV" + my_id;
         std::time_t now = std::time(0);
         std::tm *local_time = std::localtime(&now);
         int day = local_time->tm_mday;   // Día del mes (1-31)
@@ -37,73 +38,73 @@ public:
         prefix = "ASV" + my_id + "-" + std::to_string(day) + "-" + std::to_string(month) + "-bag" + "-";
         RCLCPP_INFO(this->get_logger(), "Current day: %s", prefix.c_str());
 
-        subscriber_state = this-> create_subscription<mavros_msgs::msg::State>("/mavros/state",1,
+        subscriber_state = this-> create_subscription<mavros_msgs::msg::State>("/" + name_id + "/mavros/state",1,
                 std::bind(&BagRecordNode::callbackMavrosState, this, std::placeholders::_1));
-        subscriber_imu = this-> create_subscription<sensor_msgs::msg::Imu>("/mavros/imu/data",rclcpp::SensorDataQoS(),
+        subscriber_imu = this-> create_subscription<sensor_msgs::msg::Imu>("/" + name_id + "/mavros/imu/data",rclcpp::SensorDataQoS(),
                 std::bind(&BagRecordNode::callbackImuData, this, std::placeholders::_1));
-        subscriber_imu_raw = this-> create_subscription<sensor_msgs::msg::Imu>("/mavros/imu/data_raw",rclcpp::SensorDataQoS(),
+        subscriber_imu_raw = this-> create_subscription<sensor_msgs::msg::Imu>("/" + name_id + "/mavros/imu/data_raw",rclcpp::SensorDataQoS(),
                 std::bind(&BagRecordNode::callbackImuDataRaw, this, std::placeholders::_1));
-        subscriber_imu_ext = this-> create_subscription<sensor_msgs::msg::Imu>("/imu_ext/data",rclcpp::SensorDataQoS(),
+        subscriber_imu_ext = this-> create_subscription<sensor_msgs::msg::Imu>("/" + name_id + "/comunication/imu_ext/data",rclcpp::SensorDataQoS(),
                 std::bind(&BagRecordNode::callbackImuDataExt, this, std::placeholders::_1));
-        subscriber_gps_global = this-> create_subscription<sensor_msgs::msg::NavSatFix>("/mavros/global_position/global",
+        subscriber_gps_global = this-> create_subscription<sensor_msgs::msg::NavSatFix>("/" + name_id + "/mavros/global_position/global",
                 rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackGpsGlobalData, this, std::placeholders::_1));
-        subscriber_gps_local= this-> create_subscription<geometry_msgs::msg::PoseStamped>("/mavros/local_position/pose",
+        subscriber_gps_local= this-> create_subscription<geometry_msgs::msg::PoseStamped>("/" + name_id + "/mavros/local_position/pose",
                 rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackGpsLocalData, this, std::placeholders::_1));
-        subscriber_rcout = this-> create_subscription<mavros_msgs::msg::RCOut>("/mavros/rc/out",1,
+        subscriber_rcout = this-> create_subscription<mavros_msgs::msg::RCOut>("/" + name_id + "/mavros/rc/out",1,
                 std::bind(&BagRecordNode::callbackRcoutData, this, std::placeholders::_1));
-        subscriber_rcin = this-> create_subscription<mavros_msgs::msg::RCIn>("/mavros/rc/in",1,
+        subscriber_rcin = this-> create_subscription<mavros_msgs::msg::RCIn>("/" + name_id + "/mavros/rc/in",1,
                 std::bind(&BagRecordNode::callbackRcinData, this, std::placeholders::_1));
-        subscriber_rc_over_in = this-> create_subscription<mavros_msgs::msg::OverrideRCIn>("/mavros/rc/override",1,
+        subscriber_rc_over_in = this-> create_subscription<mavros_msgs::msg::OverrideRCIn>("/" + name_id + "/mavros/rc/override",1,
                 std::bind(&BagRecordNode::callbackRcOverinData, this, std::placeholders::_1));
-        subscriber_reference = this-> create_subscription<geometry_msgs::msg::Vector3>("/control/reference_llc",1,
+        subscriber_reference = this-> create_subscription<geometry_msgs::msg::Vector3>("/" + name_id + "/control/reference_llc",1,
                 std::bind(&BagRecordNode::callbackReference, this, std::placeholders::_1));
-        subscriber_cmd_vel = this-> create_subscription<geometry_msgs::msg::Twist>("/mavros/setpoint_velocity/cmd_vel_unstamped"
+        subscriber_cmd_vel = this-> create_subscription<geometry_msgs::msg::Twist>("/" + name_id + "/mavros/setpoint_velocity/cmd_vel_unstamped"
                 ,1, std::bind(&BagRecordNode::callbackCmdVel, this, std::placeholders::_1));
-        subscriber_ifac_pwm = this-> create_subscription<asv_interfaces::msg::PwmValues>("/control/pwm_value_ifac",1,
+        subscriber_ifac_pwm = this-> create_subscription<asv_interfaces::msg::PwmValues>("/" + name_id + "/control/pwm_value_ifac",1,
                 std::bind(&BagRecordNode::callbackIfacPwm, this, std::placeholders::_1));
-        subscriber_mpc_pwm = this-> create_subscription<asv_interfaces::msg::PwmValues>("/control/pwm_value_mpc",1,
+        subscriber_mpc_pwm = this-> create_subscription<asv_interfaces::msg::PwmValues>("/" + name_id + "/control/pwm_value_mpc",1,
                 std::bind(&BagRecordNode::callbackMpcPwm, this, std::placeholders::_1));
-        subscriber_pwm = this-> create_subscription<asv_interfaces::msg::PwmValues>("/control/pwm_values",1,
+        subscriber_pwm = this-> create_subscription<asv_interfaces::msg::PwmValues>("/" + name_id + "/control/pwm_values",1,
                 std::bind(&BagRecordNode::callbackPwms, this, std::placeholders::_1));
-        subscriber_state_guille= this-> create_subscription<asv_interfaces::msg::StateObserver>("/control/state_observer_guille",
+        subscriber_state_guille= this-> create_subscription<asv_interfaces::msg::StateObserver>("/" + name_id + "/observer/state_observer_guille",
                 rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackStateGuilleData, this, std::placeholders::_1));
-        subscriber_state_liu= this-> create_subscription<asv_interfaces::msg::StateObserver>("/control/state_observer_liu",
+        subscriber_state_liu= this-> create_subscription<asv_interfaces::msg::StateObserver>("/" + name_id + "/observer/state_observer_liu",
                 rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackStateLiulData, this, std::placeholders::_1));
-        subscriber_state_zono= this-> create_subscription<asv_interfaces::msg::StateObserver>("/control/state_observer_zono",
+        subscriber_state_zono= this-> create_subscription<asv_interfaces::msg::StateObserver>("/" + name_id + "/observer/state_observer_zono",
                 rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackStateZonoData, this, std::placeholders::_1));
-        subscriber_state_zono_min= this-> create_subscription<asv_interfaces::msg::StateObserver>("/control/state_observer_zono_min",
+        subscriber_state_zono_min= this-> create_subscription<asv_interfaces::msg::StateObserver>("/" + name_id + "/observer/state_observer_zono_min",
                 rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackStateZonoMinData, this, std::placeholders::_1));
-        subscriber_state_zono_max= this-> create_subscription<asv_interfaces::msg::StateObserver>("/control/state_observer_zono_max",
+        subscriber_state_zono_max= this-> create_subscription<asv_interfaces::msg::StateObserver>("/" + name_id + "/observer/state_observer_zono_max",
                 rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackStateZonoMaxData, this, std::placeholders::_1));
-        subscriber_states= this-> create_subscription<asv_interfaces::msg::StateObserver>("/control/state_observer",
+        subscriber_states= this-> create_subscription<asv_interfaces::msg::StateObserver>("/" + name_id + "/observer/state_observer",
                 rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackStateData, this, std::placeholders::_1));
-        subscriber_pose= this-> create_subscription<geometry_msgs::msg::PoseStamped>("/control/pose",
+        subscriber_pose= this-> create_subscription<geometry_msgs::msg::PoseStamped>("/" + name_id + "/control/pose",
                 rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackPoseData, this, std::placeholders::_1));
-        subscriber_pose_neighbor= this-> create_subscription<geometry_msgs::msg::PoseStamped>("/control/pose_neighbor",
+        subscriber_pose_neighbor= this-> create_subscription<geometry_msgs::msg::PoseStamped>("/" + name_id + "/control/pose_neighbor",
                 rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackPoseNeighborData, this, std::placeholders::_1));
-        subscriber_pose_guille= this-> create_subscription<geometry_msgs::msg::PoseStamped>("/control/pose_guille",
+        subscriber_pose_guille= this-> create_subscription<geometry_msgs::msg::PoseStamped>("/" + name_id + "/observer/pose_guille",
                 rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackPoseGuilleData, this, std::placeholders::_1));
-        subscriber_pose_liu= this-> create_subscription<geometry_msgs::msg::PoseStamped>("/control/pose_liu",
+        subscriber_pose_liu= this-> create_subscription<geometry_msgs::msg::PoseStamped>("/" + name_id + "/observer/pose_liu",
                 rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackPoseLiuData, this, std::placeholders::_1));
-        subscriber_pose_zono= this-> create_subscription<geometry_msgs::msg::PoseStamped>("/control/pose_zono",
+        subscriber_pose_zono= this-> create_subscription<geometry_msgs::msg::PoseStamped>("/" + name_id + "/observer/pose_zono",
                 rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackPoseZonoData, this, std::placeholders::_1));
-        subscriber_compass= this-> create_subscription<std_msgs::msg::Float64>("/mavros/global_position/compass_hdg",
+        subscriber_compass= this-> create_subscription<std_msgs::msg::Float64>("/" + name_id + "/mavros/global_position/compass_hdg",
                 rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackCompassData, this, std::placeholders::_1));
-        subscriber_vel_body= this-> create_subscription<geometry_msgs::msg::TwistStamped>("/mavros/local_position/velocity_body",
+        subscriber_vel_body= this-> create_subscription<geometry_msgs::msg::TwistStamped>("/" + name_id + "/mavros/local_position/velocity_body",
                 rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackVelocityBodyData, this, std::placeholders::_1));
-        subscriber_vel_local= this-> create_subscription<geometry_msgs::msg::TwistStamped>("/mavros/local_position/velocity_local",
+        subscriber_vel_local= this-> create_subscription<geometry_msgs::msg::TwistStamped>("/" + name_id + "/mavros/local_position/velocity_local",
                 rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackVelocityLocalData, this, std::placeholders::_1));
-        subscriber_xbee= this-> create_subscription<asv_interfaces::msg::XbeeObserver>("/comunication/xbee_observer",1,
+        subscriber_xbee= this-> create_subscription<asv_interfaces::msg::XbeeObserver>("/" + name_id + "/comunication/xbee_observer",1,
                 std::bind(&BagRecordNode::callbackXbeeData, this, std::placeholders::_1));
-        subscriber_IG = this-> create_subscription<geometry_msgs::msg::Vector3>("/control/IG_ifac",1,
+        subscriber_IG = this-> create_subscription<geometry_msgs::msg::Vector3>("/" + name_id + "/control/IG_ifac",1,
                 std::bind(&BagRecordNode::callbackIG, this, std::placeholders::_1));
-        subscriber_ref_mlc = create_subscription<std_msgs::msg::Float64>("/control/reference_mlc", 1,
+        subscriber_ref_mlc = create_subscription<std_msgs::msg::Float64>("/" + name_id + "/control/reference_mlc", 1,
                 std::bind(&BagRecordNode::callbackRefMlc, this, std::placeholders::_1));
-        subscriber_error_mlc = this-> create_subscription<geometry_msgs::msg::Vector3>("/control/error_mlc",1,
+        subscriber_error_mlc = this-> create_subscription<geometry_msgs::msg::Vector3>("/" + name_id + "/control/error_mlc",1,
                 std::bind(&BagRecordNode::callbackErrorMlc, this, std::placeholders::_1));
-        subscriber_accel = this-> create_subscription<geometry_msgs::msg::Twist>("/control/accel_imu",1,
+        subscriber_accel = this-> create_subscription<geometry_msgs::msg::Twist>("/" + name_id + "/control/accel_imu",1,
                 std::bind(&BagRecordNode::callbackAcceleration, this, std::placeholders::_1));
-        subscriber_accel_ext = this-> create_subscription<geometry_msgs::msg::Twist>("/control/accel_imu_ext",1,
+        subscriber_accel_ext = this-> create_subscription<geometry_msgs::msg::Twist>("/" + name_id + "/control/accel_imu_ext",1,
                 std::bind(&BagRecordNode::callbackAccelerationExt, this, std::placeholders::_1));
 
     	RCLCPP_INFO(this->get_logger(), "Bag Record Node has been started.");
@@ -114,7 +115,7 @@ private:
     {
         if(armed==true){
             rclcpp::Time time_stamp = this->now();
-            writer_->write(msg, "/comunication/xbee_observer", "asv_interfaces/msg/XbeeObserver", time_stamp);
+            writer_->write(msg, "/" + name_id + "/comunication/xbee_observer", "asv_interfaces/msg/XbeeObserver", time_stamp);
         }
     }
 
@@ -122,7 +123,7 @@ private:
     {
         if(armed==true){
             rclcpp::Time time_stamp = this->now();
-            writer_->write(msg, "/mavros/local_position/velocity_body", "geometry_msgs/msg/TwistStamped", time_stamp);
+            writer_->write(msg, "/" + name_id + "/mavros/local_position/velocity_body", "geometry_msgs/msg/TwistStamped", time_stamp);
         }
     }
 
@@ -130,7 +131,7 @@ private:
     {
         if(armed==true){
             rclcpp::Time time_stamp = this->now();
-            writer_->write(msg, "/mavros/local_position/velocity_local", "geometry_msgs/msg/TwistStamped", time_stamp);
+            writer_->write(msg, "/" + name_id + "/mavros/local_position/velocity_local", "geometry_msgs/msg/TwistStamped", time_stamp);
         }
     }
 
@@ -138,7 +139,7 @@ private:
     {
         if(armed==true){
             rclcpp::Time time_stamp = this->now();
-            writer_->write(msg, "/mavros/global_position/compass_hdg", "std_msgs/msg/Float64", time_stamp);
+            writer_->write(msg, "/" + name_id + "/mavros/global_position/compass_hdg", "std_msgs/msg/Float64", time_stamp);
         }
     }
 
@@ -146,7 +147,7 @@ private:
     {
         if(armed==true){
             rclcpp::Time time_stamp = this->now();
-            writer_->write(msg, "/control/pose", "geometry_msgs/msg/PoseStamped", time_stamp);
+            writer_->write(msg, "/" + name_id + "/control/pose", "geometry_msgs/msg/PoseStamped", time_stamp);
         }
     }
 
@@ -154,7 +155,7 @@ private:
     {
         if(armed==true){
             rclcpp::Time time_stamp = this->now();
-            writer_->write(msg, "/control/pose_neighbor", "geometry_msgs/msg/PoseStamped", time_stamp);
+            writer_->write(msg, "/" + name_id + "/control/pose_neighbor", "geometry_msgs/msg/PoseStamped", time_stamp);
         }
     }
 
@@ -162,7 +163,7 @@ private:
     {
         if(armed==true){
             rclcpp::Time time_stamp = this->now();
-            writer_->write(msg, "/control/pose_guille", "geometry_msgs/msg/PoseStamped", time_stamp);
+            writer_->write(msg, "/" + name_id + "/observer/pose_guille", "geometry_msgs/msg/PoseStamped", time_stamp);
         }
     }
 
@@ -170,7 +171,7 @@ private:
     {
         if(armed==true){
             rclcpp::Time time_stamp = this->now();
-            writer_->write(msg, "/control/pose_liu", "geometry_msgs/msg/PoseStamped", time_stamp);
+            writer_->write(msg, "/" + name_id + "/observer/pose_liu", "geometry_msgs/msg/PoseStamped", time_stamp);
         }
     }
 
@@ -178,7 +179,7 @@ private:
     {
         if(armed==true){
             rclcpp::Time time_stamp = this->now();
-            writer_->write(msg, "/control/pose_zono", "geometry_msgs/msg/PoseStamped", time_stamp);
+            writer_->write(msg, "/" + name_id + "/observer/pose_zono", "geometry_msgs/msg/PoseStamped", time_stamp);
         }
     }
 
@@ -186,7 +187,7 @@ private:
     {
         if(armed==true){
             rclcpp::Time time_stamp = this->now();
-            writer_->write(msg, "/control/state_observer_guille", "asv_interfaces/msg/StateObserver", time_stamp);
+            writer_->write(msg, "/" + name_id + "/observer/state_observer_guille", "asv_interfaces/msg/StateObserver", time_stamp);
         }
     }
 
@@ -194,7 +195,7 @@ private:
     {
         if(armed==true){
             rclcpp::Time time_stamp = this->now();
-            writer_->write(msg, "/control/state_observer_liu", "asv_interfaces/msg/StateObserver", time_stamp);
+            writer_->write(msg, "/" + name_id + "/observer/state_observer_liu", "asv_interfaces/msg/StateObserver", time_stamp);
         }
     }
 
@@ -202,7 +203,7 @@ private:
     {
         if(armed==true){
             rclcpp::Time time_stamp = this->now();
-            writer_->write(msg, "/control/state_observer_zono", "asv_interfaces/msg/StateObserver", time_stamp);
+            writer_->write(msg, "/" + name_id + "/observer/state_observer_zono", "asv_interfaces/msg/StateObserver", time_stamp);
         }
     }
 
@@ -210,7 +211,7 @@ private:
     {
         if(armed==true){
             rclcpp::Time time_stamp = this->now();
-            writer_->write(msg, "/control/state_observer_zono_min", "asv_interfaces/msg/StateObserver", time_stamp);
+            writer_->write(msg, "/" + name_id + "/observer/state_observer_zono_min", "asv_interfaces/msg/StateObserver", time_stamp);
         }
     }
 
@@ -218,7 +219,7 @@ private:
     {
         if(armed==true){
             rclcpp::Time time_stamp = this->now();
-            writer_->write(msg, "/control/state_observer_zono_max", "asv_interfaces/msg/StateObserver", time_stamp);
+            writer_->write(msg, "/" + name_id + "/observer/state_observer_zono_max", "asv_interfaces/msg/StateObserver", time_stamp);
         }
     }
 
@@ -226,7 +227,7 @@ private:
     {
         if(armed==true){
             rclcpp::Time time_stamp = this->now();
-            writer_->write(msg, "/control/state_observer", "asv_interfaces/msg/StateObserver", time_stamp);
+            writer_->write(msg, "/" + name_id + "/observer/state_observer", "asv_interfaces/msg/StateObserver", time_stamp);
         }
     }
 
@@ -234,7 +235,7 @@ private:
     {
         if(armed==true){
             rclcpp::Time time_stamp = this->now();
-            writer_->write(msg, "/mavros/global_position/global", "sensor_msgs/msg/NavSatFix", time_stamp);
+            writer_->write(msg, "/" + name_id + "/mavros/global_position/global", "sensor_msgs/msg/NavSatFix", time_stamp);
         }
     }
 
@@ -242,7 +243,7 @@ private:
     {
         if(armed==true){
             rclcpp::Time time_stamp = this->now();
-            writer_->write(msg, "/mavros/local_position/pose", "geometry_msgs/msg/PoseStamped", time_stamp);
+            writer_->write(msg, "/" + name_id + "/mavros/local_position/pose", "geometry_msgs/msg/PoseStamped", time_stamp);
         }
     }
 
@@ -250,7 +251,7 @@ private:
     {
         if(armed==true){
             rclcpp::Time time_stamp = this->now();
-            writer_->write(msg, "/mavros/rc/out", "mavros_msgs/msg/RCOut", time_stamp);
+            writer_->write(msg, "/" + name_id + "/mavros/rc/out", "mavros_msgs/msg/RCOut", time_stamp);
         }
     }
 
@@ -258,7 +259,7 @@ private:
     {
         if(armed==true){
             rclcpp::Time time_stamp = this->now();
-            writer_->write(msg, "/mavros/rc/in", "mavros_msgs/msg/RCIn", time_stamp);
+            writer_->write(msg, "/" + name_id + "/mavros/rc/in", "mavros_msgs/msg/RCIn", time_stamp);
         }
     }
 
@@ -266,7 +267,7 @@ private:
     {
         if(armed==true){
             rclcpp::Time time_stamp = this->now();
-            writer_->write(msg, "/mavros/rc/override", "mavros_msgs/msg/OverrideRCIn", time_stamp);
+            writer_->write(msg, "/" + name_id + "/mavros/rc/override", "mavros_msgs/msg/OverrideRCIn", time_stamp);
         }
     }
 
@@ -274,7 +275,7 @@ private:
     {
         if(armed==true){
             rclcpp::Time time_stamp = this->now();
-            writer_->write(msg, "/control/reference_llc", "geometry_msgs/msg/Vector3", time_stamp);
+            writer_->write(msg, "/" + name_id + "/control/reference_llc", "geometry_msgs/msg/Vector3", time_stamp);
         }
     }
 
@@ -282,7 +283,7 @@ private:
     {
         if(armed==true){
             rclcpp::Time time_stamp = this->now();
-            writer_->write(msg, "/mavros/setpoint_velocity/cmd_vel_unstamped", "geometry_msgs/msg/Twist", time_stamp);
+            writer_->write(msg, "/" + name_id + "/mavros/setpoint_velocity/cmd_vel_unstamped", "geometry_msgs/msg/Twist", time_stamp);
         }
     }
 
@@ -290,7 +291,7 @@ private:
     {
         if(armed==true){
             rclcpp::Time time_stamp = this->now();
-            writer_->write(msg, "/control/pwm_value_ifac", "asv_interfaces/msg/PwmValues", time_stamp);
+            writer_->write(msg, "/" + name_id + "/control/pwm_value_ifac", "asv_interfaces/msg/PwmValues", time_stamp);
         }
     }
 
@@ -298,7 +299,7 @@ private:
     {
         if(armed==true){
             rclcpp::Time time_stamp = this->now();
-            writer_->write(msg, "/control/pwm_value_mpc", "asv_interfaces/msg/PwmValues", time_stamp);
+            writer_->write(msg, "/" + name_id + "/control/pwm_value_mpc", "asv_interfaces/msg/PwmValues", time_stamp);
         }
     }
 
@@ -306,7 +307,7 @@ private:
     {
         if(armed==true){
             rclcpp::Time time_stamp = this->now();
-            writer_->write(msg, "/control/pwm_values", "asv_interfaces/msg/PwmValues", time_stamp);
+            writer_->write(msg, "/" + name_id + "/control/pwm_values", "asv_interfaces/msg/PwmValues", time_stamp);
         }
     }
 
@@ -314,7 +315,7 @@ private:
     {
         if(armed==true){
             rclcpp::Time time_stamp = this->now();
-            writer_->write(msg, "/mavros/imu/data", "sensor_msgs/msg/Imu", time_stamp);
+            writer_->write(msg, "/" + name_id + "/mavros/imu/data", "sensor_msgs/msg/Imu", time_stamp);
         }
     }
 
@@ -322,7 +323,7 @@ private:
     {
         if(armed==true){
             rclcpp::Time time_stamp = this->now();
-            writer_->write(msg, "/mavros/imu/data_raw", "sensor_msgs/msg/Imu", time_stamp);
+            writer_->write(msg, "/" + name_id + "/mavros/imu/data_raw", "sensor_msgs/msg/Imu", time_stamp);
         }
     }
 
@@ -330,7 +331,7 @@ private:
     {
         if(armed==true){
             rclcpp::Time time_stamp = this->now();
-            writer_->write(msg, "/imu_ext/data", "sensor_msgs/msg/Imu", time_stamp);
+            writer_->write(msg, "/" + name_id + "/comunication/imu_ext/data", "sensor_msgs/msg/Imu", time_stamp);
         }
     }
 
@@ -367,7 +368,7 @@ private:
     {
         if(armed==true){
             rclcpp::Time time_stamp = this->now();
-            writer_->write(msg, "/control/IG_ifac", "geometry_msgs/msg/Vector3", time_stamp);
+            writer_->write(msg, "/" + name_id + "/control/IG_ifac", "geometry_msgs/msg/Vector3", time_stamp);
         }
     }
 
@@ -375,7 +376,7 @@ private:
     {
         if(armed==true){
             rclcpp::Time time_stamp = this->now();
-            writer_->write(msg, "/control/reference_mlc", "std_msgs/msg/Float64", time_stamp);
+            writer_->write(msg, "/" + name_id + "/control/reference_mlc", "std_msgs/msg/Float64", time_stamp);
         }
     }
 
@@ -383,7 +384,7 @@ private:
     {
         if(armed==true){
             rclcpp::Time time_stamp = this->now();
-            writer_->write(msg, "/control/error_mlc", "geometry_msgs/msg/Vector3", time_stamp);
+            writer_->write(msg, "/" + name_id + "/control/error_mlc", "geometry_msgs/msg/Vector3", time_stamp);
         }
     }
 
@@ -391,7 +392,7 @@ private:
     {
         if(armed==true){
             rclcpp::Time time_stamp = this->now();
-            writer_->write(msg, "/control/accel_imu", "geometry_msgs/msg/Twist", time_stamp);
+            writer_->write(msg, "/" + name_id + "/control/accel_imu", "geometry_msgs/msg/Twist", time_stamp);
         }
     }
 
@@ -399,12 +400,12 @@ private:
     {
         if(armed==true){
             rclcpp::Time time_stamp = this->now();
-            writer_->write(msg, "/control/accel_imu_ext", "geometry_msgs/msg/Twist", time_stamp);
+            writer_->write(msg, "/" + name_id + "/control/accel_imu_ext", "geometry_msgs/msg/Twist", time_stamp);
         }
     }
     
 
-    std::string my_id;
+    std::string my_id, name_id;
     std::string name_bag;
     bool armed = false;
     std::string prefix;

@@ -18,7 +18,7 @@ public:
                 std::bind(&ObserverTestNode::callbackCompassData, this, std::placeholders::_1));
         subscriber_rcout = this-> create_subscription<mavros_msgs::msg::RCOut>("/mavros/rc/out",1,
                 std::bind(&ObserverTestNode::callbackRcoutData, this, std::placeholders::_1));
-        publisher_state = this-> create_publisher<asv_interfaces::msg::StateObserver>("/control/state_observer",1);
+        publisher_state = this-> create_publisher<asv_interfaces::msg::StateObserver>("/observer/state_observer",1);
         timer_ = this -> create_wall_timer(std::chrono::milliseconds(200),
                                           std::bind(&ObserverTestNode::calculateState, this));
         RCLCPP_INFO(this->get_logger(), "Observer Node has been started.");

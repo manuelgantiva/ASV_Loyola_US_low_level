@@ -13,6 +13,8 @@ from asv_interfaces.msg import StateObserver, XbeeObserver, StateNeighbor
 class TransceiverXbeeNode(Node):
     def __init__(self):
         super().__init__("xbee_node")
+        self.declare_parameter("my_id", "ASV0")
+        my_id = self.get_parameter("my_id").get_parameter_value().string_value
         try:
             self.xbee = XBeeDevice("/dev/xbee_usb", 115200)
             self.get_logger().info("\033[32mSerial Xbee port opened successfully...\033[0m")
@@ -22,11 +24,11 @@ class TransceiverXbeeNode(Node):
         self.count_ = 0
         self.xbee.open()
         self.xbee.add_data_received_callback(self.callback_received_data)  # Agregar el callback de recepción de datos
-        self.publisher_ = self.create_publisher(XbeeObserver, "/comunication/xbee_observer", 1)
-        self.subscriber_ = self.create_subscription(StateObserver, "/control/state_observer",
+        self.publisher_ = self.create_publisher(XbeeObserver, "/" + my_id +"/comunication/xbee_observer", 1)
+        self.subscriber_ = self.create_subscription(StateObserver, "/" + my_id +"/observer/state_observer",
                         self.callback_state_observer,qos_profile_sensor_data)
         self.timer_ = self.create_timer(0.1, self.publish_states)
-        self.get_logger().info("Transceiver Xbee Node has been started")
+        self.get_logger().info("Transceiver Xbee Node in " + my_id + " has been started")
 
     def publish_states(self):
         msg=XbeeObserver()
