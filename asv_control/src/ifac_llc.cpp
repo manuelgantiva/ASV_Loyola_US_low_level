@@ -164,148 +164,151 @@ private:
         }else{
             //auto start = std::chrono::high_resolution_clock::now();
             auto msg = asv_interfaces::msg::PwmValues();
-
             auto msg_Igu = geometry_msgs::msg::Vector3();
             auto msg_Igr = geometry_msgs::msg::Vector3();
             auto msg_Ig = geometry_msgs::msg::Vector3();
             float zone;
 
-            float u_hat_i;
-            float r_hat_i;
-            float psi_hat_i;
-            float sig_u_i;
-            float sig_r_i;
+            if(count > 7){
+                float u_hat_i;
+                float r_hat_i;
+                float psi_hat_i;
+                float sig_u_i;
+                float sig_r_i;
 
-            float u_ref_i;
-            float r_ref_i;
-            float u_dot_ref_i;
-            float r_dot_ref_i;
-            float psi_ref_i;
-            {
-                std::lock_guard<std::mutex> lock(mutex_);
-                u_hat_i=u_hat;
-                r_hat_i=r_hat;
-                psi_hat_i=psi_hat;
-                sig_u_i=sig_u;
-                sig_r_i=sig_r;
-                u_ref_i=u_ref;
-                r_ref_i=r_ref;
-                u_dot_ref_i=u_dot_ref;
-                r_dot_ref_i=r_dot_ref;
-                psi_ref_i=psi_ref;
-            }
+                float u_ref_i;
+                float r_ref_i;
+                float u_dot_ref_i;
+                float r_dot_ref_i;
+                float psi_ref_i;
+                {
+                    std::lock_guard<std::mutex> lock(mutex_);
+                    u_hat_i=u_hat;
+                    r_hat_i=r_hat;
+                    psi_hat_i=psi_hat;
+                    sig_u_i=sig_u;
+                    sig_r_i=sig_r;
+                    u_ref_i=u_ref;
+                    r_ref_i=r_ref;
+                    u_dot_ref_i=u_dot_ref;
+                    r_dot_ref_i=r_dot_ref;
+                    psi_ref_i=psi_ref;
+                }
 
-            float error = (u_hat_i-u_ref_i);
-            integral_error += error;
-            msg_Igu.x = u_dot_ref_i;
-            msg_Igu.y = sm_gain_ku*error;
-            msg_Igu.z = sm_gain_ki*integral_error;
+                float error = (u_hat_i-u_ref_i);
+                integral_error += error;
+                msg_Igu.x = u_dot_ref_i;
+                msg_Igu.y = sm_gain_ku*error;
+                msg_Igu.z = sm_gain_ki*integral_error;
 
-            float c_ref=r_ref_i-sm_gain_kpsi*(psi_hat_i-psi_ref_i);
-            msg_Igr.x = sm_gain_kr*(r_hat_i-c_ref);
-            msg_Igr.y = sm_gain_kpsi*(r_hat_i-r_ref_i);
-            msg_Igr.z = r_dot_ref_i;
-            float IG_u;
-            float IG_r;
+                float c_ref=r_ref_i-sm_gain_kpsi*(psi_hat_i-psi_ref_i);
+                msg_Igr.x = sm_gain_kr*(r_hat_i-c_ref);
+                msg_Igr.y = sm_gain_kpsi*(r_hat_i-r_ref_i);
+                msg_Igr.z = r_dot_ref_i;
+                float IG_u;
+                float IG_r;
 
-            IG_u = msg_Igu.x - msg_Igu.y - msg_Igu.z - (Su_en*sig_u_i);
-            IG_r = msg_Igr.z - msg_Igr.x - msg_Igr.y - (Sr_en*sig_r_i);
-            
+                IG_u = msg_Igu.x - msg_Igu.y - msg_Igu.z - (Su_en*sig_u_i);
+                IG_r = msg_Igr.z - msg_Igr.x - msg_Igr.y - (Sr_en*sig_r_i);
+                
 
-            // New Code
-            float m, d;
+                // New Code
+                float m, d;
 
-            if(IG_u>IGumax_ff){
-                IG_u=IGumax_ff;
-            }
+                if(IG_u>IGumax_ff){
+                    IG_u=IGumax_ff;
+                }
 
-            if(IG_u<IGumin_rf){
-                IG_u=IGumin_rf;
-            }
+                if(IG_u<IGumin_rf){
+                    IG_u=IGumin_rf;
+                }
 
-            if(IG_r>IGrmax_rf){
-                IG_r=IGrmax_rf;
-            }
+                if(IG_r>IGrmax_rf){
+                    IG_r=IGrmax_rf;
+                }
 
-            if(IG_r<-IGrmax_rf){
-                IG_r=-IGrmax_rf;
-            }
-            
-            if(IG_u>IGumax_rf){
-                // Zona Roja
-                m = mf0+mf1*IG_u+mf2*IG_r+mf3*IG_u*IG_u+mf4*IG_u*IG_r+mf5*IG_r*IG_r;
-                d = df0+df1*IG_u+df2*IG_r+df3*IG_u*IG_u+df4*IG_u*IG_r+df5*IG_r*IG_r;
-                zone = 0;
-            }else if(IG_r>IGrmax_ff){
-                // Zona Azul
-                m = mr0+mr1*IG_u+mr2*IG_r+mr3*IG_u*IG_u+mr4*IG_u*IG_r+mr5*IG_r*IG_r;
-                d = dr0+dr1*IG_u+dr2*IG_r+dr3*IG_u*IG_u+dr4*IG_u*IG_r+dr5*IG_r*IG_r;
-                zone = 1;
-            }else if(IG_r<-IGrmax_ff){
-                // Zona Verde
-                m = mr0+mr1*IG_u-mr2*IG_r+mr3*IG_u*IG_u-mr4*IG_u*IG_r+mr5*IG_r*IG_r;
-                d = dr0-dr1*IG_u+dr2*IG_r-dr3*IG_u*IG_u+dr4*IG_u*IG_r-dr5*IG_r*IG_r;
-                zone = -1;
-            }else{
-                // Zona Roja
-                m = mf0+mf1*IG_u+mf2*IG_r+mf3*IG_u*IG_u+mf4*IG_u*IG_r+mf5*IG_r*IG_r;
-                d = df0+df1*IG_u+df2*IG_r+df3*IG_u*IG_u+df4*IG_u*IG_r+df5*IG_r*IG_r;
-                zone = 0;
-                if((m<=0.5*d) || (m<=-0.5*d)){
-                    if(IG_r>=0){
-                        //Zona Azul
-                        m = mr0+mr1*IG_u+mr2*IG_r+mr3*IG_u*IG_u+mr4*IG_u*IG_r+mr5*IG_r*IG_r;
-                        d = dr0+dr1*IG_u+dr2*IG_r+dr3*IG_u*IG_u+dr4*IG_u*IG_r+dr5*IG_r*IG_r;
-                        zone = 1;
-                    }else{
-                        //Zona Verde
-                        m = mr0+mr1*IG_u-mr2*IG_r+mr3*IG_u*IG_u-mr4*IG_u*IG_r+mr5*IG_r*IG_r;
-                        d = dr0-dr1*IG_u+dr2*IG_r-dr3*IG_u*IG_u+dr4*IG_u*IG_r-dr5*IG_r*IG_r;
-                        zone = -1;
+                if(IG_r<-IGrmax_rf){
+                    IG_r=-IGrmax_rf;
+                }
+                
+                if(IG_u>IGumax_rf){
+                    // Zona Roja
+                    m = mf0+mf1*IG_u+mf2*IG_r+mf3*IG_u*IG_u+mf4*IG_u*IG_r+mf5*IG_r*IG_r;
+                    d = df0+df1*IG_u+df2*IG_r+df3*IG_u*IG_u+df4*IG_u*IG_r+df5*IG_r*IG_r;
+                    zone = 0;
+                }else if(IG_r>IGrmax_ff){
+                    // Zona Azul
+                    m = mr0+mr1*IG_u+mr2*IG_r+mr3*IG_u*IG_u+mr4*IG_u*IG_r+mr5*IG_r*IG_r;
+                    d = dr0+dr1*IG_u+dr2*IG_r+dr3*IG_u*IG_u+dr4*IG_u*IG_r+dr5*IG_r*IG_r;
+                    zone = 1;
+                }else if(IG_r<-IGrmax_ff){
+                    // Zona Verde
+                    m = mr0+mr1*IG_u-mr2*IG_r+mr3*IG_u*IG_u-mr4*IG_u*IG_r+mr5*IG_r*IG_r;
+                    d = dr0-dr1*IG_u+dr2*IG_r-dr3*IG_u*IG_u+dr4*IG_u*IG_r-dr5*IG_r*IG_r;
+                    zone = -1;
+                }else{
+                    // Zona Roja
+                    m = mf0+mf1*IG_u+mf2*IG_r+mf3*IG_u*IG_u+mf4*IG_u*IG_r+mf5*IG_r*IG_r;
+                    d = df0+df1*IG_u+df2*IG_r+df3*IG_u*IG_u+df4*IG_u*IG_r+df5*IG_r*IG_r;
+                    zone = 0;
+                    if((m<=0.5*d) || (m<=-0.5*d)){
+                        if(IG_r>=0){
+                            //Zona Azul
+                            m = mr0+mr1*IG_u+mr2*IG_r+mr3*IG_u*IG_u+mr4*IG_u*IG_r+mr5*IG_r*IG_r;
+                            d = dr0+dr1*IG_u+dr2*IG_r+dr3*IG_u*IG_u+dr4*IG_u*IG_r+dr5*IG_r*IG_r;
+                            zone = 1;
+                        }else{
+                            //Zona Verde
+                            m = mr0+mr1*IG_u-mr2*IG_r+mr3*IG_u*IG_u-mr4*IG_u*IG_r+mr5*IG_r*IG_r;
+                            d = dr0-dr1*IG_u+dr2*IG_r-dr3*IG_u*IG_u+dr4*IG_u*IG_r-dr5*IG_r*IG_r;
+                            zone = -1;
+                        }
                     }
                 }
-            }
 
-            double L, R;
-            L = ((2 * m + d) / 2);
-            R = ((2 * m - d) / 2);
+                double L, R;
+                L = ((2 * m + d) / 2);
+                R = ((2 * m - d) / 2);
 
-            if (L > 0) {
-                L = L + Dz_2;
-            } else if (L < 0){
-                L = L + Dz_1;
-            }
+                if (L > 0) {
+                    L = L + Dz_2;
+                } else if (L < 0){
+                    L = L + Dz_1;
+                }
 
-            if (R > 0) {
-                R = R + Dz_2;;
-            } else if (R < 0){
-                R = R + Dz_1;
-            }
+                if (R > 0) {
+                    R = R + Dz_2;;
+                } else if (R < 0){
+                    R = R + Dz_1;
+                }
 
-            // Publish pwms
-            msg.t_left=400 * L + 1500;
-            msg.t_righ=400 * R + 1500;
-            if(msg.t_left<1100){
-                msg.t_left=1100;
-            }else if (msg.t_left > 1900) {
-                msg.t_left=1900;
-            }
-            if(msg.t_righ<1100){
-                msg.t_righ=1100;
-            }else if (msg.t_righ > 1900) {
-                msg.t_righ=1900;
-            }
+                // Publish pwms
+                msg.t_left=400 * L + 1500;
+                msg.t_righ=400 * R + 1500;
+                if(msg.t_left<1100){
+                    msg.t_left=1100;
+                }else if (msg.t_left > 1900) {
+                    msg.t_left=1900;
+                }
+                if(msg.t_righ<1100){
+                    msg.t_righ=1100;
+                }else if (msg.t_righ > 1900) {
+                    msg.t_righ=1900;
+                }
+                msg_Ig.x = IG_u;
+                msg_Ig.y = IG_r;
+                msg_Ig.z = zone;
+                publisher_pwm->publish(msg);
+                publisher_IG->publish(msg_Ig);
 
-            if(count < 5){
+
+            }else{
                 msg.t_left= 1500;
                 msg.t_righ= 1500; 
                 count=count+1;
+                publisher_pwm->publish(msg);
+                publisher_IG->publish(msg_Ig);
             }
-            msg_Ig.x = IG_u;
-            msg_Ig.y = IG_r;
-            msg_Ig.z = zone;
-            publisher_pwm->publish(msg);
-            publisher_IG->publish(msg_Ig);
             // auto end = std::chrono::high_resolution_clock::now();
             // std::chrono::duration<double> elapsed = end - start;
             // double miliseconds = elapsed.count()*1000;
@@ -476,7 +479,7 @@ private:
     }
 
     bool armed = false;
-    float u_hat, psi_hat, r_hat, sig_u, sig_r, u_ref, psi_ref, r_ref, u_dot_ref, r_dot_ref;
+    float u_hat = 0, psi_hat = 0, r_hat = 0, sig_u = 0, sig_r = 0, u_ref = 0, psi_ref = 0, r_ref = 0, u_dot_ref = 0, r_dot_ref = 0;
     float c_ref;
     int count=0;
     float integral_error=0;

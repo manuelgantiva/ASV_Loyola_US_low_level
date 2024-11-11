@@ -6,6 +6,7 @@
 #include "mavros_msgs/msg/state.hpp"               //Interface state ardupilot
 #include "geometry_msgs/msg/pose_stamped.hpp"       //Interface gps local data
 #include "asv_interfaces/msg/state_observer.hpp"    //Interface state observer
+#include "nav_msgs/msg/odometry.hpp"                //Interface gps global local data
 
 #include "tf2/exceptions.h"
 #include "tf2_ros/transform_listener.h"
@@ -129,7 +130,10 @@ public:
 
         params_callback_handle_ = this->add_on_set_parameters_callback(std::bind(&ObserverGuilleNode::param_callback, this, _1));
 
-        subscriber_gps_local= this-> create_subscription<geometry_msgs::msg::PoseStamped>("/" + my_id + "/mavros/local_position/pose",
+        /*subscriber_gps_local= this-> create_subscription<geometry_msgs::msg::PoseStamped>("/" + my_id + "/mavros/local_position/pose",
+                rclcpp::SensorDataQoS(), std::bind(&ObserverGuilleNode::callbackGpsLocalData, this, std::placeholders::_1), options_sensors_);*/
+
+        subscriber_gps_local= this-> create_subscription<nav_msgs::msg::Odometry>("/" + my_id + "/mavros/global_position/local",
                 rclcpp::SensorDataQoS(), std::bind(&ObserverGuilleNode::callbackGpsLocalData, this, std::placeholders::_1), options_sensors_);
         subscriber_rcout = this-> create_subscription<mavros_msgs::msg::RCOut>("/" + my_id + "/mavros/rc/out",1,
                 std::bind(&ObserverGuilleNode::callbackRcoutData, this, std::placeholders::_1), options_sensors_);
@@ -168,7 +172,7 @@ private:
                 beta=0;
             }
         }else{
-            if(count > 5){
+            if(count > 6){
                 //auto start = std::chrono::high_resolution_clock::now();
                 float psi_i;
                 Matrix <float, 2,1> Yp_i;
@@ -215,7 +219,7 @@ private:
 
                 Lp=Tp.inverse()*PpWp*R2T; 
 
-                if(count==6){
+                if(count==7){
                     Xp_hat_ant << Yp_i(0,0),
                                 Yp_i(1,0),
                                 0.0,
@@ -279,13 +283,63 @@ private:
         }        
     }
 
-    void callbackGpsLocalData(const geometry_msgs::msg::PoseStamped::SharedPtr msg)
+    /*void callbackGpsLocalData(const geometry_msgs::msg::PoseStamped::SharedPtr msg)
     {
         if(armed==true){
             float y = msg->pose.position.x;
             float x = msg->pose.position.y;
             float psi_rad = quat2EulerAngles_XYZ(msg->pose.orientation.w, msg->pose.orientation.x,
                                                 msg->pose.orientation.y, msg->pose.orientation.z);
+            psi_rad=-psi_rad+(M_PI/2);
+            if (psi_rad<0){
+                psi_rad=psi_rad+(2*M_PI);
+            }
+
+            float dy = -0.2750;            //distancia de la antena del GPS al navio coordenada x
+            float dx = 0.2625;           //distancia de la antena del GPS al navio coordenada y
+            // 1) Xp = Xo + R(psi)*OP
+            x = x + cos(psi_rad)*dx - sin(psi_rad)*dy;
+            y = y + sin(psi_rad)*dx + cos(psi_rad)*dy;
+            if(armed_act==false){
+                psi_ant = psi_rad;
+                laps = 0;
+                {
+                    std::lock_guard<std::mutex> lock(mutex_);
+                    Yp << x,
+                        y;
+                    psi = psi_rad;
+                }
+            }else{
+                psi_act = psi_rad;
+                if((psi_act - psi_ant) > M_PI){
+                    laps = laps - 1;
+                }else if((psi_act - psi_ant) < -M_PI){
+                    laps = laps + 1;
+                }
+                {
+                    std::lock_guard<std::mutex> lock(mutex_);
+                    Yp << x,
+                        y;
+                    psi = psi_act + 2*M_PI*laps;
+                }
+                psi_ant=psi_act;
+            }
+            //RCLCPP_INFO(this->get_logger(), "n is: %d", int(laps));
+            //RCLCPP_INFO(this->get_logger(), "Heading is: %f", psi);
+        }else{
+            psi_ant=0;
+            laps=0;
+        }
+        armed_act=armed;
+    }*/
+
+    void callbackGpsLocalData(const nav_msgs::msg::Odometry::SharedPtr msg)
+    {
+        if(armed==true){
+            float y = msg->pose.pose.position.x;
+            float x = msg->pose.pose.position.y;
+            float psi_rad = quat2EulerAngles_XYZ(msg->pose.pose.orientation.w, msg->pose.pose.orientation.x,
+                                                msg->pose.pose.orientation.y, msg->pose.pose.orientation.z);
             psi_rad=-psi_rad+(M_PI/2);
             if (psi_rad<0){
                 psi_rad=psi_rad+(2*M_PI);
@@ -476,7 +530,7 @@ private:
     Matrix <float, 3,1> Xpsi_hat_dot; 
     Matrix <float, 3,1> Xpsi_hat_ant; 
 
-    rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr subscriber_gps_local;
+    rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr subscriber_gps_local;
     rclcpp::Subscription<mavros_msgs::msg::RCOut>::SharedPtr subscriber_rcout;
     rclcpp::Subscription<mavros_msgs::msg::State>::SharedPtr subscriber_state;
 

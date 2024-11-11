@@ -74,8 +74,7 @@ private:
             {
                 ref_vel = -1.0;
             }
-            ref_vel = ref_vel * 0.5;
-        } 
+        }
         return ref_vel;
     }
 

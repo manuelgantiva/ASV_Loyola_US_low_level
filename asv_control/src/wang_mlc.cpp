@@ -42,7 +42,7 @@ public:
 
         a=(taud*Ts)/(taud*Ts+Ts);
         b=1/(taud*Ts+Ts);
-
+        w = 0.0;
         cb_group_sensors_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
         cb_group_obs_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
         auto options_sensors_ = rclcpp::SubscriptionOptions();
@@ -77,7 +77,7 @@ private:
             w=0.0;
             laps=0;
         }else{
-            if(count > 4){
+            if(count > 7){
                 //auto start = std::chrono::high_resolution_clock::now();
                 auto msg = geometry_msgs::msg::Vector3();
                 auto msg_e = geometry_msgs::msg::Vector3();
@@ -91,8 +91,6 @@ private:
                 float xp_i, yp_i;
                 float dxp_i, dyp_i;
                 float psip_i;
-
-
                 {
                     std::lock_guard<std::mutex> lock(mutex_);
                     x_hat_i = x_hat;
@@ -227,7 +225,7 @@ private:
         Target result;
         switch(path_d) {
             case 0:
-                /*result.xp =w;
+                /*result.xp = w;
                 result.yp = w;
                 result.dxp = 1;
                 result.dyp = 1;*/
@@ -240,7 +238,10 @@ private:
                 result = curva_1_d(w);
                 break;
             case 3:
-                //result = curva3(w);
+                result.xp = w;
+                result.yp = w;
+                result.dxp = 1;
+                result.dyp = 1;
                 break;
             case 4:
                 //result = curva4(w);
@@ -350,7 +351,7 @@ private:
     }
 
     bool armed = false, armed_act=false, flag;
-    float u_hat, psi_hat, r_hat, v_hat, x_hat, y_hat, u_d, w=0.0, psi_ant;
+    float u_hat = 0, psi_hat = 0, r_hat = 0, v_hat = 0, x_hat = 0, y_hat = 0, u_d = 0, w=0.0, psi_ant;
     int count=0, laps=0;
     //------Params-------//
     float Ts;  

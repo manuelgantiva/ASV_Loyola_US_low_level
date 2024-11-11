@@ -21,6 +21,7 @@ find_package(rcl_interfaces REQUIRED)     # interface to use param with aardupil
 find_package(sensor_msgs REQUIRED)        # interface to use navio2's sensors
 find_package(tf2 REQUIRED)        # interface to use navio2's sensors
 find_package(tf2_ros REQUIRED)        # interface to use navio2's sensors
+find_package(nav_msgs REQUIRED)        # interface to use navio2's sensors
 
 include_directories(SYSTEM ${EIGEN3_INCLUDE_DIRS})
 
@@ -37,7 +38,7 @@ add_executable(mux_llc src/mux_llc.cpp)
 ament_target_dependencies(mux_llc rclcpp example_interfaces mavros_msgs asv_interfaces)
 
 add_executable(asv_tf2_broadcaster src/asv_tf2_broadcaster.cpp)
-ament_target_dependencies(asv_tf2_broadcaster rclcpp tf2 tf2_ros geometry_msgs asv_interfaces)
+ament_target_dependencies(asv_tf2_broadcaster rclcpp tf2 tf2_ros geometry_msgs asv_interfaces nav_msgs)
 
 add_executable(ifac_llc src/ifac_llc.cpp)
 ament_target_dependencies(ifac_llc rclcpp geometry_msgs mavros_msgs asv_interfaces)

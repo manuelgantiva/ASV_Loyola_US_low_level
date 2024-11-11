@@ -14,6 +14,7 @@
 #include "geometry_msgs/msg/twist.hpp"              //Interface cmd vel ardupilot
 #include "asv_interfaces/msg/pwm_values.hpp"        //Interface pwm values override
 #include "geometry_msgs/msg/twist.hpp"              //Interface accel computed
+#include "nav_msgs/msg/odometry.hpp"                //Interface gps global local data
 
 
 #include <rosbag2_cpp/writer.hpp>
@@ -48,6 +49,8 @@ public:
                 std::bind(&BagRecordNode::callbackImuDataExt, this, std::placeholders::_1));
         subscriber_gps_global = this-> create_subscription<sensor_msgs::msg::NavSatFix>("/" + name_id + "/mavros/global_position/global",
                 rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackGpsGlobalData, this, std::placeholders::_1));
+        subscriber_gps_= this-> create_subscription<nav_msgs::msg::Odometry>("/" + my_id + "/mavros/global_position/local",
+                rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackGpsData, this, std::placeholders::_1));
         subscriber_gps_local= this-> create_subscription<geometry_msgs::msg::PoseStamped>("/" + name_id + "/mavros/local_position/pose",
                 rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackGpsLocalData, this, std::placeholders::_1));
         subscriber_rcout = this-> create_subscription<mavros_msgs::msg::RCOut>("/" + name_id + "/mavros/rc/out",1,
@@ -247,6 +250,14 @@ private:
         }
     }
 
+    void callbackGpsData(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
+    {
+        if(armed==true){
+            rclcpp::Time time_stamp = this->now();
+            writer_->write(msg, "/" + name_id + "/mavros/global_position/local", "nav_msgs/msg/Odometry", time_stamp);
+        }
+    }
+
     void callbackRcoutData(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
     {
         if(armed==true){
@@ -417,6 +428,7 @@ private:
     rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr subscriber_imu_ext;
     rclcpp::Subscription<sensor_msgs::msg::NavSatFix>::SharedPtr subscriber_gps_global;
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr subscriber_gps_local;
+    rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr subscriber_gps_;
     rclcpp::Subscription<mavros_msgs::msg::RCOut>::SharedPtr subscriber_rcout;
     rclcpp::Subscription<mavros_msgs::msg::RCIn>::SharedPtr subscriber_rcin;
     rclcpp::Subscription<mavros_msgs::msg::OverrideRCIn>::SharedPtr subscriber_rc_over_in;

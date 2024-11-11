@@ -21,6 +21,7 @@ find_package(rcl_interfaces REQUIRED)     # interface to use param with aardupil
 find_package(sensor_msgs REQUIRED)        # interface to use navio2's sensors
 find_package(tf2 REQUIRED)        # interface to use navio2's sensors
 find_package(tf2_ros REQUIRED)        # interface to use navio2's sensors
+find_package(nav_msgs REQUIRED)        # interface to use navio2's sensors
 
 include_directories(SYSTEM ${EIGEN3_INCLUDE_DIRS})
 
@@ -28,13 +29,13 @@ add_executable(mux_obs src/mux_obs.cpp)
 ament_target_dependencies(mux_obs rclcpp example_interfaces mavros_msgs asv_interfaces)
 
 add_executable(observer_guille src/observer_guille.cpp)
-ament_target_dependencies(observer_guille rclcpp std_msgs sensor_msgs mavros_msgs asv_interfaces tf2 tf2_ros geometry_msgs)
+ament_target_dependencies(observer_guille rclcpp std_msgs sensor_msgs mavros_msgs asv_interfaces tf2 tf2_ros geometry_msgs nav_msgs)
 
 add_executable(observer_liu src/observer_liu.cpp)
-ament_target_dependencies(observer_liu rclcpp std_msgs sensor_msgs mavros_msgs asv_interfaces tf2 tf2_ros geometry_msgs)
+ament_target_dependencies(observer_liu rclcpp std_msgs sensor_msgs mavros_msgs asv_interfaces tf2 tf2_ros geometry_msgs nav_msgs)
 
 add_executable(observer_zono src/observer_zono.cpp)
-ament_target_dependencies(observer_zono rclcpp std_msgs sensor_msgs mavros_msgs asv_interfaces asv_library tf2 tf2_ros geometry_msgs)
+ament_target_dependencies(observer_zono rclcpp std_msgs sensor_msgs mavros_msgs asv_interfaces asv_library tf2 tf2_ros geometry_msgs nav_msgs)
 
 # Install Targets
 install(TARGETS

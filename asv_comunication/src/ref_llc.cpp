@@ -109,7 +109,7 @@ private:
 
         // Cuantizar 16 pasos
         ref_vel = round(ref_vel / 0.08) * 0.08;
-        ref_vel = ref_vel * 0.6;
+        //ref_vel = ref_vel * 0.6;
         return ref_vel;
     }
 

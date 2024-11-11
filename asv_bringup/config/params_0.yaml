@@ -65,7 +65,7 @@ ASV0:
         Ts: 100.0         #ms
         ku: 2.0
         ki: 0.0
-        kpsi: 0.5
+        kpsi: 0.2
         kr: 2.0
         taud: 200
         Su_en: 1.0
@@ -122,7 +122,7 @@ ASV0:
     wang_mlc:
       ros__parameters:
         Ts: 100.0         #ms
-        delta_SGLOS: 2.0
+        delta_SGLOS: 3.0
         k_u_tar: 2.0
         taud: 5.0
         path_d: 0
