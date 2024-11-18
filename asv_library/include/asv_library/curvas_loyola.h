@@ -14,11 +14,11 @@ void arco(float w, Target* px, float ax, float by, float r, bool sig) ;
 
 
 // Closed semicircle radius 6, straight line 20
-Target curva_1_i(const float w);
+Target curva_2_i(const float w);
 // Closed semicircle radius 5, straight line 20
-Target curva_1_c(const float w);
+Target curva_2_c(const float w);
 // Closed semicircle radius 4, straight line 20
-Target curva_1_d(const float w);
+Target curva_2_d(const float w);
 
 
 #endif

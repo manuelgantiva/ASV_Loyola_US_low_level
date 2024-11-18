@@ -149,7 +149,7 @@ private:
                         
                 float r_ref = derivationFilter(psi_ref, memory_psi, a, b);
 
-                float r_ref_max = 0.6; //0.6
+                float r_ref_max = 0.8; //0.6
                 if(r_ref > r_ref_max){
                     r_ref = r_ref_max;
                 }else if(r_ref < -r_ref_max){
@@ -225,23 +225,19 @@ private:
         Target result;
         switch(path_d) {
             case 0:
-                /*result.xp = w;
-                result.yp = w;
-                result.dxp = 1;
-                result.dyp = 1;*/
-                result = curva_1_i(w);
+                result.xp = -w;
+                result.yp = 0;
+                result.dxp = -1;
+                result.dyp = 0;
                 break;
             case 1:
-                result = curva_1_c(w);
+                result = curva_2_d(w);
                 break;
             case 2:
-                result = curva_1_d(w);
+                result = curva_2_c(w);
                 break;
             case 3:
-                result.xp = w;
-                result.yp = w;
-                result.dxp = 1;
-                result.dyp = 1;
+                result = curva_2_i(w);
                 break;
             case 4:
                 //result = curva4(w);

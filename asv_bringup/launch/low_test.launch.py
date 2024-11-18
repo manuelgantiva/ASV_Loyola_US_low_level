@@ -611,7 +611,7 @@ def generate_launch_description():
     ###################################################################
     ##-------------------------Mavros Nodes--------------------------##
     ################################################################### 
-    # ld.add_action(Mavros_launch)
+    ld.add_action(Mavros_launch)
     ld.add_action(own_robot_state_publisher_node)
     # ld.add_action(neighbor_robot_state_publisher_node)
 
@@ -619,31 +619,31 @@ def generate_launch_description():
     ##--------------------Comunication Nodes-------------------------##
     ################################################################### 
     ld.add_action(rc_handler_node)
-    # ld.add_action(ref_llc_node)
-    ld.add_action(ref_mlc_node)
-    # ld.add_action(apm_llc_node)
+    ld.add_action(ref_llc_node)
+    # ld.add_action(ref_mlc_node)
+    ld.add_action(apm_llc_node)
     ld.add_action(imu_fix_node)
-    # ld.add_action(imu_ext_node)
+    ld.add_action(imu_ext_node)
     # ld.add_action(imu_fix_ext_node)
     ld.add_action(record)
-    # ld.add_action(transceiver_xbee_node)
+    ld.add_action(transceiver_xbee_node)
 
     ###################################################################
     ##-----------------------Observer Nodes--------------------------##
     ################################################################### 
     ld.add_action(mux_obs_node)
     ld.add_action(observer_guille0)
-    # ld.add_action(observer_guille1)
-    # ld.add_action(observer_guille3)
-    # ld.add_action(observer_guille4)
+    ld.add_action(observer_guille1)
+    ld.add_action(observer_guille3)
+    ld.add_action(observer_guille4)
     ld.add_action(observer_liu0)
-    # ld.add_action(observer_liu1)
-    # ld.add_action(observer_liu3)
-    # ld.add_action(observer_liu4)
+    ld.add_action(observer_liu1)
+    ld.add_action(observer_liu3)
+    ld.add_action(observer_liu4)
     ld.add_action(observer_zono0)
-    # ld.add_action(observer_zono1)
-    # ld.add_action(observer_zono3)
-    # ld.add_action(observer_zono4)
+    ld.add_action(observer_zono1)
+    ld.add_action(observer_zono3)
+    ld.add_action(observer_zono4)
 
     ###################################################################
     ##-----------------------Control Nodes---------------------------##
@@ -652,14 +652,14 @@ def generate_launch_description():
     ld.add_action(pwm_mapper_node)
     ld.add_action(mux_llc_node)
     ld.add_action(ifac_llc_node0)
-    # ld.add_action(ifac_llc_node1)
-    # ld.add_action(ifac_llc_node3)
-    # ld.add_action(ifac_llc_node4)
+    ld.add_action(ifac_llc_node1)
+    ld.add_action(ifac_llc_node3)
+    ld.add_action(ifac_llc_node4)
     # ld.add_action(mpc_llc_node0)
     # ld.add_action(mpc_llc_node1)
     # ld.add_action(mpc_llc_node3)
     # ld.add_action(mpc_llc_node4)
-    ld.add_action(wang_mlc_node0)
+    # ld.add_action(wang_mlc_node0)
     # ld.add_action(wang_mlc_node1)
     # ld.add_action(wang_mlc_node3)
     # ld.add_action(wang_mlc_node4)

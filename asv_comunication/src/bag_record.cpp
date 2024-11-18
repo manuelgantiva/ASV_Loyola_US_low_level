@@ -49,7 +49,7 @@ public:
                 std::bind(&BagRecordNode::callbackImuDataExt, this, std::placeholders::_1));
         subscriber_gps_global = this-> create_subscription<sensor_msgs::msg::NavSatFix>("/" + name_id + "/mavros/global_position/global",
                 rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackGpsGlobalData, this, std::placeholders::_1));
-        subscriber_gps_= this-> create_subscription<nav_msgs::msg::Odometry>("/" + my_id + "/mavros/global_position/local",
+        subscriber_gps_= this-> create_subscription<nav_msgs::msg::Odometry>("/" + name_id + "/mavros/global_position/local",
                 rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackGpsData, this, std::placeholders::_1));
         subscriber_gps_local= this-> create_subscription<geometry_msgs::msg::PoseStamped>("/" + name_id + "/mavros/local_position/pose",
                 rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackGpsLocalData, this, std::placeholders::_1));
@@ -57,7 +57,7 @@ public:
                 std::bind(&BagRecordNode::callbackRcoutData, this, std::placeholders::_1));
         subscriber_rcin = this-> create_subscription<mavros_msgs::msg::RCIn>("/" + name_id + "/mavros/rc/in",1,
                 std::bind(&BagRecordNode::callbackRcinData, this, std::placeholders::_1));
-        subscriber_rc_over_in = this-> create_subscription<mavros_msgs::msg::OverrideRCIn>("/" + name_id + "/mavros/rc/override",1,
+        subscriber_rc_over_in = this-> create_subscription<mavros_msgs::msg::OverrideRCIn>("/" + name_id + "/mavros/rc/override",10,
                 std::bind(&BagRecordNode::callbackRcOverinData, this, std::placeholders::_1));
         subscriber_reference = this-> create_subscription<geometry_msgs::msg::Vector3>("/" + name_id + "/control/reference_llc",1,
                 std::bind(&BagRecordNode::callbackReference, this, std::placeholders::_1));
