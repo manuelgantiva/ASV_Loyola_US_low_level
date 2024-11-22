@@ -7,6 +7,7 @@
 #include "mavros_msgs/msg/state.hpp"               //Interface state ardupilot
 #include "geometry_msgs/msg/pose_stamped.hpp"       //Interface gps local data
 #include "asv_interfaces/msg/state_observer.hpp"    //Interface state observer
+#include "nav_msgs/msg/odometry.hpp"                //Interface gps global local data
 
 #include "tf2/exceptions.h"
 #include "tf2_ros/transform_listener.h"
@@ -25,7 +26,7 @@ class ObserverZonoNode : public rclcpp::Node
 public:
     ObserverZonoNode() : Node("observer_zono")
     {
-        this-> declare_parameter("my_id", 0);
+        this-> declare_parameter("my_id", "ASV0");
           //---------Parámetros del ASV-------------------//
         this-> declare_parameter("Ts", 100.0);
         
@@ -45,14 +46,17 @@ public:
 
         this-> declare_parameter("Max_n_r", 0.01);
         this-> declare_parameter("Max_n_p", 0.02);
+        this-> declare_parameter("Max_w_r", 0.01);
+        this-> declare_parameter("Max_w_p", 0.02);
 
         this-> declare_parameter("q", 300);
+        this-> declare_parameter("met", 1);
 
         this-> declare_parameter("Wpsi_di", std::vector<float>{1.0, 1.0, 1.0});
         this-> declare_parameter("Wp_di", std::vector<float>{1.0, 1.0, 1.0, 1.0, 1.0, 1.0});
         
 
-        my_id = std::to_string(this->get_parameter("my_id").as_int());
+        my_id = (this->get_parameter("my_id").as_string());
         Ts = this->get_parameter("Ts").as_double();
         t_s = Ts/1000; // En segundos
 
@@ -72,14 +76,14 @@ public:
 
         Max_n_r = this->get_parameter("Max_n_r").as_double(); // pequeños Metodo 2
         Max_n_p = this->get_parameter("Max_n_p").as_double();
+        Max_w_r = this->get_parameter("Max_w_r").as_double();
+        Max_w_p = this->get_parameter("Max_w_p").as_double();
 
         q = this->get_parameter("q").as_int();
+        met = this->get_parameter("met").as_int();
 
         std::vector<double> Wpsi_di = this->get_parameter("Wpsi_di").as_double_array();
         std::vector<double> Wp_di = this->get_parameter("Wp_di").as_double_array();
-
-        Max_w_r = 2*Max_n_r + 0.01;
-        Max_w_p = 2*Max_n_p + 0.02;
 
         Apsi << 1.0, t_s, 0.0,
                 0.0, 1.0, t_s,
@@ -155,23 +159,23 @@ public:
 
         params_callback_handle_ = this->add_on_set_parameters_callback(std::bind(&ObserverZonoNode::param_callback, this, _1));
 
-        subscriber_gps_local= this-> create_subscription<geometry_msgs::msg::PoseStamped>("/mavros/local_position/pose",
+        subscriber_gps_local= this-> create_subscription<nav_msgs::msg::Odometry>("/" + my_id + "/mavros/global_position/local",
                 rclcpp::SensorDataQoS(), std::bind(&ObserverZonoNode::callbackGpsLocalData, this, std::placeholders::_1), options_sensors_);
-        subscriber_rcout = this-> create_subscription<mavros_msgs::msg::RCOut>("/mavros/rc/out",1,
+        subscriber_rcout = this-> create_subscription<mavros_msgs::msg::RCOut>("/" + my_id + "/mavros/rc/out",1,
                 std::bind(&ObserverZonoNode::callbackRcoutData, this, std::placeholders::_1), options_sensors_);
-        subscriber_state = this-> create_subscription<mavros_msgs::msg::State>("/mavros/state",1,
+        subscriber_state = this-> create_subscription<mavros_msgs::msg::State>("/" + my_id + "/mavros/state",1,
                 std::bind(&ObserverZonoNode::callbackStateData, this, std::placeholders::_1), options_sensors_);
-        publisher_state = this-> create_publisher<asv_interfaces::msg::StateObserver>("/control/state_observer_zono",
+        publisher_state = this-> create_publisher<asv_interfaces::msg::StateObserver>("/" + my_id + "/observer/state_observer_zono",
                 rclcpp::SensorDataQoS());
-        publisher_state_min = this-> create_publisher<asv_interfaces::msg::StateObserver>("/control/state_observer_zono_min",
+        publisher_state_min = this-> create_publisher<asv_interfaces::msg::StateObserver>("/" + my_id + "/observer/state_observer_zono_min",
                 rclcpp::SensorDataQoS());
-        publisher_state_max = this-> create_publisher<asv_interfaces::msg::StateObserver>("/control/state_observer_zono_max",
+        publisher_state_max = this-> create_publisher<asv_interfaces::msg::StateObserver>("/" + my_id + "/observer/state_observer_zono_max",
                 rclcpp::SensorDataQoS());
-        publisher_obs = this-> create_publisher<geometry_msgs::msg::PoseStamped>("pose_zono",
+        publisher_obs = this-> create_publisher<geometry_msgs::msg::PoseStamped>("/" + my_id + "/observer/pose_zono",
                 rclcpp::SensorDataQoS());
         
                                         
-        RCLCPP_INFO(this->get_logger(), "Observer Zonotopos Node has been started.");
+        RCLCPP_INFO(this->get_logger(), "Observer Zonotopos Node in %s has been started.", my_id.c_str());
     }
 
 private:
@@ -192,7 +196,7 @@ private:
                 psi = 0.0;
             }
         }else{
-            if(count > 5){
+            if(count > 6){
                 //ssauto start = std::chrono::high_resolution_clock::now();
                 Vector <double, 2> Yp_i;
                 Vector <double, 1> Ypsi_i;
@@ -226,7 +230,7 @@ private:
                 IGp(3,0) = IGp(3,0)*0.1;
                 IGpsi(1,0) = IGpsi(1,0)*0.1;
 
-                if(count==6){
+                if(count==7){
                     Eigen::VectorXd cr0(3);
                     cr0 << Ypsi_i(0), 0.0, 0.0;  
                     Eigen::VectorXd cp0(6);
@@ -269,7 +273,11 @@ private:
                 Hr << Hr1, Hr2;
                 Zpsi_prior = Zonotopo(qr, Hr);
 
-                Zp_prior = Zonotopo::prediction_Y(Ap,Zp_next,Ypsi_i(0)-Max_n_r,Ypsi_i(0)+Max_n_r,Bwp,Qp,IGp);
+                if(met == 1){
+                    Zp_prior = Zonotopo::prediction_Y(Ap,Zp_next,Ypsi_i(0)-Max_n_r,Ypsi_i(0)+Max_n_r,Bwp,Qp,IGp);
+                }else{
+                    Zp_prior = Zonotopo::prediction2_Y(Ap, t_s, Zp_next,Ypsi_i(0)-Max_n_r,Ypsi_i(0)+Max_n_r,Bwp,Qp,IGp,1);
+                }
 
                 msg.header.stamp = this->now();
                 msg.header.frame_id = my_id; 
@@ -332,13 +340,13 @@ private:
         }
     }
 
-    void callbackGpsLocalData(const geometry_msgs::msg::PoseStamped::SharedPtr msg)
+    void callbackGpsLocalData(const nav_msgs::msg::Odometry::SharedPtr msg)
     {
         if(armed==true){
-            float y = msg->pose.position.x;
-            float x = msg->pose.position.y;
-            float psi_rad = quat2EulerAngles_XYZ(msg->pose.orientation.w, msg->pose.orientation.x,
-                                                msg->pose.orientation.y, msg->pose.orientation.z);
+            float y = msg->pose.pose.position.x;
+            float x = msg->pose.pose.position.y;
+            float psi_rad = quat2EulerAngles_XYZ(msg->pose.pose.orientation.w, msg->pose.pose.orientation.x,
+                                                msg->pose.pose.orientation.y, msg->pose.pose.orientation.z);
             psi_rad=-psi_rad+(M_PI/2);
             if (psi_rad<0){
                 psi_rad=psi_rad+(2*M_PI);
@@ -474,11 +482,8 @@ private:
                 if(param.as_double() >= 0.0 and param.as_double() < 100.0){
                     RCLCPP_INFO(this->get_logger(), "changed param value");
                     Max_n_p = param.as_double();
-                    Max_w_p = 2*Max_n_p + 0.02;
                     Rp << Max_n_p, 0.0,
                         0.0, Max_n_p;
-                    Qp << Max_w_p, 0.0,
-                        0.0, Max_w_p;
                 }else{
                     RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-100");
                     result.successful = false;
@@ -490,8 +495,31 @@ private:
                 if(param.as_double() >= 0.0 and param.as_double() < 100.0){
                     RCLCPP_INFO(this->get_logger(), "changed param value");
                     Max_n_r = param.as_double();
-                    Max_w_r = 2*Max_n_r + 0.1;
                     Rpsi <<  Max_n_r;        
+                }else{
+                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-100");
+                    result.successful = false;
+                    result.reason = "Value out of range";
+                    return result;
+                }
+            }
+            if (param.get_name() == "Max_w_p"){
+                if(param.as_double() >= 0.0 and param.as_double() < 100.0){
+                    RCLCPP_INFO(this->get_logger(), "changed param value");
+                    Max_w_p = param.as_double();
+                    Qp << Max_w_p, 0.0,
+                        0.0, Max_w_p;
+                }else{
+                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-100");
+                    result.successful = false;
+                    result.reason = "Value out of range";
+                    return result;
+                }
+            }
+            if (param.get_name() == "Max_w_r"){
+                if(param.as_double() >= 0.0 and param.as_double() < 100.0){
+                    RCLCPP_INFO(this->get_logger(), "changed param value");
+                    Max_w_r = param.as_double();      
                     Qpsi << Max_w_r;
                 }else{
                     RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-100");
@@ -506,6 +534,17 @@ private:
                     q = this->get_parameter("q").as_int();
                 }else{
                     RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-100");
+                    result.successful = false;
+                    result.reason = "Value out of range";
+                    return result;
+                }
+            }
+            if (param.get_name() == "met"){
+                if(param.as_int() == 1 or param.as_int() == 2){
+                    RCLCPP_INFO(this->get_logger(), "changed param value");
+                    met = this->get_parameter("met").as_int();
+                }else{
+                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be 1 or 2");
                     result.successful = false;
                     result.reason = "Value out of range";
                     return result;
@@ -561,7 +600,7 @@ private:
 
     float delta_diff;
     float delta_mean;
-    int beta, count=0, q;  
+    int beta, count=0, q, met;  
 
     Matrix <double, 3,1> IGpsi; 
     Matrix <double, 6,1> IGp;
@@ -582,7 +621,7 @@ private:
     
     Zonotopo Zp_prior, Zpsi_prior, Zp_next, Zpsi_next;
 
-    rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr subscriber_gps_local;
+    rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr subscriber_gps_local;
     rclcpp::Subscription<mavros_msgs::msg::RCOut>::SharedPtr subscriber_rcout;
     rclcpp::Subscription<mavros_msgs::msg::State>::SharedPtr subscriber_state;
 

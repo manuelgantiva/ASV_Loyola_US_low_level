@@ -15,7 +15,11 @@ include_directories(SYSTEM ${EIGEN3_INCLUDE_DIRS})
 include_directories(include)
  
 # define a library target called my_value_converter_library
-add_library(asv_library src/Zonotopo.cpp)
+add_library(asv_library 
+  src/Zonotopo.cpp 
+  src/curvas_sim.cpp 
+  src/curvas_alamillo.cpp 
+  src/curvas_loyola.cpp)
  
 # this line to exports the library
 ament_export_targets(asv_library HAS_LIBRARY_TARGET)

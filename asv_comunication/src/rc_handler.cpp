@@ -8,6 +8,7 @@
 #include "example_interfaces/srv/set_bool.hpp"      //Interface srv on_off PWM
 #include "asv_interfaces/srv/set_llc.hpp"           //Interface srv set low level controller enable 
 #include "asv_interfaces/srv/set_obs.hpp"           //Interface srv set State Observer enable 
+#include "mavros_msgs/srv/stream_rate.hpp"           //Interface srv set State Observer enable 
 
 #include <cmath>
 
@@ -22,24 +23,29 @@ class RcHandlerNode : public rclcpp::Node
 public:
     RcHandlerNode() : Node("rc_handler") 
     {
-        this-> declare_parameter("origin", std::vector<float>{37.30769, -5.94021, 89.95863749032833});
+        std::string my_id; 
+        this-> declare_parameter("my_id", "ASV0");
+        my_id = (this->get_parameter("my_id").as_string());
 
-        origin= this->get_parameter("origin").as_double_array();
+        this-> declare_parameter("home", std::vector<float>{37.30769, -5.94021, 89.95863749032833});
+
+        home= this->get_parameter("home").as_double_array();
 
         params_callback_handle_ = this->add_on_set_parameters_callback(std::bind(&RcHandlerNode::param_callback, this, _1));
 
-        this->client_set_mode_ = this->create_client<mavros_msgs::srv::SetMode>("/mavros/set_mode");
-        this->client_set_llc_ = this->create_client<asv_interfaces::srv::SetLlc>("/control/set_llc");
-        this->client_set_obs_ = this->create_client<asv_interfaces::srv::SetObs>("/control/set_obs");
-        this->client_set_param = this->create_client<mavros_msgs::srv::ParamSetV2>("/mavros/param/set");
-        this->client_enable_pwm = this->create_client<example_interfaces::srv::SetBool>("/control/on_off_pwm");
-        this->client_set_home = this->create_client<mavros_msgs::srv::CommandHome>("/mavros/cmd/set_home");
-        this->client_arming = this->create_client<mavros_msgs::srv::CommandBool>("/mavros/cmd/arming");
-        subscriber_ = this-> create_subscription<mavros_msgs::msg::RCIn>("/mavros/rc/in",10,
+        this->client_set_mode_ = this->create_client<mavros_msgs::srv::SetMode>("/" + my_id + "/mavros/set_mode");
+        this->client_set_llc_ = this->create_client<asv_interfaces::srv::SetLlc>("/" + my_id + "/control/set_llc");
+        this->client_set_obs_ = this->create_client<asv_interfaces::srv::SetObs>("/" + my_id + "/observer/set_obs");
+        this->client_set_param = this->create_client<mavros_msgs::srv::ParamSetV2>("/" + my_id + "/mavros/param/set");
+        this->client_enable_pwm = this->create_client<example_interfaces::srv::SetBool>("/" + my_id + "/control/on_off_pwm");
+        this->client_set_home = this->create_client<mavros_msgs::srv::CommandHome>("/" + my_id + "/mavros/cmd/set_home");
+        this->client_set_stream = this->create_client<mavros_msgs::srv::StreamRate>("/" + my_id + "/mavros/set_stream_rate");
+        this->client_arming = this->create_client<mavros_msgs::srv::CommandBool>("/" + my_id + "/mavros/cmd/arming");
+        subscriber_ = this-> create_subscription<mavros_msgs::msg::RCIn>("/" + my_id + "/mavros/rc/in",10,
                 std::bind(&RcHandlerNode::callbackRcIn, this, std::placeholders::_1));
-        subscriber_2 = this-> create_subscription<mavros_msgs::msg::State>("/mavros/state",10,
+        subscriber_2 = this-> create_subscription<mavros_msgs::msg::State>("/" + my_id + "/mavros/state",10,
                 std::bind(&RcHandlerNode::callbackMavrosState, this, std::placeholders::_1));
-    	RCLCPP_INFO(this->get_logger(), "Rc Handler Node has been started.");
+    	RCLCPP_INFO(this->get_logger(), "Rc Handler Node in %s has been started.", my_id.c_str());
     }
 
 private:
@@ -135,9 +141,9 @@ private:
         auto request = std::make_shared<mavros_msgs::srv::CommandHome::Request>();
         request->current_gps = false;
         request->yaw = 0.0;
-        request->latitude= origin[0];
-        request->longitude= origin[1];
-        request->altitude = origin[3];
+        request->latitude= home[0];
+        request->longitude= home[1];
+        request->altitude = home[3];
 
         client_set_home->async_send_request(request,std::bind(&RcHandlerNode::callbackResponseSetHome, this, _1));
     }
@@ -148,6 +154,33 @@ private:
             auto response = future.get();
             RCLCPP_INFO(this->get_logger(),"succes: %d and new value is %d",  
                         response.second->success, int(response.second->result));                  
+        }
+        catch (const std::exception &e)
+        {
+            RCLCPP_ERROR(this->get_logger(), "Service call failed");
+        }
+    }
+
+    void callSetStreamRate()
+    {
+        while (!client_set_stream->wait_for_service(std::chrono::seconds(1)))
+        {
+            RCLCPP_WARN(this->get_logger(), "Waiting for the server set_stream_rate to be up...");
+        }
+
+        auto request = std::make_shared<mavros_msgs::srv::StreamRate::Request>();
+        request->stream_id = 0;
+        request->message_rate = 10.0;
+        request->on_off = true;
+
+        client_set_stream->async_send_request(request,std::bind(&RcHandlerNode::callbackResponseSetStreamRate, this, _1));
+    }
+
+    void callbackResponseSetStreamRate(rclcpp::Client<mavros_msgs::srv::StreamRate>::SharedFutureWithRequest future){
+        try
+        {
+            auto response = future.get();
+            RCLCPP_INFO(this->get_logger(),"Succes: request set stream rate");                  
         }
         catch (const std::exception &e)
         {
@@ -317,7 +350,8 @@ private:
     void callbackMavrosState(const mavros_msgs::msg::State::SharedPtr msg)
     {
         if(msg->armed == true && msg->armed!=armed){
-            RCLCPP_INFO(this->get_logger(), "Set Home");
+            threads_.push_back(std::thread(std::bind(&RcHandlerNode::callSetStreamRate, this)));
+            RCLCPP_INFO(this->get_logger(), "Set Home and rate");
             threads_.push_back(std::thread(std::bind(&RcHandlerNode::callSetHomeMavros, this)));
         }
         armed= msg->armed;
@@ -328,10 +362,10 @@ private:
     rcl_interfaces::msg::SetParametersResult param_callback(const std::vector<rclcpp::Parameter> &params){
         rcl_interfaces::msg::SetParametersResult result;
         for (const auto &param: params){
-            if (param.get_name() == "origin"){
+            if (param.get_name() == "home"){
                 if(param.as_double_array().size() == 3){
                     RCLCPP_INFO(this->get_logger(), "changed param value");
-                    origin = param.as_double_array();
+                    home = param.as_double_array();
                 }else{
                     RCLCPP_INFO(this->get_logger(), "could not change parameter value, array size must be 3");
                     result.successful = false;
@@ -349,12 +383,13 @@ private:
     uint16_t sel_obs, sel_con;
     uint8_t mode = 1;
 
-    std::vector<double> origin;
+    std::vector<double> home;
 
     rclcpp::Subscription<mavros_msgs::msg::RCIn>::SharedPtr subscriber_;
     rclcpp::Subscription<mavros_msgs::msg::State>::SharedPtr subscriber_2;
     rclcpp::Client<mavros_msgs::srv::ParamSetV2>::SharedPtr client_set_param;
     rclcpp::Client<mavros_msgs::srv::CommandHome>::SharedPtr client_set_home;
+    rclcpp::Client<mavros_msgs::srv::StreamRate>::SharedPtr client_set_stream;
     rclcpp::Client<mavros_msgs::srv::CommandBool>::SharedPtr client_arming;
     rclcpp::Client<example_interfaces::srv::SetBool>::SharedPtr client_enable_pwm;
     rclcpp::Client<mavros_msgs::srv::SetMode>::SharedPtr client_set_mode_;

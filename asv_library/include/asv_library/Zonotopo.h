@@ -32,6 +32,12 @@ public:
                           double min_psi, double max_psi, 
                           const MatrixXd& Bwp, const MatrixXd& Qp, 
                           const MatrixXd& Bp_tau);
+
+    static Zonotopo prediction2_Y(const Eigen::MatrixXd& Ap, double Ts, const Zonotopo& Z,
+                                    double min_psi, double max_psi, 
+                                    const Eigen::MatrixXd& Bwp, const Eigen::MatrixXd& Qp, 
+                                    const Eigen::MatrixXd& Bp_tau, int modo);
+
 private:
     // Método para obtener el índice de la columna con la mayor norma
     int mayor(const VectorXd& normas, int r, int j);
@@ -43,6 +49,10 @@ private:
     static MatrixXd int_prod(const MatrixXd& a, const MatrixXd& b);
     static std::pair<MatrixXd, MatrixXd> max_min_trig(double min_psi, double max_psi);
     static MatrixXd max_min(int ind, const Zonotopo& Z);
+
+    static std::pair<MatrixXd, MatrixXd> rad_mid_2(const MatrixXd& Ap, double min_psi, double max_psi);
+    static std::pair<MatrixXd, MatrixXd> max_min_trig_2(double min_psi, double max_psi);
+    static std::pair<double, double> int_prod(const MatrixXd& a, const std::pair<double, double>& b);
 };
 
 #endif // ZONOTOPO_H

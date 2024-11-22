@@ -108,7 +108,10 @@ class IMUDriverNode(Node):
         self.declare_parameter("port", "/dev/imu_usb")
         self.declare_parameter("baud", 115200)
 
-        self.imu_pub = self.create_publisher(Imu, 'imu_ext/data',qos_profile_sensor_data)
+        self.declare_parameter("my_id", "ASV0")
+        my_id = self.get_parameter("my_id").get_parameter_value().string_value
+
+        self.imu_pub = self.create_publisher(Imu, "/" + my_id +"/comunication/imu_ext/data",qos_profile_sensor_data)
         self.port = self.get_parameter('port').value
         self.baud_rate = self.get_parameter('baud').value
 

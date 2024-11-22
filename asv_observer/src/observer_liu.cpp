@@ -6,6 +6,7 @@
 #include "mavros_msgs/msg/state.hpp"               //Interface state ardupilot
 #include "geometry_msgs/msg/pose_stamped.hpp"       //Interface gps local data
 #include "asv_interfaces/msg/state_observer.hpp"    //Interface state observer
+#include "nav_msgs/msg/odometry.hpp"                //Interface gps global local data
 
 #include "tf2/exceptions.h"
 #include "tf2_ros/transform_listener.h"
@@ -24,7 +25,7 @@ class ObserverLiuNode : public rclcpp::Node
 public:
     ObserverLiuNode() : Node("observer_liu")
     {
-        this-> declare_parameter("my_id", 0);
+        this-> declare_parameter("my_id", "ASV0");
           //---------Parámetros del ASV-------------------//
         this-> declare_parameter("Ts", 100.0);
         
@@ -46,7 +47,7 @@ public:
         this-> declare_parameter("PpWp_c2", std::vector<float>{0.0, 6.567173587771372, 0.0, 12.050184632655867, 0.0, 6.992727395821881});
         this-> declare_parameter("Lpsi", std::vector<float>{10.370372264461590, 42.762463429973230, 76.008320148412050});
 
-        my_id = std::to_string(this->get_parameter("my_id").as_int());
+        my_id = (this->get_parameter("my_id").as_string());
         Ts = this->get_parameter("Ts").as_double();
         
         Xu6 = this->get_parameter("Xu6").as_double();
@@ -129,20 +130,20 @@ public:
 
         params_callback_handle_ = this->add_on_set_parameters_callback(std::bind(&ObserverLiuNode::param_callback, this, _1));
 
-        subscriber_gps_local= this-> create_subscription<geometry_msgs::msg::PoseStamped>("/mavros/local_position/pose",
+        subscriber_gps_local= this-> create_subscription<nav_msgs::msg::Odometry>("/" + my_id + "/mavros/global_position/local",
                 rclcpp::SensorDataQoS(), std::bind(&ObserverLiuNode::callbackGpsLocalData, this, std::placeholders::_1), options_sensors_);
-        subscriber_rcout = this-> create_subscription<mavros_msgs::msg::RCOut>("/mavros/rc/out",1,
+        subscriber_rcout = this-> create_subscription<mavros_msgs::msg::RCOut>("/" + my_id + "/mavros/rc/out",1,
                 std::bind(&ObserverLiuNode::callbackRcoutData, this, std::placeholders::_1), options_sensors_);
-        subscriber_state = this-> create_subscription<mavros_msgs::msg::State>("/mavros/state",1,
+        subscriber_state = this-> create_subscription<mavros_msgs::msg::State>("/" + my_id + "/mavros/state",1,
                 std::bind(&ObserverLiuNode::callbackStateData, this, std::placeholders::_1), options_sensors_);
-        publisher_state = this-> create_publisher<asv_interfaces::msg::StateObserver>("/control/state_observer_liu",
+        publisher_state = this-> create_publisher<asv_interfaces::msg::StateObserver>("/" + my_id + "/observer/state_observer_liu",
                 rclcpp::SensorDataQoS());
         timer_ = this -> create_wall_timer(std::chrono::milliseconds(int(Ts)),
                                           std::bind(&ObserverLiuNode::calculateState, this), cb_group_obs_);
-        publisher_obs = this-> create_publisher<geometry_msgs::msg::PoseStamped>("pose_liu",
+        publisher_obs = this-> create_publisher<geometry_msgs::msg::PoseStamped>("/" + my_id + "/observer/pose_liu",
                 rclcpp::SensorDataQoS());
                                         
-        RCLCPP_INFO(this->get_logger(), "Observer Liu Node has been started.");
+        RCLCPP_INFO(this->get_logger(), "Observer Liu Node in %s has been started.", my_id.c_str());
     	
     }
 
@@ -168,7 +169,7 @@ private:
                 beta=0;
             }
         }else{
-            if(count > 5){
+            if(count > 6){
                 //auto start = std::chrono::high_resolution_clock::now();
                 float psi_i;
                 Matrix <float, 2,1> Yp_i;
@@ -215,7 +216,7 @@ private:
 
                 Lp=Tp.inverse()*PpWp*R2T; 
 
-                if(count==6){
+                if(count==7){
                     Xp_hat_ant << Yp_i(0,0),
                                 Yp_i(1,0),
                                 0.0,
@@ -279,13 +280,13 @@ private:
         }        
     }
 
-    void callbackGpsLocalData(const geometry_msgs::msg::PoseStamped::SharedPtr msg)
+    void callbackGpsLocalData(const nav_msgs::msg::Odometry::SharedPtr msg)
     {
         if(armed==true){
-            float y = msg->pose.position.x;
-            float x = msg->pose.position.y;
-            float psi_rad = quat2EulerAngles_XYZ(msg->pose.orientation.w, msg->pose.orientation.x,
-                                                msg->pose.orientation.y, msg->pose.orientation.z);
+            float y = msg->pose.pose.position.x;
+            float x = msg->pose.pose.position.y;
+            float psi_rad = quat2EulerAngles_XYZ(msg->pose.pose.orientation.w, msg->pose.pose.orientation.x,
+                                                msg->pose.pose.orientation.y, msg->pose.pose.orientation.z);
             psi_rad=-psi_rad+(M_PI/2);
             if (psi_rad<0){
                 psi_rad=psi_rad+(2*M_PI);
@@ -479,7 +480,7 @@ private:
     Matrix <float, 3,1> Xpsi_hat_dot; 
     Matrix <float, 3,1> Xpsi_hat_ant; 
 
-    rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr subscriber_gps_local;
+    rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr subscriber_gps_local;
     rclcpp::Subscription<mavros_msgs::msg::RCOut>::SharedPtr subscriber_rcout;
     rclcpp::Subscription<mavros_msgs::msg::State>::SharedPtr subscriber_state;
 

@@ -6,7 +6,7 @@
 
 #include <cmath>
 #include <thread>
-#include "curvas_3.cpp"
+#include "asv_library/curvas_loyola.h"
 
 using namespace std;
 
@@ -19,6 +19,8 @@ class WangMlcNode : public rclcpp::Node
 public:
     WangMlcNode() : Node("wang_mlc")
     {     
+        std::string my_id; 
+        this-> declare_parameter("my_id", "ASV0");
         
         //---------Parámetros del LLC-------------------//
         this-> declare_parameter("Ts", 100.0);
@@ -27,7 +29,8 @@ public:
         this-> declare_parameter("taud", 15.0); // Taud = #*Ts Est es #
         this-> declare_parameter("path_d", 0); // path_d = #Path deseado #
         this-> declare_parameter("flag", true); // path_d = #Path deseado #
-    
+
+        my_id = (this->get_parameter("my_id").as_string());    
         Ts = this->get_parameter("Ts").as_double()/1000.0;
         delta_SGLOS = this->get_parameter("delta_SGLOS").as_double();
         k_u_tar = this->get_parameter("k_u_tar").as_double();
@@ -39,7 +42,7 @@ public:
 
         a=(taud*Ts)/(taud*Ts+Ts);
         b=1/(taud*Ts+Ts);
-
+        w = 0.0;
         cb_group_sensors_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
         cb_group_obs_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
         auto options_sensors_ = rclcpp::SubscriptionOptions();
@@ -48,20 +51,20 @@ public:
         params_callback_handle_ = this->add_on_set_parameters_callback(std::bind(&WangMlcNode::param_callback, this, _1));
 
         subscriber_states_obs_ = this-> create_subscription<asv_interfaces::msg::StateObserver>(
-            "/control/state_observer",rclcpp::SensorDataQoS(), std::bind(&WangMlcNode::callbackStates,
+            "/" + my_id + "/observer/state_observer",rclcpp::SensorDataQoS(), std::bind(&WangMlcNode::callbackStates,
             this, std::placeholders::_1), options_sensors_);
         subscriber_references_ = this-> create_subscription<std_msgs::msg::Float64>(
-            "/control/reference_mlc", 1, std::bind(&WangMlcNode::callbackVelReference,
+            "/" + my_id + "/control/reference_mlc", 1, std::bind(&WangMlcNode::callbackVelReference,
             this, std::placeholders::_1), options_sensors_);
-        subscriber_state = this-> create_subscription<mavros_msgs::msg::State>("/mavros/state",1,
+        subscriber_state = this-> create_subscription<mavros_msgs::msg::State>("/" + my_id + "/mavros/state",1,
                 std::bind(&WangMlcNode::callbackStateData, this, std::placeholders::_1), options_sensors_);
-        publisher_llc = this-> create_publisher<geometry_msgs::msg::Vector3>("/control/reference_llc",1);
-        publisher_error = this-> create_publisher<geometry_msgs::msg::Vector3>("/control/error_mlc",1);
+        publisher_llc = this-> create_publisher<geometry_msgs::msg::Vector3>("/" + my_id + "/control/reference_llc",1);
+        publisher_error = this-> create_publisher<geometry_msgs::msg::Vector3>("/" + my_id + "/control/error_mlc",1);
 
         timer_ = this -> create_wall_timer(std::chrono::milliseconds(int(Ts*1000.0)),
                 std::bind(&WangMlcNode::calculateMidLevelController, this), cb_group_obs_);
 
-        RCLCPP_INFO(this->get_logger(), "Mid Level Controller Wang Node has been started.");
+        RCLCPP_INFO(this->get_logger(), "Mid Level Controller Wang Node in %s has been started.", my_id.c_str());
     	
     }
 
@@ -74,7 +77,7 @@ private:
             w=0.0;
             laps=0;
         }else{
-            if(count > 4){
+            if(count > 7){
                 //auto start = std::chrono::high_resolution_clock::now();
                 auto msg = geometry_msgs::msg::Vector3();
                 auto msg_e = geometry_msgs::msg::Vector3();
@@ -88,8 +91,6 @@ private:
                 float xp_i, yp_i;
                 float dxp_i, dyp_i;
                 float psip_i;
-
-
                 {
                     std::lock_guard<std::mutex> lock(mutex_);
                     x_hat_i = x_hat;
@@ -148,10 +149,11 @@ private:
                         
                 float r_ref = derivationFilter(psi_ref, memory_psi, a, b);
 
-                if(r_ref > 0.6){
-                    r_ref = 0.6;
-                }else if(r_ref < -0.6){
-                    r_ref = -0.6;
+                float r_ref_max = 0.8; //0.6
+                if(r_ref > r_ref_max){
+                    r_ref = r_ref_max;
+                }else if(r_ref < -r_ref_max){
+                    r_ref = -r_ref_max;
                 }
 
                 if(u_ref > 2.0){
@@ -223,47 +225,46 @@ private:
         Target result;
         switch(path_d) {
             case 0:
-                /*result.xp =-1*w;
+                result.xp = -w;
                 result.yp = 0;
                 result.dxp = -1;
-                result.dyp = 0;*/
-                result = curva0(w);
+                result.dyp = 0;
                 break;
             case 1:
-                result = curva1(w);
+                result = curva_2_d(w);
                 break;
             case 2:
-                result = curva2(w);
+                result = curva_2_c(w);
                 break;
             case 3:
-                result = curva3(w);
+                result = curva_2_i(w);
                 break;
             case 4:
-                result = curva4(w);
+                //result = curva4(w);
                 break;
             case 5:
-                result = curva5(w);
+                //result = curva5(w);
                 break;
             case 6:
-                result = curva6(w);
+                //result = curva6(w);
                 break;
             case 7:
-                result = curva7(w);
+                //result = curva7(w);
                 break;
             case 8:
-                result = curva8(w);
+                //result = curva8(w);
                 break;
             case 9:
-                result = curva9(w);
+                //result = curva9(w);
                 break;
             case 10:
-                result = curva10(w);
+                //result = curva10(w);
                 break;
             case 11:
-                result = curva11(w);
+                //result = curva11(w);
                 break;
             case 12:
-                result = curva12(w);
+                //result = curva12(w);
                 break;
             default:
                 result.xp =0.0;
@@ -346,7 +347,7 @@ private:
     }
 
     bool armed = false, armed_act=false, flag;
-    float u_hat, psi_hat, r_hat, v_hat, x_hat, y_hat, u_d, w=0.0, psi_ant;
+    float u_hat = 0, psi_hat = 0, r_hat = 0, v_hat = 0, x_hat = 0, y_hat = 0, u_d = 0, w=0.0, psi_ant;
     int count=0, laps=0;
     //------Params-------//
     float Ts;  

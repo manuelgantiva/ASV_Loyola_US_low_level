@@ -1,4 +1,4 @@
-#include "curvas.hpp"
+#include "asv_library/curvas_alamillo.h"
 #include <cmath> 
 
 void recta(float w, Target* px, float ax, float by, float mx, float my){

@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <robot xmlns:xacro="http://ros.org/wiki/xacro">
-  <xacro:macro name="asv_camera">
+  <xacro:macro name="asv_camera" params="name">
     <link
-      name="asv_camera">
+      name="${name}/asv_camera">
       <visual>
         <origin
           xyz="0 0 0"
@@ -21,27 +21,27 @@
       </collision>
     </link>
     <joint
-      name="camera_joint"
+      name="${name}/camera_joint"
       type="fixed">
       <origin
         xyz="-0.24 0.0 0.44"
         rpy="0.0 0.0 0.0" />
       <parent
-        link="base_link" />
+        link="${name}/base_link" />
       <child
-        link="asv_camera"/>
+        link="${name}/asv_camera"/>
     </joint>
 
-    <link name="camera_link_optical">
+    <link name="${name}/camera_link_optical">
     </link>
 
-    <joint name="camera_optical_joint" type="fixed">
+    <joint name="${name}/camera_optical_joint" type="fixed">
         <!-- these values have to be these values otherwise the gazebo camera
             image won't be aligned properly with the frame it is supposedly
             originating from -->
         <origin xyz="0 0 0" rpy="${pi/2} ${pi} ${pi/2}"/>
-        <parent link="asv_camera"/>
-        <child link="camera_link_optical"/>
+        <parent link="${name}/asv_camera"/>
+        <child link="${name}/camera_link_optical"/>
     </joint>
 
   </xacro:macro>

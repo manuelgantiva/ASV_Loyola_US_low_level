@@ -619,8 +619,8 @@ def generate_launch_description():
     ##--------------------Comunication Nodes-------------------------##
     ################################################################### 
     ld.add_action(rc_handler_node)
-    # ld.add_action(ref_llc_node)
-    ld.add_action(ref_mlc_node)
+    ld.add_action(ref_llc_node)
+    # ld.add_action(ref_mlc_node)
     ld.add_action(apm_llc_node)
     ld.add_action(imu_fix_node)
     ld.add_action(imu_ext_node)
@@ -659,9 +659,9 @@ def generate_launch_description():
     # ld.add_action(mpc_llc_node1)
     # ld.add_action(mpc_llc_node3)
     # ld.add_action(mpc_llc_node4)
-    ld.add_action(wang_mlc_node0)
-    ld.add_action(wang_mlc_node1)
-    ld.add_action(wang_mlc_node3)
-    ld.add_action(wang_mlc_node4)
+    # ld.add_action(wang_mlc_node0)
+    # ld.add_action(wang_mlc_node1)
+    # ld.add_action(wang_mlc_node3)
+    # ld.add_action(wang_mlc_node4)
 
     return ld
