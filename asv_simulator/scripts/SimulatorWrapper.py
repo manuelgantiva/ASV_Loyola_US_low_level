@@ -75,9 +75,8 @@ class SimulatorASVWrapper(Node):
         super().__init__('simulator_asv_wrapper')
 
         self.declare_parameter('Ts', 100.0)
-
-        self.declare_parameter('my_id', '0')
-        self.my_id = self.get_parameter('my_id').get_parameter_value().string_value
+        self.declare_parameter('my_id', 0)
+        self.my_id = self.get_parameter('my_id').get_parameter_value().integer_value
         
         boat = "Gazebo" if self.my_id == '0' else "YellowFish"
         self.agent = ASVAgent(boat=boat)
