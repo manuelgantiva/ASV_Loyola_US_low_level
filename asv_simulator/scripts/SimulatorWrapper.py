@@ -1,6 +1,6 @@
 import rclpy
 from rclpy.node import Node
-from geometry_msgs.msg import PoseStamped
+from nav_msgs.msg import Odometry
 from mavros_msgs.msg import State, RCOut, OverrideRCIn, RCIn
 from mavros_msgs.srv import CommandHome, ParamSetV2, CommandBool, SetMode, StreamRate
 
@@ -75,6 +75,7 @@ class SimulatorASVWrapper(Node):
         super().__init__('simulator_asv_wrapper')
 
         self.declare_parameter('Ts', 100.0)
+
         self.declare_parameter('my_id', 0)
         self.my_id = self.get_parameter('my_id').get_parameter_value().integer_value
         
@@ -86,10 +87,9 @@ class SimulatorASVWrapper(Node):
                 f'/ASV{self.my_id}/mavros/rc/override',
                 self.obtainRCIn,
                 10)
-
         self.publisher_gps_local = self.create_publisher(
-                PoseStamped,
-                f'/ASV{self.my_id}/mavros/local_position/pose',
+                Odometry,
+                f'/ASV{self.my_id}/mavros/global_position/local',
                 10)
         self.publisher_rc_out = self.create_publisher(
                 RCOut,
@@ -103,7 +103,6 @@ class SimulatorASVWrapper(Node):
                 State,
                 f'/ASV{self.my_id}/mavros/state',
                 10)
-        self.get_logger().info(f'/ASV{self.my_id}/mavros/state')
         self.set_mode = self.create_service(
             SetMode,
             f'/ASV{self.my_id}/mavros/set_mode',
@@ -155,19 +154,27 @@ class SimulatorASVWrapper(Node):
     def calculateState(self):
 
         x, y, psi = self.agent.eta
-        msg = PoseStamped()
+        msg = Odometry()
         msg.header.stamp = self.get_clock().now().to_msg()
         msg.header.frame_id = "asv_frame" # TODO: Check this
-        msg.pose.position.x = x[0]
-        msg.pose.position.y = y[0]
-        msg.pose.position.z = 0.0
+        msg.pose.pose.position.x = x[0]
+        msg.pose.pose.position.y = y[0]
+        msg.pose.pose.position.z = 0.0
 
         # self.get_logger().info(f'x: {x[0]}, y: {y[0]}, psi: {psi[0]}')
         # psi to quaternion
-        msg.pose.orientation.x = 0.0
-        msg.pose.orientation.y = 0.0
-        msg.pose.orientation.z = np.sin(psi[0]/2)
-        msg.pose.orientation.w = np.cos(psi[0]/2)
+        msg.pose.pose.orientation.x = 0.0
+        msg.pose.pose.orientation.y = 0.0
+        msg.pose.pose.orientation.z = np.sin(psi[0]/2)
+        msg.pose.pose.orientation.w = np.cos(psi[0]/2)
+
+        msg.twist.twist.linear.x = self.agent.nu[0][0]
+        msg.twist.twist.linear.y = self.agent.nu[1][0]
+        msg.twist.twist.linear.z = 0.0
+
+        msg.twist.twist.angular.x = 0.0
+        msg.twist.twist.angular.y = 0.0
+        msg.twist.twist.angular.z = self.agent.nu[2][0]
 
         self.publisher_gps_local.publish(msg)
         
