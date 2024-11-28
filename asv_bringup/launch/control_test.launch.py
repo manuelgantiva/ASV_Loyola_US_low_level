@@ -611,8 +611,8 @@ def generate_launch_description():
     ###################################################################
     ##-------------------------Mavros Nodes--------------------------##
     ################################################################### 
-    ld.add_action(Mavros_launch)
-    ld.add_action(own_robot_state_publisher_node)
+    # ld.add_action(Mavros_launch)
+    #ld.add_action(own_robot_state_publisher_node)
     # ld.add_action(neighbor_robot_state_publisher_node)
 
     ###################################################################

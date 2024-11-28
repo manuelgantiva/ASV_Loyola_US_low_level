@@ -51,6 +51,7 @@ ASV3:
         Xr13: 1.6035
         Dz_up: 0.0750
         Dz_down: -0.08
+        Max_n_psi: 0.1
         Max_n_r: 0.1
         Max_n_p: 0.2
         Max_w_r: 1.2

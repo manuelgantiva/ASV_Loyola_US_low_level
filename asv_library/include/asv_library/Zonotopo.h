@@ -25,7 +25,7 @@ public:
     void reduccionOrden(int s, const MatrixXd& W);
 
     // Método de filtrado
-    static Zonotopo filteringPsi(const Zonotopo& Z, const Vector<double, 1>& y, const Matrix<double, 1,3>& C, const Matrix<double, 1,1>& R, const Matrix <double, 3,3>& W);
+    static Zonotopo filteringPsi(const Zonotopo& Z, const Vector<double, 2>& y, const Matrix<double, 2,3>& C, const Matrix<double, 2,2>& R, const Matrix <double, 3,3>& W);
     static Zonotopo filteringP(const Zonotopo& Z, const Vector<double, 2>& y, const Matrix<double, 2,6>& C, const Matrix<double, 2,2>& R, const Matrix <double, 6,6>& W);
 
     static Zonotopo prediction_Y(const MatrixXd& Ap, const Zonotopo& Z, 

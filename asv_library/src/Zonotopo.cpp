@@ -82,7 +82,7 @@ void Zonotopo::swapColumns(MatrixXd& H1, VectorXd& norma, int j, int colMayor) {
 }
 
 // Método de filtrado
-Zonotopo Zonotopo::filteringPsi(const Zonotopo& Z, const Vector<double, 1>& y, const Matrix<double, 1,3>& C, const Matrix<double, 1,1>& R, const Matrix <double, 3,3>& W) {
+Zonotopo Zonotopo::filteringPsi(const Zonotopo& Z, const Vector<double, 2>& y, const Matrix<double, 2,3>& C, const Matrix<double, 2,2>& R, const Matrix <double, 3,3>& W) {
     int n = Z.c.size();
     MatrixXd I = MatrixXd::Identity(n, n);
 
