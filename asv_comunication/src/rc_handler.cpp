@@ -72,7 +72,7 @@ private:
         try
         {
             auto response = future.get();
-            RCLCPP_INFO(this->get_logger(),"succes: %d and new value is %d",  
+            RCLCPP_INFO(this->get_logger(),"Success Set Servo: %d and new value is %d",  
                         response.second->success, int(response.second->value.integer_value));                  
         }
         catch (const std::exception &e)
@@ -98,7 +98,7 @@ private:
         try
         {
             auto response = future.get();
-            RCLCPP_INFO(this->get_logger(),"set mode succes = %d",  int(response.second->success));                  
+            RCLCPP_INFO(this->get_logger(),"set LLC mode success = %d",  int(response.second->success));                  
         }
         catch (const std::exception &e)
         {
@@ -123,7 +123,7 @@ private:
         try
         {
             auto response = future.get();
-            RCLCPP_INFO(this->get_logger(),"set mode succes = %d",  int(response.second->success));                  
+            RCLCPP_INFO(this->get_logger(),"set Obs mode success = %d",  int(response.second->success));                  
         }
         catch (const std::exception &e)
         {
@@ -152,7 +152,7 @@ private:
         try
         {
             auto response = future.get();
-            RCLCPP_INFO(this->get_logger(),"succes: %d and new value is %d",  
+            RCLCPP_INFO(this->get_logger(),"Success Set Home: %d and new value is %d",  
                         response.second->success, int(response.second->result));                  
         }
         catch (const std::exception &e)
@@ -205,7 +205,7 @@ private:
         try
         {
             auto response = future.get();
-            RCLCPP_INFO(this->get_logger(),"succes: %d and new value is %d",  
+            RCLCPP_INFO(this->get_logger(),"Success Arming: %d and new value is %d",  
                         response.second->success, int(response.second->result));                  
         }
         catch (const std::exception &e)
@@ -232,7 +232,7 @@ private:
         try
         {
             auto response = future.get();
-            RCLCPP_INFO(this->get_logger(), "set mode succes = %d",  int(response.second->mode_sent));
+            RCLCPP_INFO(this->get_logger(), "Set Mode success = %d",  int(response.second->mode_sent));
         }
         catch (const std::exception &e)
         {
@@ -257,7 +257,7 @@ private:
         try
         {
             auto response = future.get();
-            RCLCPP_INFO(this->get_logger(), "succes: %d and msg is %s",
+            RCLCPP_INFO(this->get_logger(), "Success Enable PWM: %d and msg is %s",
                     int(response.second->success) , response.second->message.c_str());
         }
         catch (const std::exception &e)
@@ -355,8 +355,8 @@ private:
             threads_.push_back(std::thread(std::bind(&RcHandlerNode::callSetHomeMavros, this)));
         }
         armed= msg->armed;
-        RCLCPP_INFO(this->get_logger(), "mode: %s, manual input: %d, armed: %d", msg->mode.c_str(),
-                        msg->manual_input, msg->armed);
+        // RCLCPP_INFO(this->get_logger(), "mode: %s, manual input: %d, armed: %d", msg->mode.c_str(),
+        //                 msg->manual_input, msg->armed);
     }
 
     rcl_interfaces::msg::SetParametersResult param_callback(const std::vector<rclcpp::Parameter> &params){
