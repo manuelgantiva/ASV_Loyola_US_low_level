@@ -55,7 +55,8 @@ public:
 
         this-> declare_parameter("Wr_di", std::vector<float>{1.0, 1.0, 1.0});
         this-> declare_parameter("Wp_di", std::vector<float>{1.0, 1.0, 1.0, 1.0, 1.0, 1.0});
-        
+
+        this-> declare_parameter("IMU_on", false);
 
         my_id = (this->get_parameter("my_id").as_string());
         Ts = this->get_parameter("Ts").as_double();
@@ -84,6 +85,8 @@ public:
         q = this->get_parameter("q").as_int();
         met = this->get_parameter("met").as_int();
 
+        IMU_on = this->get_parameter("IMU_on").as_bool();
+
         std::vector<double> Wr_di = this->get_parameter("Wr_di").as_double_array();
         std::vector<double> Wp_di = this->get_parameter("Wp_di").as_double_array();
 
@@ -92,7 +95,7 @@ public:
                 0.0, 0.0, 1.0; 
 
         Cr << 1.0, 0.0, 0.0,
-                0.0, 1.0, 0.0; 
+              0.0, 1.0, 0.0; 
 
         Bwr << 0.0,
                  0.0,
@@ -252,8 +255,12 @@ private:
                 }
 
                 // Llamar al método de filtrado
-                Zr_next = Zonotopo::filteringPsi(Zr_prior, Yr_i, Cr, Rr, Eigen::MatrixXd::Identity(3, 3));
-
+                if(IMU_on){
+                    Zr_next = Zonotopo::filteringR(Zr_prior, Yr_i, Cr, Rr, Eigen::MatrixXd::Identity(3, 3));
+                }else{
+                    Zr_next = Zonotopo::filteringPsi(Zr_prior, Yr_i.segment(0,1), Cr.block<1,3>(0,0), Rr.block<1,1>(0,0), Eigen::MatrixXd::Identity(3, 3));
+                }
+                
                 //Calcular bandas rotacional
                 MatrixXd br = rs_z(Zr_next);
                 int nr = br.rows();
@@ -286,9 +293,9 @@ private:
 
                 if(met == 1){
                     Zp_prior = Zonotopo::prediction_Y(Ap,Zp_next,Yr_i(0)-Max_n_psi,Yr_i(0)+Max_n_psi,Bwp,Qp,IGp);
-                }/*else{
+                }else{
                     Zp_prior = Zonotopo::prediction2_Y(Ap, t_s, Zp_next,Yr_i(0)-Max_n_r,Yr_i(0)+Max_n_r,Bwp,Qp,IGp,1);
-                }*/
+                }
 
                 msg.header.stamp = this->now();
                 msg.header.frame_id = my_id; 
@@ -615,6 +622,10 @@ private:
                     return result;
                 }
             }
+            if (param.get_name() == "IMU_on"){
+                RCLCPP_INFO(this->get_logger(), "changed param value");
+                IMU_on = this->get_parameter("IMU_on").as_bool();
+            }
         }
         result.successful = true;
         result.reason = "Success";
@@ -630,6 +641,8 @@ private:
     std::string my_id;
     float Ts, t_s, Xu6, Xu7, Xv10, Xv11, Xv12, Xv13, Xr10, Xr11 ,Xr12, Xr13;  
     float Dz_up, Dz_down;  
+
+    bool IMU_on;
 
     float Max_w_r, Max_w_p, Max_n_p, Max_n_r, Max_n_psi;
 

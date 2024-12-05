@@ -58,6 +58,7 @@ ASV4:
         Max_w_p: 0.4
         q: 300
         met: 1
+        IMU_on: True
         Wpsi_di: [1.0, 100.0, 1.0]
         Wp_di: [1.0, 1.0, 100.0, 100.0, 1.0, 1.0]
   control:

@@ -644,7 +644,6 @@ def generate_launch_description():
     ld.add_action(observer_zono1)
     ld.add_action(observer_zono3)
     ld.add_action(observer_zono4)
-
     ###################################################################
     ##-----------------------Control Nodes---------------------------##
     ################################################################### 
