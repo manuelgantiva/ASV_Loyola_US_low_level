@@ -42,6 +42,9 @@ ament_target_dependencies(ref_llc rclcpp std_msgs mavros_msgs geometry_msgs)
 add_executable(ref_mlc src/ref_mlc.cpp)
 ament_target_dependencies(ref_mlc rclcpp std_msgs mavros_msgs)
 
+add_executable(ref_hlc src/ref_hlc.cpp)
+ament_target_dependencies(ref_hlc rclcpp std_msgs mavros_msgs)
+
 add_executable(apm_llc src/apm_llc.cpp)
 ament_target_dependencies(apm_llc rclcpp geometry_msgs mavros_msgs asv_interfaces)
 
@@ -55,6 +58,7 @@ install(TARGETS
   rc_handler
   ref_llc
   ref_mlc
+  ref_hlc
   apm_llc
   imu_fix
 DESTINATION lib/${PROJECT_NAME})
@@ -63,10 +67,9 @@ DESTINATION lib/${PROJECT_NAME})
 ament_python_install_package(scripts)
 
 install(PROGRAMS
-  scripts/testnode.py 
   scripts/transceiver_xbee.py
-  scripts/test_observer.py 
-  scripts/test_xbee.py 
+  scripts/xbee_master.py
+  scripts/xbee_slave.py
   scripts/imu_driver.py 
   DESTINATION lib/${PROJECT_NAME}
 )

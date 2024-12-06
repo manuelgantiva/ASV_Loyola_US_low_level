@@ -13,4 +13,12 @@
     ref_mlc:
       ros__parameters:
         Dis_ref: True     #Referencia por escalones o continua
+    ref_hlc:
+      ros__parameters:
+        Dis_ref: True     #Referencia por escalones o continua
+  control:
+    filter_hlc:
+      ros__parameters:
+        Ts: 100.0     #Tiempo de muestreo Filtro
+        tau_f: 0.2  #Cosntante de tiempo filtro
     

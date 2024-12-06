@@ -101,8 +101,16 @@ public:
                 std::bind(&BagRecordNode::callbackXbeeData, this, std::placeholders::_1));
         subscriber_IG = this-> create_subscription<geometry_msgs::msg::Vector3>("/" + name_id + "/control/IG_ifac",1,
                 std::bind(&BagRecordNode::callbackIG, this, std::placeholders::_1));
-        subscriber_ref_mlc = create_subscription<std_msgs::msg::Float64>("/" + name_id + "/control/reference_mlc", 1,
+        subscriber_ref_mlc = this-> create_subscription<std_msgs::msg::Float64>("/" + name_id + "/control/reference_mlc", 1,
                 std::bind(&BagRecordNode::callbackRefMlc, this, std::placeholders::_1));
+        subscriber_ref_hlc = this -> create_subscription<std_msgs::msg::Float64>("/" + name_id + "/control/reference_hlc", 1,
+                std::bind(&BagRecordNode::callbackRefHlc, this, std::placeholders::_1));
+        subscriber_mlc_slave = this-> create_subscription<std_msgs::msg::Float64>("/" + my_id + "/comunication/mlc_slave", 1,
+                std::bind(&BagRecordNode::callbackMlcSlave, this, std::placeholders::_1));
+        subscriber_w_virtual = this-> create_subscription<std_msgs::msg::Float64>("/" + my_id + "/control/w_virtual", 1,
+                std::bind(&BagRecordNode::callbackWVirtual, this, std::placeholders::_1));
+        subscriber_ref_master = this-> create_subscription<geometry_msgs::msg::Vector3>("/" + my_id + "/control/ref_master",10,
+                std::bind(&BagRecordNode::callbackRefMaster, this, std::placeholders::_1));
         subscriber_error_mlc = this-> create_subscription<geometry_msgs::msg::Vector3>("/" + name_id + "/control/error_mlc",1,
                 std::bind(&BagRecordNode::callbackErrorMlc, this, std::placeholders::_1));
         subscriber_accel = this-> create_subscription<geometry_msgs::msg::Twist>("/" + name_id + "/control/accel_imu",1,
@@ -114,6 +122,38 @@ public:
     }
 
 private:
+    void callbackRefHlc(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
+    {
+        if(armed==true){
+            rclcpp::Time time_stamp = this->now();
+            writer_->write(msg, "/" + name_id + "/control/reference_hlc", "std_msgs/msg/Float64", time_stamp);
+        }
+    }
+
+    void callbackMlcSlave(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
+    {
+        if(armed==true){
+            rclcpp::Time time_stamp = this->now();
+            writer_->write(msg, "/" + name_id + "/comunication/mlc_slave", "std_msgs/msg/Float64", time_stamp);
+        }
+    }
+
+    void callbackWVirtual(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
+    {
+        if(armed==true){
+            rclcpp::Time time_stamp = this->now();
+            writer_->write(msg, "/" + name_id + "/control/w_virtual", "std_msgs/msg/Float64", time_stamp);
+        }
+    }
+
+    void callbackRefMaster(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
+    {
+        if(armed==true){
+            rclcpp::Time time_stamp = this->now();
+            writer_->write(msg, "/" + name_id + "/control/ref_master", "geometry_msgs/msg/Vector3", time_stamp);
+        }
+    }
+
     void callbackXbeeData(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
     {
         if(armed==true){
@@ -453,6 +493,10 @@ private:
     rclcpp::Subscription<geometry_msgs::msg::TwistStamped>::SharedPtr subscriber_vel_body;
     rclcpp::Subscription<asv_interfaces::msg::XbeeObserver>::SharedPtr subscriber_xbee;
     rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr subscriber_ref_mlc;
+    rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr subscriber_ref_hlc;
+    rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr subscriber_mlc_slave;
+    rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr subscriber_w_virtual;
+    rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr subscriber_ref_master;
     rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr subscriber_IG;
     rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr subscriber_error_mlc;
     rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr subscriber_accel;

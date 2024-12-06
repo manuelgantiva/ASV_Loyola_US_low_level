@@ -268,6 +268,15 @@ def generate_launch_description():
         ]
     )
 
+    xbee_slave_node = Node(
+        package="asv_comunication",
+        executable="xbee_slave.py",
+        namespace= namespace_comunication,
+        parameters = [
+            {'my_id': my_namespace},
+        ]
+    )
+
     ###################################################################
     ##-----------------------Control Nodes---------------------------##
     ################################################################### 
@@ -390,12 +399,12 @@ def generate_launch_description():
     # nodes.append(imu_fix_node)
     # nodes.append(apm_llc_node)
     # nodes.append(ref_mlc_node)
-    nodes.append(ref_hlc_node)
+    # nodes.append(ref_hlc_node)
     # nodes.append(ref_llc_node)
     nodes.append(rc_handler_node)
     nodes.append(record)
     # nodes.append(transceiver_xbee_node)
-    nodes.append(xbee_master_node)
+    nodes.append(xbee_slave_node)
 
     ###################################################################
     ##-----------------------Observer Nodes--------------------------##
@@ -412,7 +421,7 @@ def generate_launch_description():
     nodes.append(mux_llc_node)
     nodes.append(pwm_mapper_node)
     nodes.append(wang_mlc_node)
-    nodes.append(mpc_hlc_node)
+    # nodes.append(mpc_hlc_node)
     nodes.append(filter_hlc_node)
     # nodes.append(asv_tf_broadcast_node)
     # nodes.append(mpc_llc_node)

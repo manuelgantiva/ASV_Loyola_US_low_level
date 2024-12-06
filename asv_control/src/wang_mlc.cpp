@@ -6,7 +6,7 @@
 
 #include <cmath>
 #include <thread>
-#include "asv_library/curvas_loyola.h"
+#include "asv_library/curvas_sim.h"
 
 using namespace std;
 
@@ -231,22 +231,22 @@ private:
                 result.dyp = 0;
                 break;
             case 1:
-                result = curva_2_d(w);
+                result = curva_sim_2_6(w);
                 break;
             case 2:
-                result = curva_2_c(w);
+                result = curva_sim_2_8(w);
                 break;
             case 3:
-                result = curva_2_i(w);
+                result = curva_sim_2_10(w);
                 break;
             case 4:
-                //result = curva4(w);
+                result = curva_sim_3_6(w);
                 break;
             case 5:
-                //result = curva5(w);
+                result = curva_sim_3_8(w);
                 break;
             case 6:
-                //result = curva6(w);
+                result = curva_sim_3_10(w);
                 break;
             case 7:
                 //result = curva7(w);
