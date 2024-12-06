@@ -105,11 +105,11 @@ public:
                 std::bind(&BagRecordNode::callbackRefMlc, this, std::placeholders::_1));
         subscriber_ref_hlc = this -> create_subscription<std_msgs::msg::Float64>("/" + name_id + "/control/reference_hlc", 1,
                 std::bind(&BagRecordNode::callbackRefHlc, this, std::placeholders::_1));
-        subscriber_mlc_slave = this-> create_subscription<std_msgs::msg::Float64>("/" + my_id + "/comunication/mlc_slave", 1,
+        subscriber_mlc_slave = this-> create_subscription<std_msgs::msg::Float64>("/" + name_id + "/comunication/mlc_slave", 1,
                 std::bind(&BagRecordNode::callbackMlcSlave, this, std::placeholders::_1));
-        subscriber_w_virtual = this-> create_subscription<std_msgs::msg::Float64>("/" + my_id + "/control/w_virtual", 1,
+        subscriber_w_virtual = this-> create_subscription<std_msgs::msg::Float64>("/" + name_id + "/control/w_virtual", 1,
                 std::bind(&BagRecordNode::callbackWVirtual, this, std::placeholders::_1));
-        subscriber_ref_master = this-> create_subscription<geometry_msgs::msg::Vector3>("/" + my_id + "/control/ref_master",10,
+        subscriber_ref_master = this-> create_subscription<geometry_msgs::msg::Vector3>("/" + name_id + "/control/ref_master",10,
                 std::bind(&BagRecordNode::callbackRefMaster, this, std::placeholders::_1));
         subscriber_error_mlc = this-> create_subscription<geometry_msgs::msg::Vector3>("/" + name_id + "/control/error_mlc",1,
                 std::bind(&BagRecordNode::callbackErrorMlc, this, std::placeholders::_1));
