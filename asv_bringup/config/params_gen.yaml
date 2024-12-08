@@ -2,11 +2,11 @@
   comunication:
     rc_handler:
       ros__parameters:
-        home: [37.307689, -5.940203, 85.37814771871618] #Lago de la vida Grande
-        # origin: [37.3047028, -5.9404694, 85.37814771871618] #Lago de la vida Pequeño
-        # origin: [37.3088513, -5.9398486, 85.37814771871618] #Lago de la vida Alto
-        # origin: [37.4191583,  -5.9989917, 63.49701432163044] #Lago de Alamillo Izq
-        # origin: [37.4190694, -5.9984778, 63.49701432163044] #Lago de Alamillo Der
+        # home: [37.307689, -5.940203, 85.37814771871618] #Lago de la vida Grande
+        # home: [37.3047028, -5.9404694, 85.37814771871618] #Lago de la vida Pequeño
+        # home: [37.3088513, -5.9398486, 85.37814771871618] #Lago de la vida Alto
+        home: [37.4191583,  -5.9989917, 63.49701432163044] #Lago de Alamillo Izq
+        # home: [37.4190694, -5.9984778, 63.49701432163044] #Lago de Alamillo Der
     ref_llc:
       ros__parameters:
         reference_mode: True     #False sin mode and True lineal mode

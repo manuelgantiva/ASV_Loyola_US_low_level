@@ -7,37 +7,34 @@ struct Target {   // Declare target struct type
     float yp;
     float dxp;
     float dyp;
+    float f_c;
 };
 
 void recta(float w, Target* px, float ax, float by, float mx, float my);
 void arco(float w, Target* px, float ax, float by, float r, bool sig) ;
 
+//Circuito 1
+// Closed semicircle radius 2, straight line 30
+Target curva_ala_1_2(float w);
+// Closed semicircle radius 4, straight line 30
+Target curva_ala_1_4(float w);
+// Closed semicircle radius 6, straight line 30
+Target curva_ala_1_6(float w);
 
-// Closed semicircle radius 6, straight line 20
-Target curva0(float w);
-// Closed semicircle radius 5, straight line 20
-Target curva1(float w);
-// Closed semicircle radius 4, straight line 20
-Target curva2(float w);
-// Closed semicircle radius 3, straight line 20
-Target curva3(float w);
-// Closed semicircle radius 2, straight line 20
-Target curva4(float w);
-// Closed circuit of quarter circles radius 6, straight lines 20
-Target curva5(float w);
-// Closed circuit of quarter circles radius 5, straight lines 20
-Target curva6(float w);
-// Closed circuit of quarter circles radius 4, straight lines 20
-Target curva7(float w);
-// Concentric closed circuit of semicircles radius 2, straight lines 20
-Target curva8(float w);
-// Closed circuit of quarter circles radius 2, straight lines 20
-Target curva9(float w);
-// Circuit of radius 2 concentric to 4 
-Target curva10(const float w);
-// Circuit of 4 meters radius
-Target curva11(const float w);
-// straight line to the south
-Target curva12(const float w);
+//Circuito 2
+// Closed quarter radius 6, straight line 50
+Target curva_ala_2_2(float w);
+// Closed quarter radius 8, straight line 50
+Target curva_ala_2_4(float w);
+// Closed quarter radius 10, straight line 50
+Target curva_ala_2_6(float w);
+
+//Circuito 3
+// Closed quarter radius 6, straight line 50
+Target curva_ala_3_1(float w);
+// Closed quarter radius 8, straight line 50
+Target curva_ala_3_2(float w);
+// Closed quarter radius 10, straight line 50
+Target curva_ala_3_3(float w);
 
 #endif

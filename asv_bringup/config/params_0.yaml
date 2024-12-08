@@ -51,12 +51,14 @@ ASV0:
         Xr13: 4.3686
         Dz_up: 0.022
         Dz_down: -0.022
-        Max_n_r: 0.1
+        Max_n_psi: 0.1
+        Max_n_r: 0.01
         Max_n_p: 0.2
         Max_w_r: 1.2
         Max_w_p: 0.4
         q: 300
         met: 1
+        IMU_on: True
         Wpsi_di: [1.0, 1.0, 1.0]
         Wp_di: [1.0, 1.0, 100.0, 100.0, 1.0, 1.0]
   control:
@@ -125,16 +127,16 @@ ASV0:
         delta_SGLOS: 3.0
         k_u_tar: 2.0
         taud: 5.0
-        path_d: 6
+        path_d: 3
         flag: False     #True signo igual False invertido  
     mpc_hlc:
       ros__parameters:
         Ts: 5.0
-        circuit: 2
+        circuit: 1
         path_max: True
         NC: 10
         NP: 10
-        C_1: 0.01
+        C_1: 0.05
         W_Q: [1.0, 100.0, 100.0]
         W_R: [0.0, 0.0, 0.0]
         W_P: [1.0, 100.0, 100.0]

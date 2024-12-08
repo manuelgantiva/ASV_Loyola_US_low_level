@@ -3,7 +3,7 @@
 #include "geometry_msgs/msg/vector3.hpp"            // Interface master reference mpc hlc x->meta y->actual z->vecino
 #include "std_msgs/msg/float64.hpp"                 // Interface reference hlc
 #include "asv_library/curvas_sim.h"
-
+// #include "asv_library/curvas_alamillo.h"
 
 #include <cmath>
 #include <thread>
@@ -158,7 +158,7 @@ private:
         else {
             if (count > -1) {
                 //auto start = std::chrono::high_resolution_clock::now();
-                RCLCPP_INFO(this->get_logger(), "Ejecutand2");
+                //RCLCPP_INFO(this->get_logger(), "Ejecutand2");
                 auto msg = geometry_msgs::msg::Vector3();
                 auto msg_w = std_msgs::msg::Float64();
                 
@@ -166,7 +166,6 @@ private:
                     //------Primera iteracion del bucle de control
                     w_til_des.setZero();
                     count++;
-
                 }
                 float U_f_i;
                 float w_s_i;    
@@ -480,6 +479,14 @@ private:
                 vec[2] = 1;
                 break;
             case 1:
+                /*vec[0] = curva_ala_1_4(w).f_c;            // Factor de Curvatura
+                if(path_max){
+                    vec[1] = curva_ala_1_6(w).f_c;
+                    vec[2] = curva_ala_1_2(w).f_c;
+                }else{
+                    vec[1] = curva_ala_1_2(w).f_c;
+                    vec[2] = curva_ala_1_6(w).f_c;
+                } */
                 vec[0] = curva_sim_2_8(w).f_c;            // Factor de Curvatura
                 if(path_max){
                     vec[1] = curva_sim_2_10(w).f_c;
@@ -489,16 +496,26 @@ private:
                     vec[2] = curva_sim_2_10(w).f_c;
                 } 
                 break;
-            case 2:
-                vec[0] = curva_sim_3_8(w).f_c;            // Factor de Curvatura
+            /*case 2:
+                vec[0] = curva_ala_2_4(w).f_c;            // Factor de Curvatura
                 if(path_max){
-                    vec[1] = curva_sim_3_10(w).f_c;
-                    vec[2] = curva_sim_3_6(w).f_c;
+                    vec[1] = curva_ala_2_6(w).f_c;
+                    vec[2] = curva_ala_2_2(w).f_c;
                 }else{
-                    vec[1] = curva_sim_3_6(w).f_c;
-                    vec[2] = curva_sim_3_10(w).f_c;
+                    vec[1] = curva_ala_2_2(w).f_c;
+                    vec[2] = curva_ala_2_6(w).f_c;
                 } 
                 break;
+            case 3:
+                vec[0] = curva_ala_3_2(w).f_c;            // Factor de Curvatura
+                if(path_max){
+                    vec[1] = curva_ala_3_3(w).f_c;
+                    vec[2] = curva_ala_3_1(w).f_c;
+                }else{
+                    vec[1] = curva_ala_3_1(w).f_c;
+                    vec[2] = curva_ala_3_3(w).f_c;
+                } 
+                break;*/
         }
     }
 

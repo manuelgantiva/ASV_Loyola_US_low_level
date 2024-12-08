@@ -51,12 +51,14 @@ ASV3:
         Xr13: 1.6035
         Dz_up: 0.0750
         Dz_down: -0.08
+        Max_n_psi: 0.1
         Max_n_r: 0.1
         Max_n_p: 0.2
         Max_w_r: 1.2
         Max_w_p: 0.4
         q: 300
         met: 1
+        IMU_on: True
         Wpsi_di: [1.0, 1.0, 1.0]
         Wp_di: [1.0, 1.0, 100.0, 100.0, 1.0, 1.0]
   control:

@@ -7,6 +7,7 @@
 #include <cmath>
 #include <thread>
 #include "asv_library/curvas_sim.h"
+// #include "asv_library/curvas_alamillo.h"
 
 using namespace std;
 
@@ -232,45 +233,42 @@ private:
                 break;
             case 1:
                 result = curva_sim_2_6(w);
+                // result = curva_ala_1_2(w);
                 break;
             case 2:
                 result = curva_sim_2_8(w);
+                // result = curva_ala_1_4(w);
                 break;
             case 3:
                 result = curva_sim_2_10(w);
+                // result = curva_ala_1_6(w);
                 break;
-            case 4:
-                result = curva_sim_3_6(w);
+            /*case 4:
+                // result = curva_sim_3_6(w);
+                result = curva_ala_2_2(w);
                 break;
             case 5:
-                result = curva_sim_3_8(w);
+                // result = curva_sim_3_8(w);
+                result = curva_ala_2_4(w);
                 break;
             case 6:
-                result = curva_sim_3_10(w);
+                // result = curva_sim_3_10(w);
+                result = curva_ala_2_6(w);
                 break;
             case 7:
-                //result = curva7(w);
+                result = curva_ala_3_1(w);
                 break;
             case 8:
-                //result = curva8(w);
+                result = curva_ala_3_2(w);
                 break;
             case 9:
-                //result = curva9(w);
-                break;
-            case 10:
-                //result = curva10(w);
-                break;
-            case 11:
-                //result = curva11(w);
-                break;
-            case 12:
-                //result = curva12(w);
+                result = curva_ala_3_3(w);
                 break;
             default:
                 result.xp =0.0;
                 result.yp = 0.0;
                 result.dxp = 0.0;
-                result.dyp = 0.0;        
+                result.dyp = 0.0;      */  
         }
         return result;
     }
