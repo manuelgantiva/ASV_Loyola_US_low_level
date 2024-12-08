@@ -2,8 +2,8 @@
 #include "mavros_msgs/msg/state.hpp"                // Interface state mavros
 #include "geometry_msgs/msg/vector3.hpp"            // Interface master reference mpc hlc x->meta y->actual z->vecino
 #include "std_msgs/msg/float64.hpp"                 // Interface reference hlc
-#include "asv_library/curvas_sim.h"
-// #include "asv_library/curvas_alamillo.h"
+// #include "asv_library/curvas_sim.h"
+#include "asv_library/curvas_alamillo.h"
 
 #include <cmath>
 #include <thread>
@@ -479,24 +479,16 @@ private:
                 vec[2] = 1;
                 break;
             case 1:
-                /*vec[0] = curva_ala_1_4(w).f_c;            // Factor de Curvatura
+                vec[0] = curva_ala_1_4(w).f_c;            // Factor de Curvatura
                 if(path_max){
                     vec[1] = curva_ala_1_6(w).f_c;
                     vec[2] = curva_ala_1_2(w).f_c;
                 }else{
                     vec[1] = curva_ala_1_2(w).f_c;
                     vec[2] = curva_ala_1_6(w).f_c;
-                } */
-                vec[0] = curva_sim_2_8(w).f_c;            // Factor de Curvatura
-                if(path_max){
-                    vec[1] = curva_sim_2_10(w).f_c;
-                    vec[2] = curva_sim_2_6(w).f_c;
-                }else{
-                    vec[1] = curva_sim_2_6(w).f_c;
-                    vec[2] = curva_sim_2_10(w).f_c;
-                } 
+                }
                 break;
-            /*case 2:
+            case 2:
                 vec[0] = curva_ala_2_4(w).f_c;            // Factor de Curvatura
                 if(path_max){
                     vec[1] = curva_ala_2_6(w).f_c;
@@ -515,7 +507,7 @@ private:
                     vec[1] = curva_ala_3_1(w).f_c;
                     vec[2] = curva_ala_3_3(w).f_c;
                 } 
-                break;*/
+                break;
         }
     }
 

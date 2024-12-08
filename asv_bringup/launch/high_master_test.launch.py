@@ -20,7 +20,6 @@ from launch.conditions import IfCondition
 from launch.actions import IncludeLaunchDescription
 from launch_xml.launch_description_sources import XMLLaunchDescriptionSource
 
-
 def generate_launch_description():
     """
     Launch file for the ASV simulator test
@@ -28,7 +27,6 @@ def generate_launch_description():
     args:
         my_id: Vehicle ID, is a single character string
         rec: Record bag file
-        pub2neigh: Publish to neighbor
     """
 
     # TODO: Add log level
@@ -47,27 +45,21 @@ def generate_launch_description():
         default_value="false",
         description='Record bag file'
     )
-    arg_pub2neigh = DeclareLaunchArgument(
-        'pub2neigh',
-        default_value="false",
-        description='Publish to neighbor'
-    )
     my_id = LaunchConfiguration('my_id')
     rec = LaunchConfiguration('rec')
-    pub2neigh = LaunchConfiguration('pub2neigh')
     my_namespace = PythonExpression(["'ASV' + str(", my_id, ")"])
     namespace_control = PythonExpression(
         ["'ASV' + str(", my_id, ") + '/control'"])
     namespace_comunication = PythonExpression(
         ["'ASV' + str(", my_id, ") + '/comunication'"])
-    # namespace_mavros = PythonExpression(
-    #     ["'ASV' + str(", my_id, ") + '/mavros'"])
+    namespace_mavros = PythonExpression(
+        ["'ASV' + str(", my_id, ") + '/mavros'"])
     namespace_observer = PythonExpression(
         ["'ASV' + str(", my_id, ") + '/observer'"])
 
     nodes = []
     ###################################################################
-    ## --------------------Robot description rviz2--------------------##
+    ## -------------------Robot description rviz2--------------------##
     ###################################################################
 
     yf_pkg = get_package_share_directory("yf_description")
@@ -87,34 +79,32 @@ def generate_launch_description():
         ]
     )
 
-    neighbor_description = ParameterValue(Command(['xacro ', urdf_path, ' id:=n', ' own:=false']),
-                                          value_type=str)
-    neighbor_robot_state_publisher_node = Node(
-        package="robot_state_publisher",
-        executable="robot_state_publisher",
-        name="neighbor_robot_state_publisher",
-        namespace=my_namespace,
-        parameters=[{'robot_description': neighbor_description},
-                    {'publish_frequency': 10.0}],
-        remappings=[
-            ("/robot_description", "/neighbor_description")
-        ],
-        condition=IfCondition(pub2neigh)
-    )
+    # neighbor_description = ParameterValue(Command(['xacro ', urdf_path, ' id:=n', ' own:=false']),
+    #                                       value_type=str)
+    # neighbor_robot_state_publisher_node = Node(
+    #     package="robot_state_publisher",
+    #     executable="robot_state_publisher",
+    #     name="neighbor_robot_state_publisher",
+    #     namespace=my_namespace,
+    #     parameters=[{'robot_description': neighbor_description},
+    #                 {'publish_frequency': 10.0}],
+    #     remappings=[
+    #         ("/robot_description", "/neighbor_description")
+    #     ]
+    # )
 
     ###################################################################
-    ## ------------------------Mavros Launch--------------------------##
+    ## ------------------------Mavros Launch-------------------------##
     ###################################################################
     
-    # Mavros_launch = IncludeLaunchDescription(
-    #     XMLLaunchDescriptionSource(os.path.join(get_package_share_directory('asv_bringup'),
-    #                                             'launch/apm.launch.xml')),
-    #     launch_arguments={
-    #         'namespace': namespace_mavros
-    #     }.items()
-    # )
-    # node.append(Mavros_launch)
-
+    Mavros_launch = IncludeLaunchDescription(
+        XMLLaunchDescriptionSource(os.path.join(get_package_share_directory('asv_bringup'),
+                                                'launch/apm.launch.xml')),
+        launch_arguments={
+            'namespace': namespace_mavros
+        }.items()
+    )
+    
     ###################################################################
     ##--------------------Get Config id File ------------------------##
     ################################################################### 
@@ -130,18 +120,6 @@ def generate_launch_description():
     config_gen = os.path.join(get_package_share_directory('asv_bringup'),
         'config',
         'params_gen.yaml'
-    )
-
-    ###################################################################
-    ##--------------------Simulation Nodes---------------------------##
-    ################################################################### 
-   
-    asv_simulator_node = Node(
-        package="asv_sim",
-        executable="simulator",
-        namespace='control',
-        parameters=[{'my_id': my_id},
-                    config],
     )
 
     ###################################################################
@@ -194,15 +172,6 @@ def generate_launch_description():
             config_gen]
     )
 
-    filter_hlc_node = Node(
-        package="asv_control",
-        executable="filter_hlc",
-        namespace= namespace_control,
-        parameters = [
-            {'my_id': my_namespace},
-            config_gen]
-    )
-
     apm_llc_node = Node(
         package="asv_comunication",
         executable="apm_llc",
@@ -221,35 +190,20 @@ def generate_launch_description():
         ]
     )
 
-    # imu_fix_ext_node = Node (
-    #     package= "asv_comunication",
-    #     executable= "imu_fix",
-    #     name= "imu_fix_ext",
-    #     namespace= namespace_comunication,
-    #     remappings=[("mavros/imu/data", "comunication/imu_ext/data"),
-    #                 ("control/accel_imu", "control/accel_imu_ext")],
-    #     parameters = [
-    #         {'my_id': my_namespace}
-    #     ],
-    #     condition=IfCondition(
-    #         PythonExpression(
-    #             [my_id, ' == 4']
-    #         )
-    #     )
-    # )
-    # imu_ext_node = Node (
-    #     package= "asv_comunication",
-    #     executable= "imu_driver.py",
-    #     namespace= namespace_comunication,
-    #     parameters = [
-    #         {'my_id': my_namespace}
-    #     ],
-    #     condition=IfCondition(
-    #         PythonExpression(
-    #             [my_id, ' == 4']
-    #         )
-    #     )
-    # )
+    imu_ext_node = Node (
+        package= "asv_comunication",
+        executable= "imu_driver.py",
+        namespace= namespace_comunication,
+        parameters = [
+            {'my_id': my_namespace}
+        ],
+        condition=IfCondition(
+            PythonExpression(
+                [my_id, ' == 4']
+            )
+        )
+    )
+
     transceiver_xbee_node = Node(
         package="asv_comunication",
         executable="transceiver_xbee.py",
@@ -288,6 +242,15 @@ def generate_launch_description():
         parameters = [
             {'my_id': my_namespace}
         ]
+    )
+
+    filter_hlc_node = Node(
+        package="asv_control",
+        executable="filter_hlc",
+        namespace= namespace_control,
+        parameters = [
+            {'my_id': my_namespace},
+            config_gen]
     )
 
     pwm_mapper_node = Node(
@@ -389,44 +352,47 @@ def generate_launch_description():
     ###################################################################
     ##-------------------------ASVs Nodes----------------------------##
     ################################################################### 
-    # nodes.append(asv_simulator_node)
+    nodes.append(Mavros_launch)
     # nodes.append(neighbor_robot_state_publisher_node)
-    # nodes.append(own_robot_state_publisher_node)
+    nodes.append(own_robot_state_publisher_node)
 
     ###################################################################
     ##--------------------Comunication Nodes-------------------------##
     ################################################################### 
-    # nodes.append(imu_fix_node)
-    # nodes.append(apm_llc_node)
-    # nodes.append(ref_mlc_node)
-    # nodes.append(ref_hlc_node)
-    # nodes.append(ref_llc_node)
     nodes.append(rc_handler_node)
+    # nodes.append(ref_llc_node)
+    # nodes.append(ref_mlc_node)
+    nodes.append(ref_hlc_node)
+    nodes.append(apm_llc_node)
+    nodes.append(imu_fix_node)
+    nodes.append(imu_ext_node)
     nodes.append(record)
+
     # nodes.append(transceiver_xbee_node)
-    nodes.append(xbee_slave_node)
+    nodes.append(xbee_master_node)
+    # nodes.append(xbee_slave_node)
 
     ###################################################################
     ##-----------------------Observer Nodes--------------------------##
     ################################################################### 
     nodes.append(mux_obs_node)
-    # nodes.append(observer_guille)
+    nodes.append(observer_guille)
     # nodes.append(observer_liu)
     nodes.append(observer_zono)
 
     ###################################################################
     ##-----------------------Control Nodes---------------------------##
     ################################################################### 
+    nodes.append(asv_tf_broadcast_node)
+    nodes.append(filter_hlc_node)
+    nodes.append(pwm_mapper_node)
+    # nodes.append(mpc_llc_node)
     nodes.append(ifac_llc_node)
     nodes.append(mux_llc_node)
-    nodes.append(pwm_mapper_node)
     nodes.append(wang_mlc_node)
-    # nodes.append(mpc_hlc_node)
-    nodes.append(filter_hlc_node)
-    # nodes.append(asv_tf_broadcast_node)
-    # nodes.append(mpc_llc_node)
-
+    nodes.append(mpc_hlc_node)
+    
     return LaunchDescription(
-        [arg_my_id, arg_rec, arg_pub2neigh, param_id,
+        [arg_my_id, arg_rec, param_id,
             *nodes]
     )

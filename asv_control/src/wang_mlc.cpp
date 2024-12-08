@@ -6,8 +6,8 @@
 
 #include <cmath>
 #include <thread>
-#include "asv_library/curvas_sim.h"
-// #include "asv_library/curvas_alamillo.h"
+// #include "asv_library/curvas_sim.h"
+#include "asv_library/curvas_alamillo.h"
 
 using namespace std;
 
@@ -232,18 +232,18 @@ private:
                 result.dyp = 0;
                 break;
             case 1:
-                result = curva_sim_2_6(w);
-                // result = curva_ala_1_2(w);
+                // result = curva_sim_2_6(w);
+                result = curva_ala_1_2(w);
                 break;
             case 2:
-                result = curva_sim_2_8(w);
-                // result = curva_ala_1_4(w);
+                // result = curva_sim_2_8(w);
+                result = curva_ala_1_4(w);
                 break;
             case 3:
-                result = curva_sim_2_10(w);
-                // result = curva_ala_1_6(w);
+                // result = curva_sim_2_10(w);
+                result = curva_ala_1_6(w);
                 break;
-            /*case 4:
+            case 4:
                 // result = curva_sim_3_6(w);
                 result = curva_ala_2_2(w);
                 break;
@@ -268,7 +268,7 @@ private:
                 result.xp =0.0;
                 result.yp = 0.0;
                 result.dxp = 0.0;
-                result.dyp = 0.0;      */  
+                result.dyp = 0.0;     
         }
         return result;
     }

@@ -161,6 +161,13 @@ private:
             memory_r.assign(4, 0.0);
             count=0;
             integral_error=0;
+            {
+                std::lock_guard<std::mutex> lock(mutex_);
+                u_hat = 0.0;
+                r_hat= 0.0;
+                u_ref = 0.2;
+                r_ref = 0.0;
+            }
         }else{
             //auto start = std::chrono::high_resolution_clock::now();
             auto msg = asv_interfaces::msg::PwmValues();
@@ -169,7 +176,7 @@ private:
             auto msg_Ig = geometry_msgs::msg::Vector3();
             float zone;
 
-            if(count > 7){
+            if(count > 8){
                 float u_hat_i;
                 float r_hat_i;
                 float psi_hat_i;
@@ -479,7 +486,7 @@ private:
     }
 
     bool armed = false;
-    float u_hat = 0, psi_hat = 0, r_hat = 0, sig_u = 0, sig_r = 0, u_ref = 0, psi_ref = 0, r_ref = 0, u_dot_ref = 0, r_dot_ref = 0;
+    float u_hat = 0, psi_hat = 0, r_hat = 0, sig_u = 0, sig_r = 0, u_ref = 0.2, psi_ref = 0, r_ref = 0, u_dot_ref = 0, r_dot_ref = 0;
     float c_ref;
     int count=0;
     float integral_error=0;
