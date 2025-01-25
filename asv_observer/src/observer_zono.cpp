@@ -44,6 +44,10 @@ public:
         this-> declare_parameter("Dz_up", 0.0750);
         this-> declare_parameter("Dz_down", -0.08);
 
+        this-> declare_parameter("Xu", std::vector<float>{1.0, 1.0, 1.0, 1.0});
+        this-> declare_parameter("Xv", std::vector<float>{1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0});
+        this-> declare_parameter("Xr", std::vector<float>{1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0});
+
         this-> declare_parameter("Max_n_psi", 0.01);
         this-> declare_parameter("Max_n_r", 0.01);
         this-> declare_parameter("Max_n_p", 0.02);
@@ -57,6 +61,7 @@ public:
         this-> declare_parameter("Wp_di", std::vector<float>{1.0, 1.0, 1.0, 1.0, 1.0, 1.0});
 
         this-> declare_parameter("IMU_on", false);
+        this-> declare_parameter("Sig_on", false);
 
         my_id = (this->get_parameter("my_id").as_string());
         Ts = this->get_parameter("Ts").as_double();
@@ -73,6 +78,10 @@ public:
         Xr12 = this->get_parameter("Xr12").as_double();
         Xr13 = this->get_parameter("Xr13").as_double();
 
+        Xu = this->get_parameter("Xu").as_double_array();
+        Xv = this->get_parameter("Xv").as_double_array();
+        Xr = this->get_parameter("Xr").as_double_array();
+
         Dz_up  = this->get_parameter("Dz_up").as_double();
         Dz_down = this->get_parameter("Dz_down").as_double();
 
@@ -86,6 +95,7 @@ public:
         met = this->get_parameter("met").as_int();
 
         IMU_on = this->get_parameter("IMU_on").as_bool();
+        Sig_on = this->get_parameter("Sig_on").as_bool();
 
         std::vector<double> Wr_di = this->get_parameter("Wr_di").as_double_array();
         std::vector<double> Wp_di = this->get_parameter("Wp_di").as_double_array();
@@ -167,7 +177,7 @@ public:
         params_callback_handle_ = this->add_on_set_parameters_callback(std::bind(&ObserverZonoNode::param_callback, this, _1));
 
         // suscribir a IMU 
-        subscriber_imu = this-> create_subscription<sensor_msgs::msg::Imu>("/" + my_id + "/mavros/imu/data",
+        subscriber_imu = this-> create_subscription<sensor_msgs::msg::Imu>("/" + my_id + "/comunication/imu_ext/data",
                 rclcpp::SensorDataQoS(), std::bind(&ObserverZonoNode::callbackImuData,
                 this, std::placeholders::_1), options_sensors_);
         subscriber_gps_local= this-> create_subscription<nav_msgs::msg::Odometry>("/" + my_id + "/mavros/global_position/local",
@@ -184,6 +194,7 @@ public:
                 rclcpp::SensorDataQoS());
         publisher_obs = this-> create_publisher<geometry_msgs::msg::PoseStamped>("/" + my_id + "/observer/pose_zono",
                 rclcpp::SensorDataQoS());
+        publisher_sigmas = this-> create_publisher<geometry_msgs::msg::Vector3>("/" + my_id + "/observer/sigmas_zono",1);
         
                                         
         RCLCPP_INFO(this->get_logger(), "Observer Zonotopos Node in %s has been started.", my_id.c_str());
@@ -196,9 +207,9 @@ private:
         if(armed==false){ 
             count=0;
             R2T.setZero();
-            Yp.setZero();
             Zr_prior= Zonotopo(VectorXd::Zero(3), MatrixXd::Identity(3,3));
             Zp_prior = Zonotopo(VectorXd::Zero(6), MatrixXd::Identity(6,6));
+            Sigmas.setZero();
             {
                 std::lock_guard<std::mutex> lock(mutex_);
                 Yp.setZero();
@@ -235,15 +246,7 @@ private:
                 }else{
                     sig=-1;
                 }
-                
-                IGp(2,0) = (Xu6*sum_1)+(Xu7*delta_mean_i);
-                IGp(3,0) = (Xv10*sum_1*(1-beta_i)*sig)+(Xv11*delta_mean_i*delta_diff_i)+(Xv12*delta_mean_i*(1-beta_i)*sig)+(Xv13*delta_diff_i/2.0);
-                IGr(1,0)=(Xr10*sum_1*(1-beta_i)*sig)+(Xr11*delta_mean_i*delta_diff_i)+(Xr12*delta_mean_i*(1-beta_i)*sig)+(Xr13*delta_diff_i/2.0);
-
-                IGp(2,0) = IGp(2,0)*0.1;
-                IGp(3,0) = IGp(3,0)*0.1;
-                IGr(1,0) = IGr(1,0)*0.1;
-                
+                                
                 // inicializar variables
                 if(count==7){
                     Eigen::VectorXd cr0(3);
@@ -254,6 +257,25 @@ private:
                     Zp_prior = Zonotopo(cp0, Eigen::MatrixXd::Identity(6, 6));  // Amplia Zonotopo si no estoy seguro
                     count=count+1;
                 }
+
+                IGp(2,0) = (Xu6*sum_1)+(Xu7*delta_mean_i);
+                IGp(3,0) = (Xv10*sum_1*(1-beta_i)*sig)+(Xv11*delta_mean_i*delta_diff_i)+(Xv12*delta_mean_i*(1-beta_i)*sig)+(Xv13*delta_diff_i/2.0);
+                IGr(1,0)=(Xr10*sum_1*(1-beta_i)*sig)+(Xr11*delta_mean_i*delta_diff_i)+(Xr12*delta_mean_i*(1-beta_i)*sig)+(Xr13*delta_diff_i/2.0);
+
+                if(Sig_on){
+                    Sigmas(0) = (Xu[0] * Zp_next.c(2) * std::abs(Zp_next.c(2)) + Xu[1] * Zp_next.c(3) * Zr_next.c(1) + Xu[2] * Zr_next.c(1) * Zr_next.c(1)
+                                + Xu[3] * Zp_next.c(2) + Xu6)*0.1;
+                    Sigmas(1) = (Xv[0] * Zp_next.c(3) * std::abs(Zp_next.c(3)) + Xv[1] * Zp_next.c(3) * std::abs(Zr_next.c(1)) + Xv[2] * Zr_next.c(1) * std::abs(Zp_next.c(3)) 
+                                + Xv[3] * Zr_next.c(1) * std::abs(Zr_next.c(1)) + Xv[4] * Zp_next.c(2) * Zp_next.c(3) +Xv[5] * Zp_next.c(2) * Zr_next.c(1) 
+                                + Xv[6] * Zp_next.c(3) +Xv[7] * Zr_next.c(1))*0.1;
+                    Sigmas(2) = (Xr[0] * Zp_next.c(3) * std::abs(Zp_next.c(3)) + Xr[1] * Zp_next.c(3) * std::abs(Zr_next.c(1)) + Xr[2] * Zr_next.c(1) * std::abs(Zp_next.c(3)) 
+                                + Xr[3] * Zr_next.c(1) * std::abs(Zr_next.c(1)) + Xr[4] * Zp_next.c(2) * Zp_next.c(3) + Xr[5] * Zp_next.c(2) * Zr_next.c(1) 
+                                + Xr[6] * Zp_next.c(3) + Xr[7] * Zr_next.c(1))*0.1;
+                }
+
+                IGp(2,0) = IGp(2,0)*0.1 + Sigmas(0);
+                IGp(3,0) = IGp(3,0)*0.1 + Sigmas(1);
+                IGr(1,0) = IGr(1,0)*0.1 + Sigmas(2);
 
                 // Llamar al método de filtrado
                 if(IMU_on){
@@ -307,9 +329,9 @@ private:
                 msg.velocity.x=Zp_next.c(2);
                 msg.velocity.y=Zp_next.c(3);
                 msg.velocity.z=Zr_next.c(1);
-                msg.disturbances.x=Zp_next.c(4);
-                msg.disturbances.y=Zp_next.c(5);
-                msg.disturbances.z=Zr_next.c(2);
+                msg.disturbances.x=Zp_next.c(4) + Sigmas(0);
+                msg.disturbances.y=Zp_next.c(5) + Sigmas(1);
+                msg.disturbances.z=Zr_next.c(2) + Sigmas(2);
                 publisher_state->publish(msg);
 
                 msg.point.x=min_p[0];
@@ -318,9 +340,9 @@ private:
                 msg.velocity.x=min_p[2];
                 msg.velocity.y=min_p[3];
                 msg.velocity.z=min_r[1];
-                msg.disturbances.x=min_p[4];
-                msg.disturbances.y=min_p[5];
-                msg.disturbances.z=min_r[2];
+                msg.disturbances.x=min_p[4] + Sigmas(0);
+                msg.disturbances.y=min_p[5] + Sigmas(1);
+                msg.disturbances.z=min_r[2] + Sigmas(2);
                 publisher_state_min->publish(msg);
 
                 msg.point.x=max_p[0];
@@ -329,9 +351,9 @@ private:
                 msg.velocity.x=max_p[2];
                 msg.velocity.y=max_p[3];
                 msg.velocity.z=max_r[1];
-                msg.disturbances.x=max_p[4];
-                msg.disturbances.y=max_p[5];
-                msg.disturbances.z=max_r[2];
+                msg.disturbances.x=max_p[4] + Sigmas(0);
+                msg.disturbances.y=max_p[5] + Sigmas(1);
+                msg.disturbances.z=max_r[2] + Sigmas(2);
                 publisher_state_max->publish(msg);
 
                 auto msg_obs = geometry_msgs::msg::PoseStamped();
@@ -348,6 +370,14 @@ private:
                 msg_obs.pose.orientation.z = q.z();
                 msg_obs.pose.orientation.w = q.w();
                 publisher_obs->publish(msg_obs); 
+
+                if(Sig_on){
+                    auto msg_s = geometry_msgs::msg::Vector3();
+                    msg_s.x = Zp_next.c(4); 
+                    msg_s.y = Zp_next.c(5); 
+                    msg_s.z = Zr_next.c(2); 
+                    publisher_sigmas->publish(msg_s);
+                }
 
                 //auto end = std::chrono::high_resolution_clock::now();
                 //std::chrono::duration<double> elapsed = end - start;
@@ -627,6 +657,10 @@ private:
                 RCLCPP_INFO(this->get_logger(), "changed param value");
                 IMU_on = this->get_parameter("IMU_on").as_bool();
             }
+            if (param.get_name() == "Sig_on"){
+                RCLCPP_INFO(this->get_logger(), "changed param value");
+                Sig_on = this->get_parameter("Sig_on").as_bool();
+            }
         }
         result.successful = true;
         result.reason = "Success";
@@ -643,7 +677,9 @@ private:
     float Ts, t_s, Xu6, Xu7, Xv10, Xv11, Xv12, Xv13, Xr10, Xr11 ,Xr12, Xr13;  
     float Dz_up, Dz_down;  
 
-    bool IMU_on;
+    std::vector<double> Xu, Xv, Xr;
+
+    bool IMU_on, Sig_on;
 
     float Max_w_r, Max_w_p, Max_n_p, Max_n_r, Max_n_psi;
 
@@ -654,7 +690,8 @@ private:
     Matrix <double, 3,1> IGr; 
     Matrix <double, 6,1> IGp;
     Matrix <double, 2,2> R2T;
-    Vector <double, 2> Yp; 
+    Vector <double, 2> Yp;
+    Vector <double, 3> Sigmas;  
     Matrix <double, 3,3> Ar;
     Matrix <double, 2,3> Cr;
     Matrix <double, 3,1> Bwr;
@@ -679,6 +716,8 @@ private:
     rclcpp::Publisher<asv_interfaces::msg::StateObserver>::SharedPtr publisher_state;
     rclcpp::Publisher<asv_interfaces::msg::StateObserver>::SharedPtr publisher_state_min;
     rclcpp::Publisher<asv_interfaces::msg::StateObserver>::SharedPtr publisher_state_max;
+    rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr publisher_sigmas;
+
     rclcpp::TimerBase::SharedPtr timer_;
 
     // mutex callback group: 
