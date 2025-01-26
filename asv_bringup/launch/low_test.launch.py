@@ -196,12 +196,7 @@ def generate_launch_description():
         namespace= namespace_comunication,
         parameters = [
             {'my_id': my_namespace}
-        ],
-        condition=IfCondition(
-            PythonExpression(
-                [my_id, ' == 4']
-            )
-        )
+        ]
     )
 
     transceiver_xbee_node = Node(
@@ -352,9 +347,9 @@ def generate_launch_description():
     ###################################################################
     ##-------------------------ASVs Nodes----------------------------##
     ################################################################### 
-    nodes.append(Mavros_launch)
+    # nodes.append(Mavros_launch)
     # nodes.append(neighbor_robot_state_publisher_node)
-    nodes.append(own_robot_state_publisher_node)
+    # nodes.append(own_robot_state_publisher_node)
 
     ###################################################################
     ##--------------------Comunication Nodes-------------------------##
@@ -363,12 +358,12 @@ def generate_launch_description():
     nodes.append(ref_llc_node)
     # nodes.append(ref_mlc_node)
     # nodes.append(ref_hlc_node)
-    nodes.append(apm_llc_node)
+    # nodes.append(apm_llc_node)
     nodes.append(imu_fix_node)
-    nodes.append(imu_ext_node)
+    # nodes.append(imu_ext_node)
     nodes.append(record)
 
-    nodes.append(transceiver_xbee_node)
+    # nodes.append(transceiver_xbee_node)
     # nodes.append(xbee_master_node)
     # nodes.append(xbee_slave_node)
 
@@ -377,7 +372,7 @@ def generate_launch_description():
     ################################################################### 
     nodes.append(mux_obs_node)
     nodes.append(observer_guille)
-    nodes.append(observer_liu)
+    # nodes.append(observer_liu)
     nodes.append(observer_zono)
 
     ###################################################################
