@@ -52,14 +52,14 @@ ASV4:
         Dz_up: 0.0675
         Dz_down: -0.0625
         Max_n_psi: 0.1
-        Max_n_r: 0.01
+        Max_n_r: 0.1
         Max_n_p: 0.2
-        Max_w_r: 1.2
+        Max_w_r: 0.6
         Max_w_p: 0.4
         q: 300
         met: 1
         IMU_on: True
-        Wpsi_di: [1.0, 100.0, 1.0]
+        Wr_di: [1.0, 1.0, 1.0]
         Wp_di: [1.0, 1.0, 100.0, 100.0, 1.0, 1.0]
         Sig_on: True
         Xu: [-0.539134, 0.401426, 0.034640, 0.398517]
@@ -76,6 +76,7 @@ ASV4:
         taud: 200
         Su_en: 1.0
         Sr_en: 1.0
+        Sat: 0.3
         mf0: 0.0025071
         mf1: 1.605
         mf2: 0.0

@@ -52,9 +52,9 @@ ASV1:
         Dz_up: 0.0775
         Dz_down: -0.0925
         Max_n_psi: 0.1
-        Max_n_r: 0.01
+        Max_n_r: 0.1
         Max_n_p: 0.2
-        Max_w_r: 1.2
+        Max_w_r: 0.6
         Max_w_p: 0.4
         q: 300
         met: 1
@@ -75,7 +75,8 @@ ASV1:
         kr: 1.2
         taud: 200
         Su_en: 1.0
-        Sr_en: 0.1
+        Sr_en: 1.0
+        Sat: 0.3
         mf0: 0.0
         mf1: 1.4565
         mf2: 0.0

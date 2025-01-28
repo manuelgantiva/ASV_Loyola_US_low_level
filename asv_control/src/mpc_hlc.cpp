@@ -508,6 +508,46 @@ private:
                     vec[2] = curva_ala_3_3(w).f_c;
                 } 
                 break;
+            case 4:
+                vec[0] = curva_ala_4_3(w).f_c;            // Factor de Curvatura
+                if(path_max){
+                    vec[1] = curva_ala_4_4(w).f_c;
+                    vec[2] = curva_ala_4_2(w).f_c;
+                }else{
+                    vec[1] = curva_ala_4_2(w).f_c;
+                    vec[2] = curva_ala_4_4(w).f_c;
+                } 
+                break;
+            case 5:
+                vec[0] = curva_ala_5_5(w).f_c;            // Factor de Curvatura
+                if(path_max){
+                    vec[1] = curva_ala_5_6(w).f_c;
+                    vec[2] = curva_ala_5_4(w).f_c;
+                }else{
+                    vec[1] = curva_ala_5_4(w).f_c;
+                    vec[2] = curva_ala_5_6(w).f_c;
+                } 
+                break;
+            case 6:
+                vec[0] = curva_ala_6_3(w).f_c;            // Factor de Curvatura
+                if(path_max){
+                    vec[1] = curva_ala_6_4(w).f_c;
+                    vec[2] = curva_ala_6_2(w).f_c;
+                }else{
+                    vec[1] = curva_ala_6_2(w).f_c;
+                    vec[2] = curva_ala_6_4(w).f_c;
+                } 
+                break;
+            case 7:
+                vec[0] = curva_ala_7_5(w).f_c;            // Factor de Curvatura
+                if(path_max){
+                    vec[1] = curva_ala_7_6(w).f_c;
+                    vec[2] = curva_ala_7_4(w).f_c;
+                }else{
+                    vec[1] = curva_ala_7_4(w).f_c;
+                    vec[2] = curva_ala_7_6(w).f_c;
+                } 
+                break;
         }
     }
 
@@ -611,7 +651,7 @@ private:
                 }
             }
             if (param.get_name() == "circuit"){
-                if(param.as_int() >= 0 and param.as_int() <= 3){
+                if(param.as_int() >= 0 and param.as_int() <= 7){
                     RCLCPP_INFO(this->get_logger(), "changed param value");
                     circuit = param.as_int();
                 }else{

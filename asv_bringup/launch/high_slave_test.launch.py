@@ -196,12 +196,7 @@ def generate_launch_description():
         namespace= namespace_comunication,
         parameters = [
             {'my_id': my_namespace}
-        ],
-        condition=IfCondition(
-            PythonExpression(
-                [my_id, ' == 4']
-            )
-        )
+        ]
     )
 
     transceiver_xbee_node = Node(

@@ -91,6 +91,8 @@ public:
                 rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackPoseLiuData, this, std::placeholders::_1));
         subscriber_pose_zono= this-> create_subscription<geometry_msgs::msg::PoseStamped>("/" + name_id + "/observer/pose_zono",
                 rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackPoseZonoData, this, std::placeholders::_1));
+        subscriber_sigmas_zono = this-> create_subscription<geometry_msgs::msg::Vector3>("/" + name_id + "/observer/sigmas_zono",1,
+                std::bind(&BagRecordNode::callbackSigmaZono, this, std::placeholders::_1));
         subscriber_compass= this-> create_subscription<std_msgs::msg::Float64>("/" + name_id + "/mavros/global_position/compass_hdg",
                 rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackCompassData, this, std::placeholders::_1));
         subscriber_vel_body= this-> create_subscription<geometry_msgs::msg::TwistStamped>("/" + name_id + "/mavros/local_position/velocity_body",
@@ -263,6 +265,14 @@ private:
         if(armed==true){
             rclcpp::Time time_stamp = this->now();
             writer_->write(msg, "/" + name_id + "/observer/state_observer_zono_max", "asv_interfaces/msg/StateObserver", time_stamp);
+        }
+    }
+
+    void callbackSigmaZono(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
+    {
+        if(armed==true){
+            rclcpp::Time time_stamp = this->now();
+            writer_->write(msg, "/" + name_id + "/observer/sigmas_zono", "geometry_msgs/msg/Vector3", time_stamp);
         }
     }
 
@@ -484,6 +494,7 @@ private:
     rclcpp::Subscription<asv_interfaces::msg::StateObserver>::SharedPtr subscriber_state_zono_min;
     rclcpp::Subscription<asv_interfaces::msg::StateObserver>::SharedPtr subscriber_state_zono_max;
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr subscriber_pose_zono;
+    rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr subscriber_sigmas_zono;
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr subscriber_pose_guille;
     rclcpp::Subscription<asv_interfaces::msg::StateObserver>::SharedPtr subscriber_state_guille;
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr subscriber_pose;

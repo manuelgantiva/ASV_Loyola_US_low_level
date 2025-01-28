@@ -157,10 +157,10 @@ private:
                     r_ref = -r_ref_max;
                 }
 
-                if(u_ref > 2.0){
-                    u_ref = 2.0;
-                }else if(u_ref < -2.0){
-                    u_ref = -2.0;
+                if(u_ref > 1.5){
+                    u_ref = 1.5;
+                }else if(u_ref < -1.5){
+                    u_ref = -1.5;
                 }
                 
                 msg.x = u_ref;
@@ -264,6 +264,42 @@ private:
             case 9:
                 result = curva_ala_3_3(w);
                 break;
+            case 10:
+                result = curva_ala_4_2(w);
+                break;
+            case 11:
+                result = curva_ala_4_3(w);
+                break;
+            case 12:
+                result = curva_ala_4_4(w);
+                break;
+            case 13:
+                result = curva_ala_5_4(w);
+                break;
+            case 14:
+                result = curva_ala_5_5(w);
+                break;
+            case 15:
+                result = curva_ala_5_6(w);
+                break;
+            case 16:
+                result = curva_ala_6_2(w);
+                break;
+            case 17:
+                result = curva_ala_6_3(w);
+                break;
+            case 18:
+                result = curva_ala_6_4(w);
+                break;
+            case 19:
+                result = curva_ala_7_4(w);
+                break;
+            case 20:
+                result = curva_ala_7_5(w);
+                break;
+            case 21:
+                result = curva_ala_7_6(w);
+                break;
             default:
                 result.xp =0.0;
                 result.yp = 0.0;
@@ -324,7 +360,7 @@ private:
                 }
             }
             if (param.get_name() == "path_d"){
-                if(param.as_int() >= 0 and param.as_int() <= 12){
+                if(param.as_int() >= 0 and param.as_int() <= 21){
                     RCLCPP_INFO(this->get_logger(), "changed param value");
                     path_d = param.as_int();
                 }else{

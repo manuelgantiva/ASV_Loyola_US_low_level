@@ -52,16 +52,16 @@ ASV0:
         Dz_up: 0.022
         Dz_down: -0.022
         Max_n_psi: 0.1
-        Max_n_r: 0.01
+        Max_n_r: 0.1
         Max_n_p: 0.2
-        Max_w_r: 1.2
+        Max_w_r: 0.6
         Max_w_p: 0.4
         q: 300
         met: 1
         IMU_on: True
-        Wpsi_di: [1.0, 1.0, 1.0]
+        Wpsi_di: [1.0, 100.0, 1.0]
         Wp_di: [1.0, 1.0, 100.0, 100.0, 1.0, 1.0]
-        Sig_on: True
+        Sig_on: False
         Xu: [-0.288946, 0.551798, -0.222058, -0.404468]
         Xv: [-0.245467, 0.013272, 0.052342, -0.12229, -0.016958, -0.735862, -0.242683, -0.271904]
         Xr: [-0.034018, 0.275634, 0.139497, -0.536508, 0.0012, -0.098846, -0.146164, -0.89329]
@@ -69,13 +69,14 @@ ASV0:
     ifac_llc:
       ros__parameters:
         Ts: 100.0         #ms
-        ku: 2.0
+        ku: 1.0
         ki: 0.0
         kpsi: 0.2
-        kr: 2.0
+        kr: 1.0
         taud: 200
         Su_en: 1.0
         Sr_en: 1.0
+        Sat: 0.3
         mf0: 0.00019973
         mf1: 0.10093
         mf2: 0.0
@@ -131,7 +132,7 @@ ASV0:
         delta_SGLOS: 3.0
         k_u_tar: 2.0
         taud: 5.0
-        path_d: 3
+        path_d: 1
         flag: False     #True signo igual False invertido  
     mpc_hlc:
       ros__parameters:
