@@ -71,8 +71,8 @@ ASV3:
         Ts: 100.0         #ms
         ku: 0.8
         ki: 0.0
-        kpsi: 0.2
-        kr: 1.2
+        kpsi: 0.3
+        kr: 0.8
         taud: 200
         Su_en: 1.0
         Sr_en: 1.0

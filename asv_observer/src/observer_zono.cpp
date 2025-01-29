@@ -266,18 +266,18 @@ private:
 
                 if(Sig_on){
                     Sigmas(0) = (Xu[0] * Zp_next.c(2) * std::abs(Zp_next.c(2)) + Xu[1] * Zp_next.c(3) * Zr_next.c(1) + Xu[2] * Zr_next.c(1) * Zr_next.c(1)
-                                + Xu[3] * Zp_next.c(2))*0.1;
+                                + Xu[3] * Zp_next.c(2));
                     Sigmas(1) = (Xv[0] * Zp_next.c(3) * std::abs(Zp_next.c(3)) + Xv[1] * Zp_next.c(3) * std::abs(Zr_next.c(1)) + Xv[2] * Zr_next.c(1) * std::abs(Zp_next.c(3)) 
                                 + Xv[3] * Zr_next.c(1) * std::abs(Zr_next.c(1)) + Xv[4] * Zp_next.c(2) * Zp_next.c(3) +Xv[5] * Zp_next.c(2) * Zr_next.c(1) 
-                                + Xv[6] * Zp_next.c(3) +Xv[7] * Zr_next.c(1))*0.1;
+                                + Xv[6] * Zp_next.c(3) +Xv[7] * Zr_next.c(1));
                     Sigmas(2) = (Xr[0] * Zp_next.c(3) * std::abs(Zp_next.c(3)) + Xr[1] * Zp_next.c(3) * std::abs(Zr_next.c(1)) + Xr[2] * Zr_next.c(1) * std::abs(Zp_next.c(3)) 
                                 + Xr[3] * Zr_next.c(1) * std::abs(Zr_next.c(1)) + Xr[4] * Zp_next.c(2) * Zp_next.c(3) + Xr[5] * Zp_next.c(2) * Zr_next.c(1) 
-                                + Xr[6] * Zp_next.c(3) + Xr[7] * Zr_next.c(1))*0.1;
+                                + Xr[6] * Zp_next.c(3) + Xr[7] * Zr_next.c(1));
                 }
 
-                IGp(2,0) = IGp(2,0)*0.1 + Sigmas(0);
-                IGp(3,0) = IGp(3,0)*0.1 + Sigmas(1);
-                IGr(1,0) = IGr(1,0)*0.1 + Sigmas(2);
+                IGp(2,0) = (IGp(2,0) + Sigmas(0))*0.1;
+                IGp(3,0) = (IGp(3,0) + Sigmas(1))*0.1;
+                IGr(1,0) = (IGr(1,0) + Sigmas(2))*0.1;
 
                 // Llamar al método de filtrado
                 if(IMU_on){
@@ -331,9 +331,9 @@ private:
                 msg.velocity.x=Zp_next.c(2);
                 msg.velocity.y=Zp_next.c(3);
                 msg.velocity.z=Zr_next.c(1);
-                msg.disturbances.x=Zp_next.c(4) + Sigmas(0)/0.1;
-                msg.disturbances.y=Zp_next.c(5) + Sigmas(1)/0.1;
-                msg.disturbances.z=Zr_next.c(2) + Sigmas(2)/0.1;
+                msg.disturbances.x=Zp_next.c(4) + Sigmas(0);
+                msg.disturbances.y=Zp_next.c(5) + Sigmas(1);
+                msg.disturbances.z=Zr_next.c(2) + Sigmas(2);
                 publisher_state->publish(msg);
 
                 msg.point.x=min_p[0];
@@ -342,9 +342,9 @@ private:
                 msg.velocity.x=min_p[2];
                 msg.velocity.y=min_p[3];
                 msg.velocity.z=min_r[1];
-                msg.disturbances.x=min_p[4] + Sigmas(0)/0.1;
-                msg.disturbances.y=min_p[5] + Sigmas(1)/0.1;
-                msg.disturbances.z=min_r[2] + Sigmas(2)/0.1;
+                msg.disturbances.x=min_p[4] + Sigmas(0);
+                msg.disturbances.y=min_p[5] + Sigmas(1);
+                msg.disturbances.z=min_r[2] + Sigmas(2);
                 publisher_state_min->publish(msg);
 
                 msg.point.x=max_p[0];
@@ -353,9 +353,9 @@ private:
                 msg.velocity.x=max_p[2];
                 msg.velocity.y=max_p[3];
                 msg.velocity.z=max_r[1];
-                msg.disturbances.x=max_p[4] + Sigmas(0)/0.1;
-                msg.disturbances.y=max_p[5] + Sigmas(1)/0.1;
-                msg.disturbances.z=max_r[2] + Sigmas(2)/0.1;
+                msg.disturbances.x=max_p[4] + Sigmas(0);
+                msg.disturbances.y=max_p[5] + Sigmas(1);
+                msg.disturbances.z=max_r[2] + Sigmas(2);
                 publisher_state_max->publish(msg);
 
                 auto msg_obs = geometry_msgs::msg::PoseStamped();

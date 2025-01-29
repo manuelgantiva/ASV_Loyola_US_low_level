@@ -69,4 +69,8 @@ Target curva_ala_7_5(float w);
 // Closed quarter radius 6, straight line 50
 Target curva_ala_7_6(float w);
 
+//Trayectoria Paper
+Target curva_lissajous_1(float w);
+Target curva_lissajous_2(float w);
+
 #endif
