@@ -69,7 +69,7 @@ ASV1:
     ifac_llc:
       ros__parameters:
         Ts: 100.0         #ms
-        ku: 0.8
+        ku: 0.1
         ki: 0.0
         kpsi: 0.3
         kr: 0.8
@@ -132,12 +132,14 @@ ASV1:
         delta_SGLOS: 1.0
         k_u_tar: 2.0
         taud: 5.0
-        path_d: 1
+        path_d: 6
         flag: False     #True signo igual False invertido
+        u_max: 1.2
+        SLOS_on: True
     mpc_hlc:
       ros__parameters:
-        Ts: 5.0
-        circuit: 1
+        Ts: 3.0
+        circuit: 2
         path_max: True
         NC: 10
         NP: 10

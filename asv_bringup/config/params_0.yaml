@@ -134,6 +134,8 @@ ASV0:
         taud: 5.0
         path_d: 1
         flag: False     #True signo igual False invertido  
+        u_max: 1.2
+        SLOS_on: True
     mpc_hlc:
       ros__parameters:
         Ts: 5.0

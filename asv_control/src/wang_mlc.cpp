@@ -30,6 +30,8 @@ public:
         this-> declare_parameter("taud", 15.0); // Taud = #*Ts Est es #
         this-> declare_parameter("path_d", 0); // path_d = #Path deseado #
         this-> declare_parameter("flag", true); // path_d = #Path deseado #
+        this-> declare_parameter("u_max", 1.2); // path_d = #Path deseado #
+        this-> declare_parameter("SLOS_on", true); // path_d = #Path deseado #
 
         my_id = (this->get_parameter("my_id").as_string());    
         Ts = this->get_parameter("Ts").as_double()/1000.0;
@@ -38,6 +40,10 @@ public:
         taud = this->get_parameter("taud").as_double();
         path_d  = this->get_parameter("path_d").as_int();
         flag  = this->get_parameter("flag").as_bool();
+        u_max = this->get_parameter("u_max").as_double();
+        bool SLOS_on = this->get_parameter("SLOS_on").as_bool();
+
+        LOS = static_cast<double>(SLOS_on);
 
         memory_psi.assign(4, 0.0);
 
@@ -117,7 +123,7 @@ private:
                 msg_e.z = w;
 
                 float k1_i = u_d_i / delta_SGLOS;
-                float u_ref = k1_i * std::sqrt(delta_SGLOS*delta_SGLOS + ye*ye);
+                float u_ref = k1_i * std::sqrt(delta_SGLOS*delta_SGLOS + ye*ye*LOS);
                 float b_ref = 0.0;
                 if(flag){
                     b_ref = atan2(v_hat_i, u_ref);
@@ -150,17 +156,15 @@ private:
                         
                 float r_ref = derivationFilter(psi_ref, memory_psi, a, b);
 
-                float r_ref_max = 0.8; //0.6
+                float r_ref_max = 0.8;
                 if(r_ref > r_ref_max){
                     r_ref = r_ref_max;
                 }else if(r_ref < -r_ref_max){
                     r_ref = -r_ref_max;
                 }
 
-                if(u_ref > 1.5){
-                    u_ref = 1.5;
-                }else if(u_ref < -1.5){
-                    u_ref = -1.5;
+                if(u_ref > u_max){
+                    u_ref = u_max;
                 }
                 
                 msg.x = u_ref;
@@ -380,6 +384,22 @@ private:
                 RCLCPP_INFO(this->get_logger(), "changed param value");
                 flag = param.as_bool();
             }
+            if (param.get_name() == "u_max"){
+                if(param.as_double() >= 0.0 and param.as_double() < 2.1){
+                    RCLCPP_INFO(this->get_logger(), "changed param value");
+                    u_max = param.as_double();
+                }else{
+                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0.0-2.0");
+                    result.successful = false;
+                    result.reason = "Value out of range";
+                    return result;
+                }
+            }
+            if (param.get_name() == "SLOS_on"){
+                RCLCPP_INFO(this->get_logger(), "changed param value");
+                bool SLOS_on = param.as_bool();
+                LOS = static_cast<double>(SLOS_on);
+            }
         }
         result.successful = true;
         result.reason = "Success";
@@ -394,6 +414,9 @@ private:
     /*Parámetros del controlador SGLOS*/
     float delta_SGLOS; /*Ganancia delta SGLOS*/
     float k_u_tar; /*Ganancia de la velocidad de surge target*/
+
+    float u_max; /*velocidad maxima de referencia*/
+    float LOS; /*velocidad maxima de referencia*/
     
     float taud; /*Constante tau del filtro derivativo*/
     float a ,b; /*Constantes del filtro derivativo*/

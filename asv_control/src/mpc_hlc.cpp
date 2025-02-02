@@ -174,7 +174,7 @@ private:
                     std::lock_guard<std::mutex> lock(mutex_);
                     U_f_i = U_f;
                     w_m_i = w_m;
-                    w_s_i = w_s;// w_s; simular un barco considerando al otro en la misma posicion
+                    w_s_i = w_s;// w_m; simular un barco considerando al otro en la misma posicion
                 }
                 float vec_f_c[3];
                 currentTarget(w_v, vec_f_c);

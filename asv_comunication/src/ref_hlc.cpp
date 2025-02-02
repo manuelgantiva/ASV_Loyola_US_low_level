@@ -56,17 +56,8 @@ private:
         }
 
         if(Dis_ref){
-            if(ref_vel>=0.9){
-            ref_vel = 1.0;
-            }else if(ref_vel>=0.7 && ref_vel<0.9){
-                ref_vel = 0.75;
-            }else if(ref_vel>=0.4 && ref_vel<0.7){
-                ref_vel = 0.5;
-            }else if(ref_vel>=0.1 && ref_vel<0.4){
-                ref_vel = 0.3;
-            }else{
-                ref_vel = 0.0;
-            }
+            // Cuantizar 6 pasos
+            ref_vel = round(ref_vel / 0.2) * 0.2;
         }else{
             if(ref_vel>1.0){
                 ref_vel = 1.0;
