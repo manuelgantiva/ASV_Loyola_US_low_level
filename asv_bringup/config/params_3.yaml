@@ -138,17 +138,17 @@ ASV3:
         SLOS_on: True
     mpc_hlc:
       ros__parameters:
-        Ts: 3.0
+        Ts: 1.0
         circuit: 2
         path_max: False
-        NC: 10
-        NP: 10
+        NC: 20
+        NP: 20
         C_1: 0.05
-        W_Q: [1.0, 100.0, 100.0]
+        W_Q: [1.0, 10.0, 10.0]
         W_R: [0.0, 0.0, 0.0]
-        W_P: [1.0, 100.0, 100.0]
+        W_P: [1.0, 10.0, 10.0]
         W_N: [1.0, 1.0, 1.0]
         Ud_min: [0.2, 0.2, 0.2]
-        Ud_max: [1.5, 1.5, 1.5]
+        Ud_max: [1.0, 1.0, 1.0]
         Delta_Ud_min: [-0.4, -0.4, -0.4]
         Delta_Ud_max: [0.4, 0.4, 0.4]

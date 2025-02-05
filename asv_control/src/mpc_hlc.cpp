@@ -106,6 +106,8 @@ public:
         w_til_ref.resize(NP * nx);
         y_til_ref.resize(NP * nx);
 
+        U_opt.resize(NC*nu);
+
         cb_group_sensors_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
         cb_group_obs_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
         auto options_sensors_ = rclcpp::SubscriptionOptions();
@@ -144,15 +146,21 @@ public:
 private:
     void calculateHighLevelController()
     {
-
         if (armed == false) {
             count=0.0;
             w_v = 0.0;
             w_m = 0.0;
             w_s = 0.0;
+
+            Uf_v = 0.4;
+            Uf_m = 0.4;
+            Uf_s = 0.4;
+            U_opt.setZero();
             {
                 std::lock_guard<std::mutex> lock(mutex_);
-                U_f = 0.0;
+                U_f = 0.4;
+                w_m = 0.0;
+                w_s = 0.0;
             }
         }
         else {
@@ -162,11 +170,6 @@ private:
                 auto msg = geometry_msgs::msg::Vector3();
                 auto msg_w = std_msgs::msg::Float64();
                 
-                if(count==0){
-                    //------Primera iteracion del bucle de control
-                    w_til_des.setZero();
-                    count++;
-                }
                 float U_f_i;
                 float w_s_i;    
                 float w_m_i;
@@ -175,6 +178,13 @@ private:
                     U_f_i = U_f;
                     w_m_i = w_m;
                     w_s_i = w_s;// w_m; simular un barco considerando al otro en la misma posicion
+                }
+
+                if(count==0){
+                    //------Primera iteracion del bucle de control
+                    w_til_des.setZero();
+                    U_opt.setConstant(U_f_i); 
+                    count++;
                 }
                 float vec_f_c[3];
                 currentTarget(w_v, vec_f_c);
@@ -193,7 +203,6 @@ private:
                     w_til_ref.segment(k * nx, nx) = A.cast<double>() * w_til_des.segment(k * nx, nx) + B.cast<double>() * Ud_ref.cast<double>();
                     y_til_ref.segment(k*ny, ny) = C.cast<double>() * w_til_ref.segment(k*ny, ny);
                 }
-
 
                 //------------------------------------------------------------------------------------//
                 //                           CODIGO MPC HIHG LEVEL                                    //
@@ -240,6 +249,11 @@ private:
                         Ud_til[k * nu + 0] = model.addVar(Ud_min[0], Ud_max[0], 0.0, GRB_CONTINUOUS, "Ud_til_v_" + std::to_string(k));
                         Ud_til[k * nu + 1] = model.addVar(Ud_min[1], Ud_max[1], 0.0, GRB_CONTINUOUS, "Ud_til_m_" + std::to_string(k));
                         Ud_til[k * nu + 2] = model.addVar(Ud_min[2], Ud_max[2], 0.0, GRB_CONTINUOUS, "Ud_til_s_" + std::to_string(k));
+
+                        // Asignar valores iniciales
+                        Ud_til[k * nu + 0].set(GRB_DoubleAttr_Start, U_opt[k * nu + 0]);  // Valor inicial para Ud_til_v
+                        Ud_til[k * nu + 1].set(GRB_DoubleAttr_Start, U_opt[k * nu + 1]);  // Valor inicial para Ud_til_m
+                        Ud_til[k * nu + 2].set(GRB_DoubleAttr_Start, U_opt[k * nu + 2]);  // Valor inicial para Ud_til_s
                     }
 
                     // -----------------------------------------------------------------------------------------//
@@ -318,8 +332,8 @@ private:
                             model.addConstr(Ud_til[k * nu] - Ud_til[(k - 1) * nu] <= Delta_Ud_max[0]);
                             model.addConstr(Ud_til[k * nu + 1] - Ud_til[(k - 1) * nu + 1] >= Delta_Ud_min[1]);
                             model.addConstr(Ud_til[k * nu + 1] - Ud_til[(k - 1) * nu + 1] <= Delta_Ud_max[1]);
-                            model.addConstr(Ud_til[k * nu + 1] - Ud_til[(k - 1) * nu + 1] >= Delta_Ud_min[2]);
-                            model.addConstr(Ud_til[k * nu + 1] - Ud_til[(k - 1) * nu + 1] <= Delta_Ud_max[2]);
+                            model.addConstr(Ud_til[k * nu + 2] - Ud_til[(k - 1) * nu + 2] >= Delta_Ud_min[2]);
+                            model.addConstr(Ud_til[k * nu + 2] - Ud_til[(k - 1) * nu + 2] <= Delta_Ud_max[2]);
                         }
                     }
 
@@ -336,60 +350,53 @@ private:
                         model.computeIIS();
                         // Guardar el reporte IIS en un archivo
                         model.write("infeasibility_report.ilp");
-                        Uf_v = 0.0;
-                        Uf_m = 0.0;
-                        Uf_s = 0.0;
+                        // Asigna el valor de la flota a las salidas en caso de error o sin solucion
+                        U_opt.setConstant(U_f_i); 
                     }
                     else if (model.get(GRB_IntAttr_Status) == GRB_OPTIMAL || model.get(GRB_IntAttr_Status) == GRB_SUBOPTIMAL) {
                         // Si el modelo encontr� una soluci�n �ptima o sub�ptima
 
                         // Extraer las soluciones y aplicarlas al sistema
-
-                        VectorXd optimal_u1 = VectorXd::Zero(NC);
-                        VectorXd optimal_u2 = VectorXd::Zero(NC);
-                        VectorXd optimal_u3 = VectorXd::Zero(NC);
-
                         for (int k = 0; k < NC; ++k) {
-                            optimal_u1[k] = Ud_til[k * nu + 0].get(GRB_DoubleAttr_X);
-                            optimal_u2[k] = Ud_til[k * nu + 1].get(GRB_DoubleAttr_X);
-                            optimal_u3[k] = Ud_til[k * nu + 2].get(GRB_DoubleAttr_X);
+                            U_opt[k * nu + 0] = Ud_til[k * nu + 0].get(GRB_DoubleAttr_X);
+                            U_opt[k * nu + 1] = Ud_til[k * nu + 1].get(GRB_DoubleAttr_X);
+                            U_opt[k * nu + 2] = Ud_til[k * nu + 2].get(GRB_DoubleAttr_X);
+                            // RCLCPP_INFO(this->get_logger(), "Ud_til[%d] = (%f, %f, %f)", k, U_opt[k * nu + 0], U_opt[k * nu + 1], U_opt[k * nu + 2]);
                         }
-
-                        // Aplicar las soluciones �ptimas
-                        Uf_v = optimal_u1[0];
-                        Uf_m = optimal_u2[0];
-                        Uf_s = optimal_u3[0];
                     }
                     else {
-                        RCLCPP_ERROR(this->get_logger(), "El modelo no pudo encontrar una soluci�n �ptima.");
+                        RCLCPP_ERROR(this->get_logger(), "Sin solucion optima, generando reporte IIS...");
+                        model.computeIIS();
+                        // Guardar el reporte IIS en un archivo
+                        model.write("infeasibility_report.ilp");
+                        // Asigna el valor de la flota a las salidas en caso de error o sin solucion
+                        U_opt.setConstant(U_f_i); 
                     }
-
-                    msg.x = Uf_v;
-                    msg.y = Uf_m;
-                    msg.z = Uf_s;            
-                   
-                    // auto end = std::chrono::high_resolution_clock::now();
-                    // std::chrono::duration<double> elapsed = end - start;
-                    // double miliseconds = elapsed.count()*1000;
-                    // Imprime el tiempo con dos decimales fijos
-                    // RCLCPP_INFO(this->get_logger(), "Exec time: %.2f milliseconds", miliseconds);
-
                 }
                 // -------------------- Manejo de excepciones con Gurobi ---------------------------------- // 
                 catch (GRBException& e) {
                     RCLCPP_ERROR(this->get_logger(), "Error code = %d, %s", e.getErrorCode(), e.getMessage().c_str());
-                    // Publicar valores PWM
-                    msg.x = 0.0;
-                    msg.y = 0.0;
-                    msg.z = 0.0;
+                    // Asigna el valor de la flota a las salidas en caso de error o sin solucion
+                    U_opt.setConstant(U_f_i); 
                 }
                 catch (...) {
                     RCLCPP_ERROR(this->get_logger(), "Exception during optimization");
-                    msg.x = 0.0;
-                    msg.y = 0.0;
-                    msg.z = 0.0;
+                    // Asigna el valor de la flota a las salidas en caso de error o sin solucion
+                    U_opt.setConstant(U_f_i);   
                 }
+
                 // -----------------------------------------------------------------------------------------// 
+                // Aplicar las soluciones �ptimas
+                Uf_v = U_opt[0];
+                Uf_m = U_opt[1];
+                Uf_s = U_opt[2];
+                // Dezplazar la ultima solucion optima para la siguiente iteracion
+                U_opt.head((NC*nu)- nu) = U_opt.segment(nu, (NC*nu)- nu);
+                U_opt.tail(nu) = U_opt.segment((NC*nu)- nu - nu, nu);
+
+                msg.x = Uf_v;
+                msg.y = Uf_m;
+                msg.z = Uf_s;    
                 publisher_ref_master_->publish(msg);
 
                 double e_slave = abs(w_til_ref[2]-w_s_i);
@@ -403,6 +410,11 @@ private:
                 msg_w.data = w_v;
                 publisher_w_virtual_->publish(msg_w);
                 w_v = w_v + Ts * vec_f_c[0] * U_f_i;
+                
+                // auto end = std::chrono::high_resolution_clock::now();
+                // std::chrono::duration<double> elapsed = end - start;
+                // double miliseconds = elapsed.count()*1000;
+                // RCLCPP_INFO(this->get_logger(), "Exec time: %.2f milliseconds", miliseconds);
             }
             else {
                 count++;
@@ -555,9 +567,10 @@ private:
         rcl_interfaces::msg::SetParametersResult result;
         for (const auto& param : params) {
             if (param.get_name() == "NC") {
-                if (param.as_int() >= 1 and param.as_int() < 30) {
+                if (param.as_int() >= 1 and param.as_int() < 50) {
                     RCLCPP_INFO(this->get_logger(), "changed param value");
                     NC = param.as_int();
+                    U_opt.resize(NC*nu);
                 }
                 else {
                     RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-30");
@@ -567,13 +580,12 @@ private:
                 }
             }
             if (param.get_name() == "NP") {
-                if (param.as_int() >= 1 and param.as_int() < 30) {
+                if (param.as_int() >= 1 and param.as_int() < 50) {
                     RCLCPP_INFO(this->get_logger(), "changed param value");
                     NP = param.as_int();
-                    w_til_des.resize(NP * nx - nx);
-                    w_til_ref.resize(NP * nx - nx);
-                    y_til_ref.resize(NP * nx - nx);
-
+                    w_til_des.resize(NP * nx);
+                    w_til_ref.resize(NP * nx);
+                    y_til_ref.resize(NP * nx);
                 }
                 else {
                     RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-30");
@@ -589,6 +601,24 @@ private:
                 }
                 else {
                     RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0.0-2.00");
+                    result.successful = false;
+                    result.reason = "Value out of range";
+                    return result;
+                }
+            }
+            if (param.get_name() == "Ts") {
+                if (param.as_double() > 0.0 and param.as_double() < 10.0) {
+                    RCLCPP_INFO(this->get_logger(), "changed param value");
+                    //Inicializo el timer con el nuevo Ts
+                    Ts = param.as_double();
+                    if (timer_) {
+                        timer_->cancel();
+                    }
+                    timer_ = this->create_wall_timer(std::chrono::milliseconds(int(Ts * 1000.0)),
+                                    std::bind(&MpcHlcNode::calculateHighLevelController, this), cb_group_obs_);
+                }
+                else {
+                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0.1-10.00");
                     result.successful = false;
                     result.reason = "Value out of range";
                     return result;
@@ -748,6 +778,7 @@ private:
     VectorXd w_til_des;
     VectorXd w_til_ref;
     VectorXd y_til_ref;
+    VectorXd U_opt;
 
     float w_v = 0.0, U_f = 0.0, w_m = 0.0, w_s = 0.0;
     float Uf_v = 0.0, Uf_m = 0.0, Uf_s=0.0;
