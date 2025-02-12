@@ -310,6 +310,12 @@ private:
             case 23:
                 result = curva_lissajous_2(w);
                 break;
+            case 24:
+                result = curva_ala_8_4_5(w);
+                break;
+            case 25:
+                result = curva_ala_9_4_5(w);
+                break;
             default:
                 result.xp =0.0;
                 result.yp = 0.0;
@@ -370,11 +376,11 @@ private:
                 }
             }
             if (param.get_name() == "path_d"){
-                if(param.as_int() >= 0 and param.as_int() <= 23){
+                if(param.as_int() >= 0 and param.as_int() <= 25){
                     RCLCPP_INFO(this->get_logger(), "changed param value");
                     path_d = param.as_int();
                 }else{
-                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-23");
+                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-25");
                     result.successful = false;
                     result.reason = "Value out of range";
                     return result;

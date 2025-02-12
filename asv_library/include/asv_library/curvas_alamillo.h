@@ -73,4 +73,10 @@ Target curva_ala_7_6(float w);
 Target curva_lissajous_1(float w);
 Target curva_lissajous_2(float w);
 
+// Closed semicircle radius 5, straight line 30
+Target curva_ala_8_4_5(float w);
+
+// Closed quarter radius 5, straight line 50
+Target curva_ala_9_4_5(float w);
+
 #endif

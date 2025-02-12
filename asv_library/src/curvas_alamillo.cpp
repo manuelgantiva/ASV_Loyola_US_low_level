@@ -721,3 +721,70 @@ Target curva_lissajous_2(float w){
     result.f_c = 1; // no se utiliza en el MLC
     return result;
 }
+
+
+//Trayectoria radio 4.5
+Target curva_ala_8_4_5(float w) {
+    Target result;
+    while(w >= 31.28318531){
+        w = w - 31.28318531;
+    }
+    if (w < 12.5) {
+        // Línea recta 
+        recta(w, &result, -6.0, -1.5, -2, 0);
+    } 
+    else if (w >=12.5 && w < 15.64159265) {
+        //curva
+        arco(w -  12.5 + 3.12159265, &result,  -31.0, 3.0, 4.5, true);
+    }
+    else if (w >= 15.64159265 && w < 28.14159265) {
+        // Línea recta 
+        recta(w - 15.64159265, &result, -31.0 , 7.5, 2, 0);
+    }
+    else if (w >=28.14159265 && w < 31.28318531) {
+        //curva
+        arco(w - 28.14159265 , &result,  -6.0,3.0, 4.5, true);
+    }
+    return result;
+}
+
+
+Target curva_ala_9_4_5(float w) {
+    Target result;
+    while(w >= 46.28318531){
+        w = w - 46.28318531;
+    }
+    if (w < 10) {
+        // Línea recta 
+        recta(w, &result, - 1.5, 6.0, 0, - 2.0);
+    } 
+    else if (w >=10 && w < 11.57079633) {
+        //curva
+        arco(w - 10 + 1.5707963267948966, &result,  -6.0, -14.0, 4.5, true);
+    }
+    else if (w >= 11.57079633 && w < 21.57079633) {
+        // Línea recta 
+        recta(w - 11.57079633, &result, -6.0 , -18.5, -2.0, 0);
+    }
+    else if (w >=21.57079633 && w < 23.14159265) {
+        //curva
+        arco(w -21.57079633 + 3.141592653, &result,  -26.0, -14.0, 4.5, true);
+    }
+    else if (w >= 23.14159265 && w < 33.14159265) {
+        // Línea recta 
+        recta(w - 23.14159265, &result, -30.5 , -14.0, 0, 2.0);
+    }
+    else if (w >=33.14159265 && w < 34.71238898) {
+        //curva
+        arco(w -   33.14159265 - 1.5707963267948966, &result,  -26.0, 6.0 , 4.5, true);
+    }
+    else if (w >= 34.71238898 && w < 44.71238898) {
+        // Línea recta 
+        recta(w - 34.71238898, &result, -26 , 10.5, 2, 0);
+    }
+    else if (w >=44.71238898 && w < 46.28318531) {
+        //curva
+        arco(w - 44.71238898 , &result,  -6.0, 6.0, 4.5, true);
+    }
+    return result;
+}

@@ -560,6 +560,26 @@ private:
                     vec[2] = curva_ala_7_6(w).f_c;
                 } 
                 break;
+            case 8:
+                vec[0] = curva_ala_8_4_5(w).f_c;            // Factor de Curvatura
+                if(path_max){
+                    vec[1] = curva_ala_5_6(w).f_c;
+                    vec[2] = curva_ala_4_3(w).f_c;
+                }else{
+                    vec[1] = curva_ala_4_3(w).f_c;
+                    vec[2] = curva_ala_5_6(w).f_c;
+                } 
+                break;
+            case 9:
+                vec[0] = curva_ala_9_4_5(w).f_c;            // Factor de Curvatura
+                if(path_max){
+                    vec[1] = curva_ala_7_6(w).f_c;
+                    vec[2] = curva_ala_6_3(w).f_c;
+                }else{
+                    vec[1] = curva_ala_6_3(w).f_c;
+                    vec[2] = curva_ala_7_6(w).f_c;
+                } 
+                break;
         }
     }
 
@@ -681,11 +701,11 @@ private:
                 }
             }
             if (param.get_name() == "circuit"){
-                if(param.as_int() >= 0 and param.as_int() <= 7){
+                if(param.as_int() >= 0 and param.as_int() <= 9){
                     RCLCPP_INFO(this->get_logger(), "changed param value");
                     circuit = param.as_int();
                 }else{
-                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-3");
+                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-9");
                     result.successful = false;
                     result.reason = "Value out of range";
                     return result;
