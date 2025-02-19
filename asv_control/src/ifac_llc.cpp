@@ -38,7 +38,8 @@ public:
         this-> declare_parameter("Su_en", 1.0);
         this-> declare_parameter("Sr_en", 1.0);
         this-> declare_parameter("Sat", 0.3); // Coeficiente de saturacion
-
+        this-> declare_parameter("delta_pwm", 250); // Taud = #*Ts Est es #
+        
         this-> declare_parameter("mf0", 0.0013545);
         this-> declare_parameter("mf1", 6.0977);
         this-> declare_parameter("mf2", 0.0);
@@ -84,6 +85,7 @@ public:
         Su_en = this->get_parameter("Su_en").as_double();
         Sr_en = this->get_parameter("Sr_en").as_double();
         Sat = this->get_parameter("Sat").as_double();
+        delta_pwm = this->get_parameter("delta_pwm").as_int();
 
         mf0 = this->get_parameter("mf0").as_double();
         mf1 = this->get_parameter("mf1").as_double();
@@ -165,6 +167,8 @@ private:
             integral_error=0;
             IGu_prev = 0.0;
             IGr_prev = 0.0;
+            PWM_left_ant = 1500;
+            PWM_right_ant = 1500;
             {
                 std::lock_guard<std::mutex> lock(mutex_);
                 u_hat = 0.0;
@@ -310,18 +314,10 @@ private:
                 }
 
                 // Publish pwms
-                msg.t_left=400 * L + 1500;
-                msg.t_righ=400 * R + 1500;
-                if(msg.t_left<1100){
-                    msg.t_left=1100;
-                }else if (msg.t_left > 1900) {
-                    msg.t_left=1900;
-                }
-                if(msg.t_righ<1100){
-                    msg.t_righ=1100;
-                }else if (msg.t_righ > 1900) {
-                    msg.t_righ=1900;
-                }
+
+                msg.t_left = denormalizationPwm(L, PWM_left_ant);
+                msg.t_righ = denormalizationPwm(R, PWM_right_ant);;
+
                 msg_Ig.x = IG_u;
                 msg_Ig.y = IG_r;
                 msg_Ig.z = zone;
@@ -330,6 +326,8 @@ private:
                 IGu_prev = IG_u;
                 IGr_prev = IG_r;
 
+                PWM_left_ant = msg.t_left;
+                PWM_right_ant = msg.t_righ;
             }else{
                 msg.t_left= 1500;
                 msg.t_righ= 1500; 
@@ -345,6 +343,25 @@ private:
         }        
     }
 
+    uint16_t denormalizationPwm(double delta, uint16_t pwm_ant) {
+        int resultado = static_cast<int>(400 * delta) + 1500;
+    
+        if (resultado < 1100) {
+            resultado = 1100;
+        } else if (resultado > 1900) {
+            resultado = 1900;
+        }
+
+        int delta_diff = resultado - pwm_ant;
+        if (delta_diff > delta_pwm) {
+            resultado = pwm_ant + delta_pwm;
+        } else if (delta_diff < -delta_pwm) {
+            resultado = pwm_ant - delta_pwm;
+        }
+
+        return static_cast<uint16_t>(resultado);
+    }
+    
     vector<double> filterRoots(const VectorXcd& roots) {
         vector<double> realRoots;
         for (int i = 0; i < roots.size(); ++i) {
@@ -511,12 +528,25 @@ private:
                     return result;
                 }
             }
+            if (param.get_name() == "delta_pwm"){
+                if(param.as_int() >= 0 and param.as_int() <= 500){
+                    RCLCPP_INFO(this->get_logger(), "changed param value");
+                    delta_pwm = param.as_int();
+                }else{
+                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-500");
+                    result.successful = false;
+                    result.reason = "Value out of range";
+                    return result;
+                }
+            }
         }
         result.successful = true;
         result.reason = "Success";
         return result;
     }
 
+    uint16_t PWM_left_ant = 1500, PWM_right_ant = 1500;
+    int delta_pwm;
     bool armed = false;
     float u_hat = 0, psi_hat = 0, r_hat = 0, sig_u = 0, sig_r = 0, u_ref = 0.2, psi_ref = 0, r_ref = 0, u_dot_ref = 0, r_dot_ref = 0;
     float c_ref;

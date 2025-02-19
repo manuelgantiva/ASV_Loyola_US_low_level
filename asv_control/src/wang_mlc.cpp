@@ -83,6 +83,10 @@ private:
             count=0;
             w=0.0;
             laps=0;
+            {
+                std::lock_guard<std::mutex> lock(mutex_);
+                u_d = 0.5;
+            }
         }else{
             if(count > 7){
                 //auto start = std::chrono::high_resolution_clock::now();
@@ -180,12 +184,7 @@ private:
                 // Imprime el tiempo con dos decimales fijos
                 // RCLCPP_INFO(this->get_logger(), "Exec time: %.2f milliseconds", miliseconds);
             }else{
-                auto msg = geometry_msgs::msg::Vector3();
-                msg.x = 0.0;
-                msg.y = 0.0;
-                msg.z = 0.0; 
                 count=count+1;
-                publisher_llc->publish(msg);
             }
         }       
     }
@@ -316,6 +315,9 @@ private:
             case 25:
                 result = curva_ala_9_4_5(w);
                 break;
+            case 26:
+                result = curva_lissajous_3(w);
+                break;
             default:
                 result.xp =0.0;
                 result.yp = 0.0;
@@ -376,11 +378,11 @@ private:
                 }
             }
             if (param.get_name() == "path_d"){
-                if(param.as_int() >= 0 and param.as_int() <= 25){
+                if(param.as_int() >= 0 and param.as_int() <= 26){
                     RCLCPP_INFO(this->get_logger(), "changed param value");
                     path_d = param.as_int();
                 }else{
-                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-25");
+                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-26");
                     result.successful = false;
                     result.reason = "Value out of range";
                     return result;

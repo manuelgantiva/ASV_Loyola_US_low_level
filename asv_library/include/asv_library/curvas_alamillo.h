@@ -72,6 +72,7 @@ Target curva_ala_7_6(float w);
 //Trayectoria Paper
 Target curva_lissajous_1(float w);
 Target curva_lissajous_2(float w);
+Target curva_lissajous_3(float w);
 
 // Closed semicircle radius 5, straight line 30
 Target curva_ala_8_4_5(float w);

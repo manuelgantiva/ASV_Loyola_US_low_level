@@ -77,6 +77,7 @@ ASV0:
         Su_en: 1.0
         Sr_en: 1.0
         Sat: 0.3
+        delta_pwm: 250
         mf0: 0.00019973
         mf1: 0.10093
         mf2: 0.0
@@ -132,7 +133,7 @@ ASV0:
         delta_SGLOS: 3.0
         k_u_tar: 2.0
         taud: 5.0
-        path_d: 1
+        path_d: 26
         flag: False     #True signo igual False invertido  
         u_max: 1.2
         SLOS_on: True

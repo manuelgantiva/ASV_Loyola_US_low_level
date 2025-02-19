@@ -722,6 +722,16 @@ Target curva_lissajous_2(float w){
     return result;
 }
 
+//Trayectoria Paper 3
+Target curva_lissajous_3(float w){
+    Target result;
+    result.yp = -2.0 + 15.0 * sin(-w + 1.5707963268); 
+    result.xp = -12.0 + 15.0 * sin(-2.0 * w); 
+    result.dyp = -15.0 * sin(w);
+    result.dxp = -30.0 * cos(-2.0 * w); 
+    result.f_c = 1; // no se utiliza en el MLC
+    return result;
+}
 
 //Trayectoria radio 4.5
 Target curva_ala_8_4_5(float w) {

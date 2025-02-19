@@ -409,7 +409,7 @@ private:
                 }
                 msg_w.data = w_v;
                 publisher_w_virtual_->publish(msg_w);
-                w_v = w_v + Ts * vec_f_c[0] * U_f_i;
+                w_v = w_v + Ts * vec_f_c[0] * Uf_v;
                 
                 // auto end = std::chrono::high_resolution_clock::now();
                 // std::chrono::duration<double> elapsed = end - start;

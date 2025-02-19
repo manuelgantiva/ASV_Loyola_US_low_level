@@ -472,6 +472,12 @@ private:
             uint16_t pwm_left=msg->channels[2];
             uint16_t pwm_right=msg->channels[0];
             int beta_a = 0;
+            if(pwm_left <1099){
+                pwm_left = 1500;
+            }
+            if(pwm_right <1099){
+                pwm_right = 1500;
+            }
             if(pwm_left>=1500 && pwm_right>=1500){
                 beta_a=1;
             }else{

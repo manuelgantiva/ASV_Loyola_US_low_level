@@ -77,6 +77,7 @@ ASV4:
         Su_en: 1.0
         Sr_en: 1.0
         Sat: 0.3
+        delta_pwm: 250
         mf0: 0.0025071
         mf1: 1.605
         mf2: 0.0
@@ -132,7 +133,7 @@ ASV4:
         delta_SGLOS: 2.0
         k_u_tar: 2.0
         taud: 5.0
-        path_d: 14
+        path_d: 23
         flag: False     #True signo igual False invertido
         u_max: 1.2
         SLOS_on: True

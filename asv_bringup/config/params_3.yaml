@@ -77,6 +77,7 @@ ASV3:
         Su_en: 1.0
         Sr_en: 1.0
         Sat: 0.3
+        delta_pwm: 250
         mf0: 0.0
         mf1: 1.3139
         mf2: 0.0
