@@ -133,23 +133,23 @@ ASV0:
         delta_SGLOS: 3.0
         k_u_tar: 2.0
         taud: 5.0
-        path_d: 26
+        path_d: 3
         flag: False     #True signo igual False invertido  
         u_max: 1.2
         SLOS_on: True
     mpc_hlc:
       ros__parameters:
-        Ts: 5.0
+        Ts: 1.0
         circuit: 1
         path_max: True
         NC: 10
         NP: 10
-        C_1: 0.05
-        W_Q: [1.0, 100.0, 100.0]
+        C_1: 0.08
+        W_Q: [0.0, 1.0, 1.0]
         W_R: [0.0, 0.0, 0.0]
-        W_P: [1.0, 100.0, 100.0]
-        W_N: [1.0, 1.0, 1.0]
+        W_P: [0.0, 1.0, 1.0]
+        W_N: [50.0, 50.0, 50.0]
         Ud_min: [0.2, 0.2, 0.2]
-        Ud_max: [1.5, 1.5, 1.5]
-        Delta_Ud_min: [-0.4, -0.4, -0.4]
-        Delta_Ud_max: [0.4, 0.4, 0.4]
+        Ud_max: [1.0, 1.0, 1.0]
+        Delta_Ud_min: [-0.2, -0.2, -0.2]
+        Delta_Ud_max: [0.2, 0.2, 0.2]

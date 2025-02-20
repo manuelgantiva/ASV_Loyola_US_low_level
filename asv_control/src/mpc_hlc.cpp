@@ -223,7 +223,7 @@ private:
                     // Definir variables de estado inicial
                     y_til[0] = model.addVar(w_v, w_v, 0.0, GRB_CONTINUOUS, "y_v_0");
                     y_til[1] = model.addVar(w_m_i-w_s_i, w_m_i-w_s_i, 0.0, GRB_CONTINUOUS, "y_m_0");
-                    y_til[2] = model.addVar(w_m_i-w_s_i, w_m_i-w_s_i, 0.0, GRB_CONTINUOUS, "y_s_0");
+                    y_til[2] = model.addVar(w_v-w_s_i, w_v-w_s_i, 0.0, GRB_CONTINUOUS, "y_s_0");
                     
                     // Definir variables de estado a lo largo del horizonte de predicci�n
                     for (int k = 1; k <= NP; ++k) {
@@ -491,6 +491,14 @@ private:
                 vec[2] = 1;
                 break;
             case 1:
+                /*vec[0] = curva_sim_2_8(w).f_c;            // Factor de Curvatura
+                if(path_max){
+                    vec[1] = curva_sim_2_10(w).f_c;
+                    vec[2] = curva_sim_2_6(w).f_c;
+                }else{
+                    vec[1] = curva_sim_2_6(w).f_c;
+                    vec[2] = curva_sim_2_10(w).f_c;
+                }*/
                 vec[0] = curva_ala_1_4(w).f_c;            // Factor de Curvatura
                 if(path_max){
                     vec[1] = curva_ala_1_6(w).f_c;
