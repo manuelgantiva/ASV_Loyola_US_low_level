@@ -1,3 +1,6 @@
+transceiver simulator no funciona
+
+
 from launch import LaunchDescription
 from launch_ros.actions import Node
 
@@ -52,9 +55,17 @@ def generate_launch_description():
         default_value="false",
         description='Publish to neighbor'
     )
+    arg_worker_mode = DeclareLaunchArgument(
+        'worker_mode',
+        default_value="1",
+        description='Coordinator: 0, Worker: 1, 2, ...'
+    )
+
     my_id = LaunchConfiguration('my_id')
     rec = LaunchConfiguration('rec')
     pub2neigh = LaunchConfiguration('pub2neigh')
+    worker_mode = LaunchConfiguration('worker_mode')
+
     my_namespace = PythonExpression(["'ASV' + str(", my_id, ")"])
     namespace_control = PythonExpression(
         ["'ASV' + str(", my_id, ") + '/control'"])
@@ -64,6 +75,8 @@ def generate_launch_description():
     #     ["'ASV' + str(", my_id, ") + '/mavros'"])
     namespace_observer = PythonExpression(
         ["'ASV' + str(", my_id, ") + '/observer'"])
+    namespace_simulator = PythonExpression(
+        ["'ASV' + str(", my_id, ") + '/simulator'"])
 
     nodes = []
     ###################################################################
@@ -86,7 +99,7 @@ def generate_launch_description():
             ("/robot_description", "/own_description")
         ]
     )
-    nodes.append(own_robot_state_publisher_node)
+    # nodes.append(own_robot_state_publisher_node)
 
     neighbor_description = ParameterValue(Command(['xacro ', urdf_path, ' id:=n', ' own:=false']),
                                           value_type=str)
@@ -102,7 +115,7 @@ def generate_launch_description():
         ],
         condition=IfCondition(pub2neigh)
     )
-    nodes.append(neighbor_robot_state_publisher_node)
+    # nodes.append(neighbor_robot_state_publisher_node)
 
     ###################################################################
     ## ------------------------Mavros Launch--------------------------##
@@ -139,9 +152,9 @@ def generate_launch_description():
     ################################################################### 
    
     asv_simulator_node = Node(
-        package="asv_sim",
+        package="asv_simulator",
         executable="simulator",
-        namespace='control',
+        namespace= namespace_simulator,
         parameters=[{'my_id': my_id},
                     config],
     )
@@ -180,7 +193,7 @@ def generate_launch_description():
             {'my_id': my_namespace},
             config_gen]
     )
-    nodes.append(ref_llc_node)
+    # nodes.append(ref_llc_node)
 
     ref_mlc_node = Node(
         package="asv_comunication",
@@ -190,7 +203,7 @@ def generate_launch_description():
             {'my_id': my_namespace},
             config_gen]
     )
-    nodes.append(ref_mlc_node)
+    # nodes.append(ref_mlc_node)
 
     apm_llc_node = Node(
         package="asv_comunication",
@@ -200,7 +213,7 @@ def generate_launch_description():
             {'my_id': my_namespace}
         ]
     )
-    nodes.append(apm_llc_node)
+    # nodes.append(apm_llc_node)
 
     imu_fix_node = Node(
         package="asv_comunication",
@@ -210,7 +223,7 @@ def generate_launch_description():
             {'my_id': my_namespace}
         ]
     )
-    nodes.append(imu_fix_node)
+    # nodes.append(imu_fix_node)
 
     # imu_fix_ext_node = Node (
     #     package= "asv_comunication",
@@ -241,14 +254,19 @@ def generate_launch_description():
     #         )
     #     )
     # )
-    # transceiver_xbee_node = Node(
-    #     package="asv_comunication",
-    #     executable="transceiver_xbee.py",
-    #     namespace= namespace_comunication,
-    #     parameters = [
-    #         {'my_id': my_namespace},
-    #     ]
-    # )
+
+    
+    transceiver_sim_node = Node(
+        package="asv_comunication",
+        executable="transceiver_simulator",
+        namespace= namespace_comunication,
+        parameters = [
+            {'my_id': my_namespace,
+            'worker_mode': worker_mode},
+        ]
+    )
+
+    nodes.append(transceiver_sim_node)
 
     ###################################################################
     ##-----------------------Control Nodes---------------------------##
@@ -309,7 +327,31 @@ def generate_launch_description():
         parameters = [{'my_id': my_namespace},
                 config],
     )
-    nodes.append(wang_mlc_node)
+    # nodes.append(wang_mlc_node)
+    mod_wang_mlc_node = Node(
+        package="asv_control",
+        executable="mod_wang_mlc",
+        namespace= namespace_control,
+        parameters = [{'my_id': my_namespace},
+                config],
+    )
+    nodes.append(mod_wang_mlc_node)
+
+    morel_hlc_node = Node(
+        package="asv_control",
+        executable="morel_hlc",
+        namespace= namespace_control,
+        parameters = [{'my_id': my_namespace,
+                    'worker_mode': worker_mode},
+                config],
+                condition=IfCondition(
+                    PythonExpression(
+                        [worker_mode, ' == 0']
+                    )
+                )
+    )
+
+    nodes.append(morel_hlc_node)
 
 
     ###################################################################
@@ -336,7 +378,7 @@ def generate_launch_description():
             config
         ]
     )
-    nodes.append(observer_guille)
+    # nodes.append(observer_guille)
 
     observer_liu = Node(
         package="asv_observer",
@@ -348,7 +390,7 @@ def generate_launch_description():
             config
         ],
     )
-    nodes.append(observer_liu)
+    # nodes.append(observer_liu)
 
     observer_zono = Node(
         package="asv_observer",
@@ -365,6 +407,6 @@ def generate_launch_description():
 
 
     return LaunchDescription(
-        [arg_my_id, arg_rec, arg_pub2neigh, param_id,
+        [arg_my_id, arg_rec, arg_pub2neigh, param_id, arg_worker_mode,
             *nodes]
     )

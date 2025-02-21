@@ -51,6 +51,12 @@ target_link_libraries(mpc_llc gurobi_c++ gurobi110)
 add_executable(wang_mlc src/wang_mlc.cpp)
 ament_target_dependencies(wang_mlc rclcpp geometry_msgs mavros_msgs asv_interfaces std_msgs asv_library)
 
+add_executable(morel_hlc src/morel_hlc.cpp)
+ament_target_dependencies(morel_hlc rclcpp geometry_msgs mavros_msgs asv_interfaces std_msgs asv_library)
+
+add_executable(mod_wang_mlc src/mod_wang_mlc.cpp)
+ament_target_dependencies(mod_wang_mlc rclcpp geometry_msgs mavros_msgs asv_interfaces std_msgs asv_library)
+
 # Install Targets
 install(TARGETS
   pwm_mapper
@@ -59,6 +65,8 @@ install(TARGETS
   ifac_llc
   wang_mlc
   mpc_llc
+  morel_hlc
+  mod_wang_mlc
 DESTINATION lib/${PROJECT_NAME})
 
 # Install Scripts python

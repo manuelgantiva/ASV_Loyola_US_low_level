@@ -68,6 +68,7 @@ install(PROGRAMS
   scripts/test_observer.py 
   scripts/test_xbee.py 
   scripts/imu_driver.py 
+  scripts/transceiver_simulator.py 
   DESTINATION lib/${PROJECT_NAME}
 )
 

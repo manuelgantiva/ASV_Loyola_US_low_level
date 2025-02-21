@@ -118,6 +118,42 @@ Zonotopo Zonotopo::filteringPsi(const Zonotopo& Z, const Vector<double, 1>& y, c
     // Crear el nuevo zonotopo filtrado
     return Zonotopo(c_fil, Hn);
 }
+Zonotopo Zonotopo::filteringR(const Zonotopo& Z, const Vector<double, 2>& y, const Matrix<double, 2,3>& C, const Matrix<double, 2,2>& R, const Matrix <double, 3,3>& W) {
+    int n = Z.c.size();
+    MatrixXd I = MatrixXd::Identity(n, n);
+
+    // Cálculo de PZ y PV
+    MatrixXd PZ = W * Z.H * Z.H.transpose();
+    MatrixXd PV = R * R.transpose();
+
+    // Ganancia local
+    MatrixXd L = PZ * C.transpose() * (C * PZ * C.transpose() + PV).inverse();
+
+    // Filtrado
+    VectorXd c_fil = Z.c + L * (y - C * Z.c);
+    MatrixXd H_fil = (I - L * C) * Z.H;
+
+    // Añadir columnas -L*R a H_fil
+    H_fil.conservativeResize(H_fil.rows(), H_fil.cols() + R.cols());
+    H_fil.rightCols(R.cols()) = -L * R;
+
+    // Eliminar columnas de ceros
+    int num_ceros = 0;
+    MatrixXd Hn = MatrixXd::Zero(n, H_fil.cols());
+    int l = 0;
+    for (int k = 0; k < H_fil.cols(); ++k) {
+        if (H_fil.col(k).isZero()) {
+            num_ceros++;
+        } else {
+            Hn.col(l) = H_fil.col(k);
+            l++;
+        }
+    }
+    Hn.conservativeResize(n, Hn.cols() - num_ceros);
+
+    // Crear el nuevo zonotopo filtrado
+    return Zonotopo(c_fil, Hn);
+}
 
 Zonotopo Zonotopo::filteringP(const Zonotopo& Z, const Vector<double, 2>& y, const Matrix<double, 2,6>& C, const Matrix<double, 2,2>& R, const Matrix <double, 6,6>& W) {
     int n = Z.c.size();

@@ -37,6 +37,7 @@ public:
         this-> declare_parameter("taud", 350); // Taud = #*Ts Est es #
         this-> declare_parameter("Su_en", 1.0);
         this-> declare_parameter("Sr_en", 1.0);
+        this-> declare_parameter("Sat", 0.3); // Coeficiente de saturacion
 
         this-> declare_parameter("mf0", 0.0013545);
         this-> declare_parameter("mf1", 6.0977);
@@ -82,6 +83,7 @@ public:
         taud = this->get_parameter("taud").as_int();
         Su_en = this->get_parameter("Su_en").as_double();
         Sr_en = this->get_parameter("Sr_en").as_double();
+        Sat = this->get_parameter("Sat").as_double();
 
         mf0 = this->get_parameter("mf0").as_double();
         mf1 = this->get_parameter("mf1").as_double();
@@ -161,6 +163,15 @@ private:
             memory_r.assign(4, 0.0);
             count=0;
             integral_error=0;
+            IGu_prev = 0.0;
+            IGr_prev = 0.0;
+            {
+                std::lock_guard<std::mutex> lock(mutex_);
+                u_hat = 0.0;
+                r_hat= 0.0;
+                u_ref = 0.2;
+                r_ref = 0.0;
+            }
         }else{
             //auto start = std::chrono::high_resolution_clock::now();
             auto msg = asv_interfaces::msg::PwmValues();
@@ -169,7 +180,7 @@ private:
             auto msg_Ig = geometry_msgs::msg::Vector3();
             float zone;
 
-            if(count > 7){
+            if(count > 8){
                 float u_hat_i;
                 float r_hat_i;
                 float psi_hat_i;
@@ -229,6 +240,22 @@ private:
 
                 if(IG_r<-IGrmax_rf){
                     IG_r=-IGrmax_rf;
+                }
+
+                if(IG_u>IGumax_ff){
+                    IG_u=IGumax_ff;
+                }
+
+                if (IG_u - IGu_prev > (IGumax_ff - IGumin_rf) * Sat) {
+                    IG_u = IGu_prev + (IGumax_ff - IGumin_rf) * Sat;
+                } else if (IGu_prev - IG_u > (IGumax_ff - IGumin_rf) * Sat) {
+                    IG_u = IGu_prev - (IGumax_ff - IGumin_rf) * Sat;
+                }
+
+                if (IG_r - IGr_prev > (2*IGrmax_rf) * Sat) {
+                    IG_r = IGr_prev + (2*IGrmax_rf) * Sat;
+                } else if (IGr_prev - IG_r > (2*IGrmax_rf) * Sat) {
+                    IG_r = IGr_prev - (2*IGrmax_rf) * Sat;
                 }
                 
                 if(IG_u>IGumax_rf){
@@ -300,7 +327,8 @@ private:
                 msg_Ig.z = zone;
                 publisher_pwm->publish(msg);
                 publisher_IG->publish(msg_Ig);
-
+                IGu_prev = IG_u;
+                IGr_prev = IG_r;
 
             }else{
                 msg.t_left= 1500;
@@ -472,6 +500,17 @@ private:
                     return result;
                 }
             }
+            if (param.get_name() == "Sat"){
+                if(param.as_double() >= 0.0 or param.as_double() <= 1.0){
+                    RCLCPP_INFO(this->get_logger(), "changed param value");
+                    Sat = param.as_double();
+                }else{
+                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0.0 - 1.0");
+                    result.successful = false;
+                    result.reason = "Value out of range";
+                    return result;
+                }
+            }
         }
         result.successful = true;
         result.reason = "Success";
@@ -479,10 +518,11 @@ private:
     }
 
     bool armed = false;
-    float u_hat = 0, psi_hat = 0, r_hat = 0, sig_u = 0, sig_r = 0, u_ref = 0, psi_ref = 0, r_ref = 0, u_dot_ref = 0, r_dot_ref = 0;
+    float u_hat = 0, psi_hat = 0, r_hat = 0, sig_u = 0, sig_r = 0, u_ref = 0.2, psi_ref = 0, r_ref = 0, u_dot_ref = 0, r_dot_ref = 0;
     float c_ref;
     int count=0;
     float integral_error=0;
+    float IGu_prev = 0.0, IGr_prev = 0.0;
     //------Params-------//
     float Ts;  
     /*Parámetros del controlador Sliding Modes*/
@@ -494,6 +534,7 @@ private:
     float taud; /*Constante tau del filtro derivativo*/
     float a ,b; /*Constantes del filtro derivativo*/
     float Su_en, Sr_en; /*Enable IGr y Sigmas surge y yaw*/
+    float Sat; /*Coeficientes de saturacion*/
 
     float mf0, mf1, mf2, mf3, mf4, mf5;
     float mr0, mr1, mr2, mr3, mr4, mr5;

@@ -91,6 +91,8 @@ public:
                 rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackPoseLiuData, this, std::placeholders::_1));
         subscriber_pose_zono= this-> create_subscription<geometry_msgs::msg::PoseStamped>("/" + name_id + "/observer/pose_zono",
                 rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackPoseZonoData, this, std::placeholders::_1));
+        subscriber_sigmas_zono = this-> create_subscription<geometry_msgs::msg::Vector3>("/" + name_id + "/observer/sigmas_zono",1,
+                std::bind(&BagRecordNode::callbackSigmaZono, this, std::placeholders::_1));
         subscriber_compass= this-> create_subscription<std_msgs::msg::Float64>("/" + name_id + "/mavros/global_position/compass_hdg",
                 rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackCompassData, this, std::placeholders::_1));
         subscriber_vel_body= this-> create_subscription<geometry_msgs::msg::TwistStamped>("/" + name_id + "/mavros/local_position/velocity_body",
@@ -101,8 +103,16 @@ public:
                 std::bind(&BagRecordNode::callbackXbeeData, this, std::placeholders::_1));
         subscriber_IG = this-> create_subscription<geometry_msgs::msg::Vector3>("/" + name_id + "/control/IG_ifac",1,
                 std::bind(&BagRecordNode::callbackIG, this, std::placeholders::_1));
-        subscriber_ref_mlc = create_subscription<std_msgs::msg::Float64>("/" + name_id + "/control/reference_mlc", 1,
+        subscriber_ref_mlc = this-> create_subscription<std_msgs::msg::Float64>("/" + name_id + "/control/reference_mlc", 1,
                 std::bind(&BagRecordNode::callbackRefMlc, this, std::placeholders::_1));
+        subscriber_ref_hlc = this -> create_subscription<std_msgs::msg::Float64>("/" + name_id + "/control/reference_hlc", 1,
+                std::bind(&BagRecordNode::callbackRefHlc, this, std::placeholders::_1));
+        subscriber_mlc_slave = this-> create_subscription<std_msgs::msg::Float64>("/" + name_id + "/comunication/mlc_slave", 1,
+                std::bind(&BagRecordNode::callbackMlcSlave, this, std::placeholders::_1));
+        subscriber_w_virtual = this-> create_subscription<std_msgs::msg::Float64>("/" + name_id + "/control/w_virtual", 1,
+                std::bind(&BagRecordNode::callbackWVirtual, this, std::placeholders::_1));
+        subscriber_ref_master = this-> create_subscription<geometry_msgs::msg::Vector3>("/" + name_id + "/control/ref_master",10,
+                std::bind(&BagRecordNode::callbackRefMaster, this, std::placeholders::_1));
         subscriber_error_mlc = this-> create_subscription<geometry_msgs::msg::Vector3>("/" + name_id + "/control/error_mlc",1,
                 std::bind(&BagRecordNode::callbackErrorMlc, this, std::placeholders::_1));
         subscriber_accel = this-> create_subscription<geometry_msgs::msg::Twist>("/" + name_id + "/control/accel_imu",1,
@@ -110,10 +120,46 @@ public:
         subscriber_accel_ext = this-> create_subscription<geometry_msgs::msg::Twist>("/" + name_id + "/control/accel_imu_ext",1,
                 std::bind(&BagRecordNode::callbackAccelerationExt, this, std::placeholders::_1));
 
+        subscriber_hlc_ = this-> create_subscription<asv_interfaces::msg::StateObserver>("/" + name_id + "/control/output_hlc",
+            rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackHLCReference,this, std::placeholders::_1));
+        
+
     	RCLCPP_INFO(this->get_logger(), "Bag Record Node has been started.");
     }
 
 private:
+    void callbackRefHlc(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
+    {
+        if(armed==true){
+            rclcpp::Time time_stamp = this->now();
+            writer_->write(msg, "/" + name_id + "/control/reference_hlc", "std_msgs/msg/Float64", time_stamp);
+        }
+    }
+
+    void callbackMlcSlave(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
+    {
+        if(armed==true){
+            rclcpp::Time time_stamp = this->now();
+            writer_->write(msg, "/" + name_id + "/comunication/mlc_slave", "std_msgs/msg/Float64", time_stamp);
+        }
+    }
+
+    void callbackWVirtual(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
+    {
+        if(armed==true){
+            rclcpp::Time time_stamp = this->now();
+            writer_->write(msg, "/" + name_id + "/control/w_virtual", "std_msgs/msg/Float64", time_stamp);
+        }
+    }
+
+    void callbackRefMaster(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
+    {
+        if(armed==true){
+            rclcpp::Time time_stamp = this->now();
+            writer_->write(msg, "/" + name_id + "/control/ref_master", "geometry_msgs/msg/Vector3", time_stamp);
+        }
+    }
+
     void callbackXbeeData(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
     {
         if(armed==true){
@@ -223,6 +269,14 @@ private:
         if(armed==true){
             rclcpp::Time time_stamp = this->now();
             writer_->write(msg, "/" + name_id + "/observer/state_observer_zono_max", "asv_interfaces/msg/StateObserver", time_stamp);
+        }
+    }
+
+    void callbackSigmaZono(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
+    {
+        if(armed==true){
+            rclcpp::Time time_stamp = this->now();
+            writer_->write(msg, "/" + name_id + "/observer/sigmas_zono", "geometry_msgs/msg/Vector3", time_stamp);
         }
     }
 
@@ -415,6 +469,13 @@ private:
         }
     }
     
+    void callbackHLCReference(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
+    {
+        if(armed==true){
+            rclcpp::Time time_stamp = this->now();
+            writer_->write(msg, "/" + name_id + "/control/output_hlc" , "asv_interfaces/msg/StateObserver", time_stamp);
+        }
+    }
 
     std::string my_id, name_id;
     std::string name_bag;
@@ -444,6 +505,7 @@ private:
     rclcpp::Subscription<asv_interfaces::msg::StateObserver>::SharedPtr subscriber_state_zono_min;
     rclcpp::Subscription<asv_interfaces::msg::StateObserver>::SharedPtr subscriber_state_zono_max;
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr subscriber_pose_zono;
+    rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr subscriber_sigmas_zono;
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr subscriber_pose_guille;
     rclcpp::Subscription<asv_interfaces::msg::StateObserver>::SharedPtr subscriber_state_guille;
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr subscriber_pose;
@@ -453,10 +515,15 @@ private:
     rclcpp::Subscription<geometry_msgs::msg::TwistStamped>::SharedPtr subscriber_vel_body;
     rclcpp::Subscription<asv_interfaces::msg::XbeeObserver>::SharedPtr subscriber_xbee;
     rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr subscriber_ref_mlc;
+    rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr subscriber_ref_hlc;
+    rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr subscriber_mlc_slave;
+    rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr subscriber_w_virtual;
+    rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr subscriber_ref_master;
     rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr subscriber_IG;
     rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr subscriber_error_mlc;
     rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr subscriber_accel;
     rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr subscriber_accel_ext;
+    rclcpp::Subscription<asv_interfaces::msg::StateObserver>::SharedPtr subscriber_hlc_;
     
 };
 

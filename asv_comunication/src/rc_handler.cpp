@@ -353,10 +353,11 @@ private:
             threads_.push_back(std::thread(std::bind(&RcHandlerNode::callSetStreamRate, this)));
             RCLCPP_INFO(this->get_logger(), "Set Home and rate");
             threads_.push_back(std::thread(std::bind(&RcHandlerNode::callSetHomeMavros, this)));
+            
+            RCLCPP_INFO(this->get_logger(), "mode: %s, manual input: %d, armed: %d", msg->mode.c_str(),
+            msg->manual_input, msg->armed);
         }
         armed= msg->armed;
-        // RCLCPP_INFO(this->get_logger(), "mode: %s, manual input: %d, armed: %d", msg->mode.c_str(),
-        //                 msg->manual_input, msg->armed);
     }
 
     rcl_interfaces::msg::SetParametersResult param_callback(const std::vector<rclcpp::Parameter> &params){

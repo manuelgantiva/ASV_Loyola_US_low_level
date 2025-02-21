@@ -44,6 +44,11 @@ public:
         this-> declare_parameter("Dz_up", 0.0750);
         this-> declare_parameter("Dz_down", -0.08);
 
+        this-> declare_parameter("Xu", std::vector<float>{1.0, 1.0, 1.0, 1.0});
+        this-> declare_parameter("Xv", std::vector<float>{1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0});
+        this-> declare_parameter("Xr", std::vector<float>{1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0});
+
+        this-> declare_parameter("Max_n_psi", 0.01);
         this-> declare_parameter("Max_n_r", 0.01);
         this-> declare_parameter("Max_n_p", 0.02);
         this-> declare_parameter("Max_w_r", 0.01);
@@ -52,9 +57,11 @@ public:
         this-> declare_parameter("q", 300);
         this-> declare_parameter("met", 1);
 
-        this-> declare_parameter("Wpsi_di", std::vector<float>{1.0, 1.0, 1.0});
+        this-> declare_parameter("Wr_di", std::vector<float>{1.0, 1.0, 1.0});
         this-> declare_parameter("Wp_di", std::vector<float>{1.0, 1.0, 1.0, 1.0, 1.0, 1.0});
-        
+
+        this-> declare_parameter("IMU_on", false);
+        this-> declare_parameter("Sig_on", false);
 
         my_id = (this->get_parameter("my_id").as_string());
         Ts = this->get_parameter("Ts").as_double();
@@ -71,9 +78,14 @@ public:
         Xr12 = this->get_parameter("Xr12").as_double();
         Xr13 = this->get_parameter("Xr13").as_double();
 
+        Xu = this->get_parameter("Xu").as_double_array();
+        Xv = this->get_parameter("Xv").as_double_array();
+        Xr = this->get_parameter("Xr").as_double_array();
+
         Dz_up  = this->get_parameter("Dz_up").as_double();
         Dz_down = this->get_parameter("Dz_down").as_double();
 
+        Max_n_psi = this->get_parameter("Max_n_psi").as_double();
         Max_n_r = this->get_parameter("Max_n_r").as_double(); // pequeños Metodo 2
         Max_n_p = this->get_parameter("Max_n_p").as_double();
         Max_w_r = this->get_parameter("Max_w_r").as_double();
@@ -82,16 +94,20 @@ public:
         q = this->get_parameter("q").as_int();
         met = this->get_parameter("met").as_int();
 
-        std::vector<double> Wpsi_di = this->get_parameter("Wpsi_di").as_double_array();
+        IMU_on = this->get_parameter("IMU_on").as_bool();
+        Sig_on = this->get_parameter("Sig_on").as_bool();
+
+        std::vector<double> Wr_di = this->get_parameter("Wr_di").as_double_array();
         std::vector<double> Wp_di = this->get_parameter("Wp_di").as_double_array();
 
-        Apsi << 1.0, t_s, 0.0,
+        Ar << 1.0, t_s, 0.0,
                 0.0, 1.0, t_s,
                 0.0, 0.0, 1.0; 
 
-        Cpsi << 1.0, 0.0, 0.0; 
+        Cr << 1.0, 0.0, 0.0,
+              0.0, 1.0, 0.0; 
 
-        Bwpsi << 0.0,
+        Bwr << 0.0,
                  0.0,
                  t_s; 
         
@@ -112,7 +128,7 @@ public:
                t_s, 0.0,
                0.0, t_s;
 
-        IGpsi << 0.0,
+        IGr << 0.0,
                 0.0,
                 0.0;
 
@@ -124,20 +140,21 @@ public:
               0.0;
 
         // Condiciones iniciales para los conjuntos
-        Zpsi_prior= Zonotopo(VectorXd::Zero(3), MatrixXd::Identity(3,3));
+        Zr_prior= Zonotopo(VectorXd::Zero(3), MatrixXd::Identity(3,3));
         Zp_prior = Zonotopo(VectorXd::Zero(6), MatrixXd::Identity(6,6));
 
-        Rpsi <<  Max_n_r;
+        Rr << Max_n_psi, 0.0,
+              0.0, Max_n_r;
         Rp << Max_n_p, 0.0,
               0.0, Max_n_p;
         
-        Qpsi << Max_w_r;
+        Qr << Max_w_r;
         Qp << Max_w_p, 0.0,
               0.0, Max_w_p;
  
-        Wpsi << Wpsi_di[0], 0, 0,
-                0, Wpsi_di[1], 0,
-                0, 0, Wpsi_di[2];
+        Wr << Wr_di[0], 0, 0,
+                0, Wr_di[1], 0,
+                0, 0, Wr_di[2];
 
         Wp << Wp_di[0], 0, 0, 0, 0, 0,
               0, Wp_di[1], 0, 0, 0, 0,
@@ -159,6 +176,10 @@ public:
 
         params_callback_handle_ = this->add_on_set_parameters_callback(std::bind(&ObserverZonoNode::param_callback, this, _1));
 
+        // suscribir a IMU 
+        subscriber_imu = this-> create_subscription<sensor_msgs::msg::Imu>("/" + my_id + "/comunication/imu_ext/data",
+                rclcpp::SensorDataQoS(), std::bind(&ObserverZonoNode::callbackImuData,
+                this, std::placeholders::_1), options_sensors_);
         subscriber_gps_local= this-> create_subscription<nav_msgs::msg::Odometry>("/" + my_id + "/mavros/global_position/local",
                 rclcpp::SensorDataQoS(), std::bind(&ObserverZonoNode::callbackGpsLocalData, this, std::placeholders::_1), options_sensors_);
         subscriber_rcout = this-> create_subscription<mavros_msgs::msg::RCOut>("/" + my_id + "/mavros/rc/out",1,
@@ -173,6 +194,7 @@ public:
                 rclcpp::SensorDataQoS());
         publisher_obs = this-> create_publisher<geometry_msgs::msg::PoseStamped>("/" + my_id + "/observer/pose_zono",
                 rclcpp::SensorDataQoS());
+        publisher_sigmas = this-> create_publisher<geometry_msgs::msg::Vector3>("/" + my_id + "/observer/sigmas_zono",1);
         
                                         
         RCLCPP_INFO(this->get_logger(), "Observer Zonotopos Node in %s has been started.", my_id.c_str());
@@ -183,10 +205,11 @@ private:
     {
         auto msg = asv_interfaces::msg::StateObserver();
         if(armed==false){ 
+            count=0;
             R2T.setZero();
-            Yp.setZero();
-            Zpsi_prior= Zonotopo(VectorXd::Zero(3), MatrixXd::Identity(3,3));
+            Zr_prior= Zonotopo(VectorXd::Zero(3), MatrixXd::Identity(3,3));
             Zp_prior = Zonotopo(VectorXd::Zero(6), MatrixXd::Identity(6,6));
+            Sigmas.setZero();
             {
                 std::lock_guard<std::mutex> lock(mutex_);
                 Yp.setZero();
@@ -194,18 +217,20 @@ private:
                 delta_mean=0;
                 beta=0;
                 psi = 0.0;
+                r = 0.0;
             }
         }else{
             if(count > 6){
                 //ssauto start = std::chrono::high_resolution_clock::now();
                 Vector <double, 2> Yp_i;
-                Vector <double, 1> Ypsi_i;
+                Vector <double, 2> Yr_i;
                 float delta_diff_i;
                 float delta_mean_i;
                 int beta_i;
                 {
                     std::lock_guard<std::mutex> lock(mutex_);
-                    Ypsi_i << psi;
+                    Yr_i << psi,
+                            r;
                     Yp_i = Yp;
                     delta_diff_i = delta_diff;
                     delta_mean_i = delta_mean;
@@ -221,41 +246,59 @@ private:
                 }else{
                     sig=-1;
                 }
-                
-                IGp(2,0) = (Xu6*sum_1)+(Xu7*delta_mean_i);
-                IGp(3,0) = (Xv10*sum_1*(1-beta_i)*sig)+(Xv11*delta_mean_i*delta_diff_i)+(Xv12*delta_mean_i*(1-beta_i)*sig)+(Xv13*delta_diff_i/2.0);
-                IGpsi(1,0)=(Xr10*sum_1*(1-beta_i)*sig)+(Xr11*delta_mean_i*delta_diff_i)+(Xr12*delta_mean_i*(1-beta_i)*sig)+(Xr13*delta_diff_i/2.0);
-
-                IGp(2,0) = IGp(2,0)*0.1;
-                IGp(3,0) = IGp(3,0)*0.1;
-                IGpsi(1,0) = IGpsi(1,0)*0.1;
-
+                                
+                // inicializar variables
                 if(count==7){
                     Eigen::VectorXd cr0(3);
-                    cr0 << Ypsi_i(0), 0.0, 0.0;  
+                    cr0 << Yr_i(0), 0.0, 0.0;  
                     Eigen::VectorXd cp0(6);
                     cp0 << Yp_i(0), Yp_i(1), 0.0, 0.0, 0.0, 0.0;  
-                    Zpsi_prior = Zonotopo(cr0, Eigen::MatrixXd::Identity(3, 3));  // Amplia Zonotopo si no estoy seguro
+                    Zr_prior = Zonotopo(cr0, Eigen::MatrixXd::Identity(3, 3));  // Amplia Zonotopo si no estoy seguro
                     Zp_prior = Zonotopo(cp0, Eigen::MatrixXd::Identity(6, 6));  // Amplia Zonotopo si no estoy seguro
+                    Zr_next = Zonotopo(cr0, Eigen::MatrixXd::Identity(3, 3));  // Iniciar para sigmas
+                    Zp_next = Zonotopo(cp0, Eigen::MatrixXd::Identity(6, 6));  // Iniciar para sigmas
                     count=count+1;
                 }
 
-                // Llamar al método de filtrado
-                Zpsi_next = Zonotopo::filteringPsi(Zpsi_prior, Ypsi_i, Cpsi, Rpsi, Eigen::MatrixXd::Identity(3, 3));
+                IGp(2,0) = (Xu6*sum_1)+(Xu7*delta_mean_i);
+                IGp(3,0) = (Xv10*sum_1*(1-beta_i)*sig)+(Xv11*delta_mean_i*delta_diff_i)+(Xv12*delta_mean_i*(1-beta_i)*sig)+(Xv13*delta_diff_i/2.0);
+                IGr(1,0)=(Xr10*sum_1*(1-beta_i)*sig)+(Xr11*delta_mean_i*delta_diff_i)+(Xr12*delta_mean_i*(1-beta_i)*sig)+(Xr13*delta_diff_i/2.0);
 
-                //Calcular bandas psi
-                MatrixXd br = rs_z(Zpsi_next);
+                if(Sig_on){
+                    Sigmas(0) = (Xu[0] * Zp_next.c(2) * std::abs(Zp_next.c(2)) + Xu[1] * Zp_next.c(3) * Zr_next.c(1) + Xu[2] * Zr_next.c(1) * Zr_next.c(1)
+                                + Xu[3] * Zp_next.c(2));
+                    Sigmas(1) = (Xv[0] * Zp_next.c(3) * std::abs(Zp_next.c(3)) + Xv[1] * Zp_next.c(3) * std::abs(Zr_next.c(1)) + Xv[2] * Zr_next.c(1) * std::abs(Zp_next.c(3)) 
+                                + Xv[3] * Zr_next.c(1) * std::abs(Zr_next.c(1)) + Xv[4] * Zp_next.c(2) * Zp_next.c(3) +Xv[5] * Zp_next.c(2) * Zr_next.c(1) 
+                                + Xv[6] * Zp_next.c(3) +Xv[7] * Zr_next.c(1));
+                    Sigmas(2) = (Xr[0] * Zp_next.c(3) * std::abs(Zp_next.c(3)) + Xr[1] * Zp_next.c(3) * std::abs(Zr_next.c(1)) + Xr[2] * Zr_next.c(1) * std::abs(Zp_next.c(3)) 
+                                + Xr[3] * Zr_next.c(1) * std::abs(Zr_next.c(1)) + Xr[4] * Zp_next.c(2) * Zp_next.c(3) + Xr[5] * Zp_next.c(2) * Zr_next.c(1) 
+                                + Xr[6] * Zp_next.c(3) + Xr[7] * Zr_next.c(1));
+                }
+
+                IGp(2,0) = (IGp(2,0) + Sigmas(0))*0.1;
+                IGp(3,0) = (IGp(3,0) + Sigmas(1))*0.1;
+                IGr(1,0) = (IGr(1,0) + Sigmas(2))*0.1;
+
+                // Llamar al método de filtrado
+                if(IMU_on){
+                    Zr_next = Zonotopo::filteringR(Zr_prior, Yr_i, Cr, Rr, Eigen::MatrixXd::Identity(3, 3));
+                }else{
+                    Zr_next = Zonotopo::filteringPsi(Zr_prior, Yr_i.segment(0,1), Cr.block<1,3>(0,0), Rr.block<1,1>(0,0), Eigen::MatrixXd::Identity(3, 3));
+                }
+                
+                //Calcular bandas rotacional
+                MatrixXd br = rs_z(Zr_next);
                 int nr = br.rows();
-                std::vector<double> min_psi(nr), max_psi(nr);
+                std::vector<double> min_r(nr), max_r(nr);
                 for (int oo = 0; oo < nr; ++oo) {
-                    min_psi[oo] = br(oo, 0);  // Primera columna de br (mínimos)
-                    max_psi[oo] = br(oo, 1);  // Segunda columna de br (máximos)
+                    min_r[oo] = br(oo, 0);  // Primera columna de br (mínimos)
+                    max_r[oo] = br(oo, 1);  // Segunda columna de br (máximos)
                 }
     
-                Zpsi_next.reduccionOrden(q,Wpsi);
+                Zr_next.reduccionOrden(q,Wr);
 
                 Zp_next = Zonotopo::filteringP(Zp_prior, Yp_i, Cp, Rp, Eigen::MatrixXd::Identity(6, 6));
-                //Calcular bandas
+                //Calcular bandas posicional
                 MatrixXd bp = rs_z(Zp_next);
                 int np = bp.rows();             
                 std::vector<double> min_p(np), max_p(np);
@@ -266,17 +309,17 @@ private:
 
                 Zp_next.reduccionOrden(2*q,Wp);
 
-                VectorXd qr = Apsi * Zpsi_next.c + IGpsi;
-                MatrixXd Hr1 = Apsi * Zpsi_next.H;
-                MatrixXd Hr2 = Bwpsi * Qpsi;
+                VectorXd qr = Ar * Zr_next.c + IGr;
+                MatrixXd Hr1 = Ar * Zr_next.H;
+                MatrixXd Hr2 = Bwr * Qr;
                 MatrixXd Hr(Hr1.rows(), Hr1.cols() + Hr2.cols());
                 Hr << Hr1, Hr2;
-                Zpsi_prior = Zonotopo(qr, Hr);
+                Zr_prior = Zonotopo(qr, Hr);
 
                 if(met == 1){
-                    Zp_prior = Zonotopo::prediction_Y(Ap,Zp_next,Ypsi_i(0)-Max_n_r,Ypsi_i(0)+Max_n_r,Bwp,Qp,IGp);
+                    Zp_prior = Zonotopo::prediction_Y(Ap,Zp_next,Yr_i(0)-Max_n_psi,Yr_i(0)+Max_n_psi,Bwp,Qp,IGp);
                 }else{
-                    Zp_prior = Zonotopo::prediction2_Y(Ap, t_s, Zp_next,Ypsi_i(0)-Max_n_r,Ypsi_i(0)+Max_n_r,Bwp,Qp,IGp,1);
+                    Zp_prior = Zonotopo::prediction2_Y(Ap, t_s, Zp_next,Yr_i(0)-Max_n_r,Yr_i(0)+Max_n_r,Bwp,Qp,IGp,1);
                 }
 
                 msg.header.stamp = this->now();
@@ -284,35 +327,35 @@ private:
 
                 msg.point.x=Zp_next.c(0);
                 msg.point.y=Zp_next.c(1);
-                msg.point.z=Zpsi_next.c(0);
+                msg.point.z=Zr_next.c(0);
                 msg.velocity.x=Zp_next.c(2);
                 msg.velocity.y=Zp_next.c(3);
-                msg.velocity.z=Zpsi_next.c(1);
-                msg.disturbances.x=Zp_next.c(4);
-                msg.disturbances.y=Zp_next.c(5);
-                msg.disturbances.z=Zpsi_next.c(2);
+                msg.velocity.z=Zr_next.c(1);
+                msg.disturbances.x=Zp_next.c(4) + Sigmas(0);
+                msg.disturbances.y=Zp_next.c(5) + Sigmas(1);
+                msg.disturbances.z=Zr_next.c(2) + Sigmas(2);
                 publisher_state->publish(msg);
 
                 msg.point.x=min_p[0];
                 msg.point.y=min_p[1];
-                msg.point.z=min_psi[0];
+                msg.point.z=min_r[0];
                 msg.velocity.x=min_p[2];
                 msg.velocity.y=min_p[3];
-                msg.velocity.z=min_psi[1];
-                msg.disturbances.x=min_p[4];
-                msg.disturbances.y=min_p[5];
-                msg.disturbances.z=min_psi[2];
+                msg.velocity.z=min_r[1];
+                msg.disturbances.x=min_p[4] + Sigmas(0);
+                msg.disturbances.y=min_p[5] + Sigmas(1);
+                msg.disturbances.z=min_r[2] + Sigmas(2);
                 publisher_state_min->publish(msg);
 
                 msg.point.x=max_p[0];
                 msg.point.y=max_p[1];
-                msg.point.z=max_psi[0];
+                msg.point.z=max_r[0];
                 msg.velocity.x=max_p[2];
                 msg.velocity.y=max_p[3];
-                msg.velocity.z=max_psi[1];
-                msg.disturbances.x=max_p[4];
-                msg.disturbances.y=max_p[5];
-                msg.disturbances.z=max_psi[2];
+                msg.velocity.z=max_r[1];
+                msg.disturbances.x=max_p[4] + Sigmas(0);
+                msg.disturbances.y=max_p[5] + Sigmas(1);
+                msg.disturbances.z=max_r[2] + Sigmas(2);
                 publisher_state_max->publish(msg);
 
                 auto msg_obs = geometry_msgs::msg::PoseStamped();
@@ -323,12 +366,20 @@ private:
                 msg_obs.pose.position.y= Zp_next.c(1);
                 msg_obs.pose.position.z= 0.0;
                 tf2::Quaternion q;
-                q.setRPY(0, 0, Zpsi_next.c(0));
+                q.setRPY(0, 0, Zr_next.c(0));
                 msg_obs.pose.orientation.x = q.x();
                 msg_obs.pose.orientation.y = q.y();
                 msg_obs.pose.orientation.z = q.z();
                 msg_obs.pose.orientation.w = q.w();
                 publisher_obs->publish(msg_obs); 
+
+                if(Sig_on){
+                    auto msg_s = geometry_msgs::msg::Vector3();
+                    msg_s.x = Zp_next.c(4); 
+                    msg_s.y = Zp_next.c(5); 
+                    msg_s.z = Zr_next.c(2); 
+                    publisher_sigmas->publish(msg_s);
+                }
 
                 //auto end = std::chrono::high_resolution_clock::now();
                 //std::chrono::duration<double> elapsed = end - start;
@@ -337,6 +388,17 @@ private:
             }else{
                 count=count+1;
             }
+        }
+    }
+
+    // void callaback IMU
+    void callbackImuData( const sensor_msgs::msg::Imu::SharedPtr msg)
+    {
+        if(armed==true){
+            {
+                std::lock_guard<std::mutex> lock(mutex_);
+                r = -1*msg->angular_velocity.z;                
+            }   
         }
     }
 
@@ -491,11 +553,23 @@ private:
                     return result;
                 }
             }
+            if (param.get_name() == "Max_n_psi"){
+                if(param.as_double() >= 0.0 and param.as_double() < 100.0){
+                    RCLCPP_INFO(this->get_logger(), "changed param value"); 
+                    Max_n_psi = param.as_double();
+                    Rr(0,0) = Max_n_psi;      
+                }else{
+                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-100");
+                    result.successful = false;
+                    result.reason = "Value out of range";
+                    return result;
+                }
+            }
             if (param.get_name() == "Max_n_r"){
                 if(param.as_double() >= 0.0 and param.as_double() < 100.0){
-                    RCLCPP_INFO(this->get_logger(), "changed param value");
+                    RCLCPP_INFO(this->get_logger(), "changed param value"); 
                     Max_n_r = param.as_double();
-                    Rpsi <<  Max_n_r;        
+                    Rr(1,1) = Max_n_r;      
                 }else{
                     RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-100");
                     result.successful = false;
@@ -520,7 +594,7 @@ private:
                 if(param.as_double() >= 0.0 and param.as_double() < 100.0){
                     RCLCPP_INFO(this->get_logger(), "changed param value");
                     Max_w_r = param.as_double();      
-                    Qpsi << Max_w_r;
+                    Qr << Max_w_r;
                 }else{
                     RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-100");
                     result.successful = false;
@@ -550,13 +624,13 @@ private:
                     return result;
                 }
             }
-            if (param.get_name() == "Wpsi_di"){
+            if (param.get_name() == "Wr_di"){
                 if(param.as_double_array().size() == 3){
                     RCLCPP_INFO(this->get_logger(), "changed param value");
-                    std::vector<double> Wpsi_di = param.as_double_array();
-                    Wpsi << Wpsi_di[0], 0, 0,
-                            0, Wpsi_di[1], 0,
-                            0, 0, Wpsi_di[2];
+                    std::vector<double> Wr_di = param.as_double_array();
+                    Wr << Wr_di[0], 0, 0,
+                            0, Wr_di[1], 0,
+                            0, 0, Wr_di[2];
                 }else{
                     RCLCPP_INFO(this->get_logger(), "could not change parameter value, array size must be 3");
                     result.successful = false;
@@ -581,6 +655,14 @@ private:
                     return result;
                 }
             }
+            if (param.get_name() == "IMU_on"){
+                RCLCPP_INFO(this->get_logger(), "changed param value");
+                IMU_on = this->get_parameter("IMU_on").as_bool();
+            }
+            if (param.get_name() == "Sig_on"){
+                RCLCPP_INFO(this->get_logger(), "changed param value");
+                Sig_on = this->get_parameter("Sig_on").as_bool();
+            }
         }
         result.successful = true;
         result.reason = "Success";
@@ -590,45 +672,54 @@ private:
     float psi_act = 0.0, psi_ant = 0.0, psi_0 = 0.0, psi = 0.0;
     int status_gps, laps=0;
     bool armed = false, armed_act = false;
+    float r = 0.0;
 
  //------Params-------//
     std::string my_id;
     float Ts, t_s, Xu6, Xu7, Xv10, Xv11, Xv12, Xv13, Xr10, Xr11 ,Xr12, Xr13;  
     float Dz_up, Dz_down;  
 
-    float Max_w_r, Max_w_p, Max_n_p, Max_n_r;
+    std::vector<double> Xu, Xv, Xr;
+
+    bool IMU_on, Sig_on;
+
+    float Max_w_r, Max_w_p, Max_n_p, Max_n_r, Max_n_psi;
 
     float delta_diff;
     float delta_mean;
     int beta, count=0, q, met;  
 
-    Matrix <double, 3,1> IGpsi; 
+    Matrix <double, 3,1> IGr; 
     Matrix <double, 6,1> IGp;
     Matrix <double, 2,2> R2T;
-    Vector <double, 2> Yp; 
-    Matrix <double, 3,3> Apsi;
-    Matrix <double, 1,3> Cpsi;
-    Matrix <double, 3,1> Bwpsi;
+    Vector <double, 2> Yp;
+    Vector <double, 3> Sigmas;  
+    Matrix <double, 3,3> Ar;
+    Matrix <double, 2,3> Cr;
+    Matrix <double, 3,1> Bwr;
     Matrix <double, 6,6> Ap;
     Matrix <double, 2,6> Cp;
     Matrix <double, 6,2> Bwp;
-    Matrix <double, 1,1> Rpsi;
+    Matrix <double, 2,2> Rr;
     Matrix <double, 2,2> Rp;
-    Matrix <double, 1,1> Qpsi;
+    Matrix <double, 1,1> Qr;
     Matrix <double, 2,2> Qp;
-    Matrix <double, 3,3> Wpsi;
+    Matrix <double, 3,3> Wr;
     Matrix <double, 6,6> Wp;
     
-    Zonotopo Zp_prior, Zpsi_prior, Zp_next, Zpsi_next;
+    Zonotopo Zp_prior, Zr_prior, Zp_next, Zr_next;
 
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr subscriber_gps_local;
     rclcpp::Subscription<mavros_msgs::msg::RCOut>::SharedPtr subscriber_rcout;
     rclcpp::Subscription<mavros_msgs::msg::State>::SharedPtr subscriber_state;
+    rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr subscriber_imu;
 
     rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr publisher_obs;
     rclcpp::Publisher<asv_interfaces::msg::StateObserver>::SharedPtr publisher_state;
     rclcpp::Publisher<asv_interfaces::msg::StateObserver>::SharedPtr publisher_state_min;
     rclcpp::Publisher<asv_interfaces::msg::StateObserver>::SharedPtr publisher_state_max;
+    rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr publisher_sigmas;
+
     rclcpp::TimerBase::SharedPtr timer_;
 
     // mutex callback group: 

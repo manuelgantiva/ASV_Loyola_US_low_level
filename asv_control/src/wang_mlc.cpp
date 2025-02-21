@@ -6,7 +6,8 @@
 
 #include <cmath>
 #include <thread>
-#include "asv_library/curvas_loyola.h"
+// #include "asv_library/curvas_sim.h"
+#include "asv_library/curvas_alamillo.h"
 
 using namespace std;
 
@@ -29,6 +30,8 @@ public:
         this-> declare_parameter("taud", 15.0); // Taud = #*Ts Est es #
         this-> declare_parameter("path_d", 0); // path_d = #Path deseado #
         this-> declare_parameter("flag", true); // path_d = #Path deseado #
+        this-> declare_parameter("u_max", 1.2); // path_d = #Path deseado #
+        this-> declare_parameter("SLOS_on", true); // path_d = #Path deseado #
 
         my_id = (this->get_parameter("my_id").as_string());    
         Ts = this->get_parameter("Ts").as_double()/1000.0;
@@ -37,6 +40,10 @@ public:
         taud = this->get_parameter("taud").as_double();
         path_d  = this->get_parameter("path_d").as_int();
         flag  = this->get_parameter("flag").as_bool();
+        u_max = this->get_parameter("u_max").as_double();
+        bool SLOS_on = this->get_parameter("SLOS_on").as_bool();
+
+        LOS = static_cast<double>(SLOS_on);
 
         memory_psi.assign(4, 0.0);
 
@@ -116,7 +123,7 @@ private:
                 msg_e.z = w;
 
                 float k1_i = u_d_i / delta_SGLOS;
-                float u_ref = k1_i * std::sqrt(delta_SGLOS*delta_SGLOS + ye*ye);
+                float u_ref = k1_i * std::sqrt(delta_SGLOS*delta_SGLOS + ye*ye*LOS);
                 float b_ref = 0.0;
                 if(flag){
                     b_ref = atan2(v_hat_i, u_ref);
@@ -149,17 +156,15 @@ private:
                         
                 float r_ref = derivationFilter(psi_ref, memory_psi, a, b);
 
-                float r_ref_max = 0.8; //0.6
+                float r_ref_max = 0.8;
                 if(r_ref > r_ref_max){
                     r_ref = r_ref_max;
                 }else if(r_ref < -r_ref_max){
                     r_ref = -r_ref_max;
                 }
 
-                if(u_ref > 2.0){
-                    u_ref = 2.0;
-                }else if(u_ref < -2.0){
-                    u_ref = -2.0;
+                if(u_ref > u_max){
+                    u_ref = u_max;
                 }
                 
                 msg.x = u_ref;
@@ -231,46 +236,85 @@ private:
                 result.dyp = 0;
                 break;
             case 1:
-                result = curva_2_d(w);
+                // result = curva_sim_2_6(w);
+                result = curva_ala_1_2(w);
                 break;
             case 2:
-                result = curva_2_c(w);
+                // result = curva_sim_2_8(w);
+                result = curva_ala_1_4(w);
                 break;
             case 3:
-                result = curva_2_i(w);
+                // result = curva_sim_2_10(w);
+                result = curva_ala_1_6(w);
                 break;
             case 4:
-                //result = curva4(w);
+                // result = curva_sim_3_6(w);
+                result = curva_ala_2_2(w);
                 break;
             case 5:
-                //result = curva5(w);
+                // result = curva_sim_3_8(w);
+                result = curva_ala_2_4(w);
                 break;
             case 6:
-                //result = curva6(w);
+                // result = curva_sim_3_10(w);
+                result = curva_ala_2_6(w);
                 break;
             case 7:
-                //result = curva7(w);
+                result = curva_ala_3_1(w);
                 break;
             case 8:
-                //result = curva8(w);
+                result = curva_ala_3_2(w);
                 break;
             case 9:
-                //result = curva9(w);
+                result = curva_ala_3_3(w);
                 break;
             case 10:
-                //result = curva10(w);
+                result = curva_ala_4_2(w);
                 break;
             case 11:
-                //result = curva11(w);
+                result = curva_ala_4_3(w);
                 break;
             case 12:
-                //result = curva12(w);
+                result = curva_ala_4_4(w);
+                break;
+            case 13:
+                result = curva_ala_5_4(w);
+                break;
+            case 14:
+                result = curva_ala_5_5(w);
+                break;
+            case 15:
+                result = curva_ala_5_6(w);
+                break;
+            case 16:
+                result = curva_ala_6_2(w);
+                break;
+            case 17:
+                result = curva_ala_6_3(w);
+                break;
+            case 18:
+                result = curva_ala_6_4(w);
+                break;
+            case 19:
+                result = curva_ala_7_4(w);
+                break;
+            case 20:
+                result = curva_ala_7_5(w);
+                break;
+            case 21:
+                result = curva_ala_7_6(w);
+                break;
+            case 22:
+                result = curva_lissajous_1(w);
+                break;
+            case 23:
+                result = curva_lissajous_2(w);
                 break;
             default:
                 result.xp =0.0;
                 result.yp = 0.0;
                 result.dxp = 0.0;
-                result.dyp = 0.0;        
+                result.dyp = 0.0;     
         }
         return result;
     }
@@ -326,11 +370,11 @@ private:
                 }
             }
             if (param.get_name() == "path_d"){
-                if(param.as_int() >= 0 and param.as_int() <= 12){
+                if(param.as_int() >= 0 and param.as_int() <= 23){
                     RCLCPP_INFO(this->get_logger(), "changed param value");
                     path_d = param.as_int();
                 }else{
-                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-12");
+                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-23");
                     result.successful = false;
                     result.reason = "Value out of range";
                     return result;
@@ -339,6 +383,22 @@ private:
             if (param.get_name() == "flag"){
                 RCLCPP_INFO(this->get_logger(), "changed param value");
                 flag = param.as_bool();
+            }
+            if (param.get_name() == "u_max"){
+                if(param.as_double() >= 0.0 and param.as_double() < 2.1){
+                    RCLCPP_INFO(this->get_logger(), "changed param value");
+                    u_max = param.as_double();
+                }else{
+                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0.0-2.0");
+                    result.successful = false;
+                    result.reason = "Value out of range";
+                    return result;
+                }
+            }
+            if (param.get_name() == "SLOS_on"){
+                RCLCPP_INFO(this->get_logger(), "changed param value");
+                bool SLOS_on = param.as_bool();
+                LOS = static_cast<double>(SLOS_on);
             }
         }
         result.successful = true;
@@ -354,6 +414,9 @@ private:
     /*Parámetros del controlador SGLOS*/
     float delta_SGLOS; /*Ganancia delta SGLOS*/
     float k_u_tar; /*Ganancia de la velocidad de surge target*/
+
+    float u_max; /*velocidad maxima de referencia*/
+    float LOS; /*velocidad maxima de referencia*/
     
     float taud; /*Constante tau del filtro derivativo*/
     float a ,b; /*Constantes del filtro derivativo*/
