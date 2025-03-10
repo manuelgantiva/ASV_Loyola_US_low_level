@@ -20,7 +20,7 @@ const int PWMMIN = 1100;
 class LyapHlcNode : public rclcpp::Node
 {
 public:
-    LyapHlcNode()) : Node("wang_mlc")
+    LyapHlcNode()) : Node("lyap_hlc")
     { 
         std::string my_id; 
         this-> declare_parameter("my_id", "ASV0");   
