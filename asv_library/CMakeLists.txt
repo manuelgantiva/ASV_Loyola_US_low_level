@@ -19,7 +19,8 @@ add_library(asv_library
   src/Zonotopo.cpp 
   src/curvas_sim.cpp 
   src/curvas_alamillo.cpp 
-  src/curvas_loyola.cpp)
+  src/curvas_loyola.cpp
+  src/curvas_gelves.cpp)
  
 # this line to exports the library
 ament_export_targets(asv_library HAS_LIBRARY_TARGET)
