@@ -8,6 +8,7 @@
 #include "asv_interfaces/msg/state_observer.hpp"    //Interface state observer
 #include "nav_msgs/msg/odometry.hpp"                //Interface gps global local data
 #include "std_msgs/msg/float32_multi_array.hpp"          // Interface coeficientes polinomio
+#include "std_msgs/msg/bool.hpp"                    //Interface armed data
 
 // #include "tf2/exceptions.h"
 // #include "tf2_ros/transform_listener.h"
@@ -37,6 +38,13 @@ public:
         this-> declare_parameter("Dz_up", 0.0750);
         this-> declare_parameter("Dz_down", -0.08);
 
+        this-> declare_parameter("R", 0.01);
+
+        // variacion de parámetros
+        this-> declare_parameter("max_diff_Xu", std::vector<double>{0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1});
+        this-> declare_parameter("max_diff_Xv", std::vector<double>{0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1});
+        this-> declare_parameter("max_diff_Xr", std::vector<double>{0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1});
+
         my_id = (this->get_parameter("my_id").as_string());
         Ts = this->get_parameter("Ts").as_double();
         t_s = Ts/1000; // En segundos
@@ -45,11 +53,17 @@ public:
         std::copy(Xv.begin(), Xv.end(), Xv.data());
         std::copy(Xr.begin(), Xr.end(), Xr.data());
 
+        std::copy(max_diff_Xu.begin(), max_diff_Xu.end(), max_diff_Xu.data());
+        std::copy(max_diff_Xv.begin(), max_diff_Xv.end(), max_diff_Xv.data());
+        std::copy(max_diff_Xr.begin(), max_diff_Xr.end(), max_diff_Xr.data());
+
         /* Xu = this->get_parameter("Xu").as_double_array();
         Xv = this->get_parameter("Xv").as_double_array();
         Xr = this->get_parameter("Xr").as_double_array();*/
         Dz_up  = this->get_parameter("Dz_up").as_double();
         Dz_down = this->get_parameter("Dz_down").as_double();
+
+        R_value = this->get_parameter("R").as_double();
         
         cb_group_sensors_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
         cb_group_obs_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
@@ -72,8 +86,15 @@ public:
         subscriber_state = this-> create_subscription<mavros_msgs::msg::State>("/" + my_id + "/mavros/state",1,
                 std::bind(&ObserverParamNode::callbackStateData, this, std::placeholders::_1), options_sensors_);
 
-        publisher_ = this-> create_publisher<std_msgs::msg::Float32MultiArray>("/" + my_id + "/observer/observer_param",
+        publisher_param = this-> create_publisher<std_msgs::msg::Float32MultiArray>("/" + my_id + "/observer/observer_param",
                     rclcpp::SensorDataQoS());
+        publisher_kalmangains = this-> create_publisher<std_msgs::msg::Float32MultiArray>("/" + my_id + "/observer/kalman_gains",
+                    rclcpp::SensorDataQoS());
+        publisher_velocities = this-> create_publisher<geometry_msgs::msg::PoseStamped>("/" + my_id + "/observer/velocities",
+                    rclcpp::SensorDataQoS());
+        publisher_setparam = this-> create_publisher<std_msgs::msg::Bool>("/" + my_id + "/observer/set_param",
+                    1);
+        
                                             
         RCLCPP_INFO(this->get_logger(), "Observer Parameters Node in %s has been started.", my_id.c_str());
     }
@@ -84,6 +105,7 @@ private:
         auto msg = asv_interfaces::msg::StateObserver();
         if(armed==false){ 
             count=0;
+            count_set=0;
             {
                 std::lock_guard<std::mutex> lock(mutex_);
                 bufferX.clear();
@@ -101,7 +123,7 @@ private:
                 P_bar_v = Eigen::MatrixXd::Identity(13, 13);
                 P_bar_r = Eigen::MatrixXd::Identity(13, 13);
                 // Matriz de covarianza del ruido de medida (R)
-                R = Eigen::Matrix<double, 1, 1> {0.01};
+                R = Eigen::Matrix<double, 1, 1> {R_value};
             }
         }else{
             if(count > n_SG+6){
@@ -170,7 +192,7 @@ private:
                 P_bar_r = (Eigen::MatrixXd::Identity(13, 13) - L_r * Ar) * P_bar_r;
 
 
-                // Publicar el mensaje
+                // Publicar los valores de Xu, Xv, Xr
                 std_msgs::msg::Float32MultiArray msg;
 
                 // Configuramos el layout para un arreglo unidimensional
@@ -198,7 +220,81 @@ private:
                 }
 
                 // Publicamos el mensaje
-                publisher_->publish(msg);
+                publisher_param->publish(msg);
+
+                // Publicar los valores de las ganancias de Kalman
+                std_msgs::msg::Float32MultiArray msg_kg;
+                
+                // Configuramos el layout para un arreglo unidimensional
+                msg_kg.layout.dim.resize(1);
+                msg_kg.layout.dim[0].label = "kalman_gains";
+                msg_kg.layout.dim[0].size = 7 + 13 + 13;    // Total de elementos
+                msg_kg.layout.dim[0].stride = 7 + 13 + 13;  // En este caso, stride = tamaño total
+
+                // Limpiamos el vector de datos
+                msg_kg.data.clear();
+
+                // Agregamos los elementos de L_u (suponiendo que L_u es accesible como un array o vector)
+                for (size_t i = 0; i < 7; ++i) {
+                    msg_kg.data.push_back(static_cast<float>(L_u[i]));
+                }
+                
+                // Agregamos los elementos de L_v
+                for (size_t i = 0; i < 13; ++i) {
+                    msg_kg.data.push_back(static_cast<float>(L_v[i]));
+                }
+
+                // Agregamos los elementos de L_r
+                for (size_t i = 0; i < 13; ++i) {
+                    msg_kg.data.push_back(static_cast<float>(L_r[i]));
+                }
+
+                // Publicamos el mensaje
+                publisher_kalmangains->publish(msg_kg);
+
+                // Publicar los valores de las velocidades surge, sway y yaw
+                geometry_msgs::msg::PoseStamped msg_velocities;
+                msg_velocities.header.stamp = this->now();
+                msg_velocities.header.frame_id = "odom";
+                msg_velocities.pose.position.x = u;
+                msg_velocities.pose.position.y = v;
+                msg_velocities.pose.position.z = r;
+                publisher_velocities->publish(msg_velocities);
+
+
+                // Publicar mensaje para setear los parámetros en el observador de estados
+                count_set = count_set + 1;
+                Eigen::Matrix<double, 7, 1> max_diff_Xu = {max_diff_Xu[0], max_diff_Xu[1], max_diff_Xu[2], max_diff_Xu[3], max_diff_Xu[4], max_diff_Xu[5], max_diff_Xu[6]};
+                Eigen::Matrix<double, 13, 1> max_diff_Xv = {max_diff_Xv[0], max_diff_Xv[1], max_diff_Xv[2], max_diff_Xv[3], max_diff_Xv[4], max_diff_Xv[5], max_diff_Xv[6], max_diff_Xv[7], max_diff_Xv[8], max_diff_Xv[9], max_diff_Xv[10], max_diff_Xv[11], max_diff_Xv[12]};
+                Eigen::Matrix<double, 13, 1> max_diff_Xr = {max_diff_Xr[0], max_diff_Xr[1], max_diff_Xr[2], max_diff_Xr[3], max_diff_Xr[4], max_diff_Xr[5], max_diff_Xr[6], max_diff_Xr[7], max_diff_Xr[8], max_diff_Xr[9], max_diff_Xr[10], max_diff_Xr[11], max_diff_Xr[12]};
+                // si se ha superado el número de iteraciones
+                if (count_set > 6000)
+                {
+                    auto msg_set = std_msgs::msg::Bool();
+                    msg_set.data = true;
+                    publisher_setparam->publish(msg_set);
+                }
+                // si la diferencia de Xu y max_diff_Xu es mayor a un umbral
+                if (std::abs(Xu[0] - Xu_km1[0]) > max_diff_Xu[0] || std::abs(Xu[1] - Xu_km1[1]) > max_diff_Xu[1] || std::abs(Xu[2] - Xu_km1[2]) > max_diff_Xu[2] || std::abs(Xu[3] - Xu_km1[3]) > max_diff_Xu[3] || std::abs(Xu[4] - Xu_km1[4]) > max_diff_Xu[4] || std::abs(Xu[5] - Xu_km1[5]) > max_diff_Xu[5] || std::abs(Xu[6] - Xu_km1[6]) > max_diff_Xu[6])
+                {
+                    auto msg_set = std_msgs::msg::Bool();
+                    msg_set.data = true;
+                    publisher_setparam->publish(msg_set);
+                }
+                // si la diferencia de Xv y max_diff_Xv es mayor a un umbral
+                if (std::abs(Xv[0] - Xv_km1[0]) > max_diff_Xv[0] || std::abs(Xv[1] - Xv_km1[1]) > max_diff_Xv[1] || std::abs(Xv[2] - Xv_km1[2]) > max_diff_Xv[2] || std::abs(Xv[3] - Xv_km1[3]) > max_diff_Xv[3] || std::abs(Xv[4] - Xv_km1[4]) > max_diff_Xv[4] || std::abs(Xv[5] - Xv_km1[5]) > max_diff_Xv[5] || std::abs(Xv[6] - Xv_km1[6]) > max_diff_Xv[6] || std::abs(Xv[7] - Xv_km1[7]) > max_diff_Xv[7] || std::abs(Xv[8] - Xv_km1[8]) > max_diff_Xv[8] || std::abs(Xv[9] - Xv_km1[9]) > max_diff_Xv[9] || std::abs(Xv[10] - Xv_km1[10]) > max_diff_Xv[10] || std::abs(Xv[11] - Xv_km1[11]) > max_diff_Xv[11] || std::abs(Xv[12] - Xv_km1[12]) > max_diff_Xv[12])
+                {
+                    auto msg_set = std_msgs::msg::Bool();
+                    msg_set.data = true;
+                    publisher_setparam->publish(msg_set);
+                }
+                // si la diferencia de Xr y max_diff_Xr es mayor a un umbral
+                if (std::abs(Xr[0] - Xr_km1[0]) > max_diff_Xr[0] || std::abs(Xr[1] - Xr_km1[1]) > max_diff_Xr[1] || std::abs(Xr[2] - Xr_km1[2]) > max_diff_Xr[2] || std::abs(Xr[3] - Xr_km1[3]) > max_diff_Xr[3] || std::abs(Xr[4] - Xr_km1[4]) > max_diff_Xr[4] || std::abs(Xr[5] - Xr_km1[5]) > max_diff_Xr[5] || std::abs(Xr[6] - Xr_km1[6]) > max_diff_Xr[6] || std::abs(Xr[7] - Xr_km1[7]) > max_diff_Xr[7] || std::abs(Xr[8] - Xr_km1[8]) > max_diff_Xr[8] || std::abs(Xr[9] - Xr_km1[9]) > max_diff_Xr[9] || std::abs(Xr[10] - Xr_km1[10]) > max_diff_Xr[10] || std::abs(Xr[11] - Xr_km1[11]) > max_diff_Xr[11] || std::abs(Xr[12] - Xr_km1[12]) > max_diff_Xr[12])
+                {
+                    auto msg_set = std_msgs::msg::Bool();
+                    msg_set.data = true;
+                    publisher_setparam->publish(msg_set);
+                }
 
                 /*auto msg = std_msgs::msg::Float32MultiArray();    
                 publisher_->publish(msg);   
@@ -455,6 +551,7 @@ private:
     Eigen::Matrix<double, 1, 13> Xv, Xr;
     float t_s;
     int count=0;
+    int count_set = 0;
     std::vector<double> bufferX;
     std::vector<double> bufferY;
     std::vector<double> bufferPsi;
@@ -468,6 +565,10 @@ private:
     float u = 0.0f;
     float v = 0.0f;
 
+    Eigen::Matrix<double, 1, 7> max_diff_Xu;
+    Eigen::Matrix<double, 1, 13> max_diff_Xv;
+    Eigen::Matrix<double, 1, 13> max_diff_Xr;
+
     // Inicializar ganancias de Kalman 
     /// matrizx de zeros 
     Eigen::Matrix<double, 7,1> L_u;
@@ -479,6 +580,7 @@ private:
     Eigen::Matrix<double, 13,13> P_bar_r;
     // Matriz de covarianza del ruido de medida (R)
     Eigen::Matrix<double, 1, 1> R;
+    double R_value;
     
             
     int n_SG = 25;
@@ -493,7 +595,10 @@ private:
     rclcpp::Subscription<mavros_msgs::msg::RCOut>::SharedPtr subscriber_rcout;
     rclcpp::Subscription<mavros_msgs::msg::State>::SharedPtr subscriber_state;
     rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr subscriber_imu;
-    rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr publisher_;
+    rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr publisher_param;
+    rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr publisher_kalmangains;
+    rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr publisher_velocities;
+    rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr publisher_setparam;
 
     rclcpp::TimerBase::SharedPtr timer_;
 
