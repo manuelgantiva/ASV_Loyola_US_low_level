@@ -7,7 +7,8 @@
 #include <cmath>
 #include <thread>
 // #include "asv_library/curvas_sim.h"
-#include "asv_library/curvas_alamillo.h"
+// #include "asv_library/curvas_alamillo.h"
+#include "asv_library/curvas_gelves.h"
 
 using namespace std;
 
@@ -236,29 +237,35 @@ private:
                 break;
             case 1:
                 // result = curva_sim_2_6(w);
-                result = curva_ala_1_2(w);
+                // result = curva_ala_1_2(w);
+                result = curva_gel_1_3(w);
                 break;
             case 2:
                 // result = curva_sim_2_8(w);
-                result = curva_ala_1_4(w);
+                // result = curva_ala_1_4(w);
+                result = curva_gel_1_4(w);
                 break;
             case 3:
                 // result = curva_sim_2_10(w);
-                result = curva_ala_1_6(w);
+                // result = curva_ala_1_6(w);
+                result = curva_gel_1_6(w);
                 break;
             case 4:
                 // result = curva_sim_3_6(w);
-                result = curva_ala_2_2(w);
+                // result = curva_ala_2_2(w);
+                result = curva_gel_2_3(w);
                 break;
             case 5:
                 // result = curva_sim_3_8(w);
-                result = curva_ala_2_4(w);
+                // result = curva_ala_2_4(w);
+                result = curva_gel_2_4(w);
                 break;
             case 6:
                 // result = curva_sim_3_10(w);
-                result = curva_ala_2_6(w);
+                // result = curva_ala_2_6(w);
+                result = curva_gel_2_6(w);
                 break;
-            case 7:
+            /*case 7:
                 result = curva_ala_3_1(w);
                 break;
             case 8:
@@ -317,7 +324,7 @@ private:
                 break;
             case 26:
                 result = curva_lissajous_3(w);
-                break;
+                break;*/
             default:
                 result.xp =0.0;
                 result.yp = 0.0;
@@ -378,11 +385,11 @@ private:
                 }
             }
             if (param.get_name() == "path_d"){
-                if(param.as_int() >= 0 and param.as_int() <= 26){
+                if(param.as_int() >= 0 and param.as_int() <= 6){
                     RCLCPP_INFO(this->get_logger(), "changed param value");
                     path_d = param.as_int();
                 }else{
-                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-26");
+                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-6");
                     result.successful = false;
                     result.reason = "Value out of range";
                     return result;

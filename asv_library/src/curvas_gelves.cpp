@@ -60,7 +60,7 @@ Target curva_gel_1_6(float w){
     }
     else if (w >=28.01651864 && w < 29.59985197) {
         //Línea recta
-        arco(w - 28.01651864 , &result,  -122, -26.5 , 6.0,0 );
+        recta(w - 28.01651864 , &result,  -122, 26.5 , 6.0,0 );
     }
     else if (w >= 29.59985197&& w < 31.17064834) {
         //curva
@@ -68,7 +68,7 @@ Target curva_gel_1_6(float w){
     }
     else if (w >=31.17064834 && w < 32.88175947) {
         //Línea recta
-        arco(w - 31.17064834 , &result,  -106.5, -20.5 , 0,-4.5 );
+        recta(w - 31.17064834 , &result,  -106.5, 20.5 , 0,-4.5 );
     }
     else if (w >=32.88175947 && w < 34.4525558) {
         //curva
@@ -76,7 +76,7 @@ Target curva_gel_1_6(float w){
     }
     else if (w >=34.4525558) {
         //Línea recta
-        arco(w - 34.4525558 , &result,  -103.5, 9.8 ,4.5,0 );
+        recta(w - 34.4525558 , &result,  -103.5, 9.8 ,4.5,0 );
     }
     
     
@@ -119,7 +119,7 @@ Target curva_gel_1_4(float w){
     }
     else if (w >=28.01651864 && w < 29.59985197) {
         //Línea recta
-        arco(w - 28.01651864 , &result,  -122, -25 , 6.0,0 );
+        recta(w - 28.01651864 , &result,  -122, 25 , 6.0,0 );
     }
     else if (w >= 29.59985197&& w < 31.17064834) {
         //curva
@@ -127,7 +127,7 @@ Target curva_gel_1_4(float w){
     }
     else if (w >=31.17064834 && w < 32.88175947) {
         //Línea recta
-        arco(w - 31.17064834 , &result,  -108, -20.5 , 0,-4.5 );
+        recta(w - 31.17064834 , &result,  -108, 20.5 , 0,-4.5 );
     }
     else if (w >=32.88175947 && w < 34.4525558) {
         //curva
@@ -135,7 +135,7 @@ Target curva_gel_1_4(float w){
     }
     else if (w >=34.4525558) {
         //Línea recta
-        arco(w - 34.4525558 , &result,  -103.5, 8.3 ,4.5,0 );
+        recta(w - 34.4525558 , &result,  -103.5, 8.3 ,4.5,0 );
     }
 
     return result;
@@ -178,7 +178,7 @@ Target curva_gel_1_3(float w){
     }
     else if (w >=28.01651864 && w < 29.59985197) {
         //Línea recta
-        arco(w - 28.01651864 , &result,  -122, -23.5 , 6.0,0 );
+        recta(w - 28.01651864 , &result,  -122, 23.5 , 6.0,0 );
     }
     else if (w >= 29.59985197&& w < 31.17064834) {
         //curva
@@ -186,7 +186,7 @@ Target curva_gel_1_3(float w){
     }
     else if (w >=31.17064834 && w < 32.88175947) {
         //Línea recta
-        arco(w - 31.17064834 , &result,  -109.5, -20.5 , 0,-4.5 );
+        recta(w - 31.17064834 , &result,  -109.5, 20.5 , 0,-4.5 );
     }
     else if (w >=32.88175947 && w < 34.4525558) {
         //curva
@@ -194,7 +194,7 @@ Target curva_gel_1_3(float w){
     }
     else if (w >=34.4525558) {
         //Línea recta
-        arco(w - 34.4525558 , &result,  -103.5, 6.8 ,4.5,0 );
+        recta(w - 34.4525558 , &result,  -103.5, 6.8 ,4.5,0 );
     }
     
     return result;
