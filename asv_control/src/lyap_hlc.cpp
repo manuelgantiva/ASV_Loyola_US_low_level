@@ -9,6 +9,7 @@
 #include <thread>
 #include <vector>
 #include <complex>
+#include <mutex>
 #include <Eigen/Dense>
 #include <unsupported/Eigen/Polynomials>
 
@@ -28,48 +29,142 @@ public:
     LyapHlcNode() : Node("lyap_hlc")
     { 
         std::string my_id; 
-        this-> declare_parameter("my_id", "ASV0");   
+        this->declare_parameter("my_id", "ASV0");   
+        my_id = this->get_parameter("my_id").as_string();
 
         //---------Parámetros del HLC-------------------// 
 
         memory_u.assign(4, 0.0);
         memory_r.assign(4, 0.0);
 
-        a=(taud*Ts)/(taud*Ts+Ts);
-        b=1/(taud*Ts+Ts);
+        this->declare_parameter("taud", 1.0);
+        taud = this->get_parameter("taud").as_double();
+        
+        this->declare_parameter("Ts", 0.01);
+        Ts = this->get_parameter("Ts").as_double();
+        
+        this->declare_parameter("lambda", 1.0);
+        lambda = this->get_parameter("lambda").as_double();
+        
+        this->declare_parameter("zeta", 1.0);
+        zeta = this->get_parameter("zeta").as_double();
+        
+        this->declare_parameter("gamma", 1.0);
+        gamma = this->get_parameter("gamma").as_double();
+        
+        this->declare_parameter("sigma_h", 1.0);
+        sigma_h = this->get_parameter("sigma_h").as_double();
+        
+        this->declare_parameter("mu_u", 1.0);
+        mu_u = this->get_parameter("mu_u").as_double();
+        
+        this->declare_parameter("mu_r", 1.0);
+        mu_r = this->get_parameter("mu_r").as_double();
+        
+        this->declare_parameter("k_d", 1.0);
+        k_d = this->get_parameter("k_d").as_double();
+        
+        this->declare_parameter("k_theta", 1.0);
+        k_theta = this->get_parameter("k_theta").as_double();
+        
+        this->declare_parameter("m11", 1.0);
+        m11 = this->get_parameter("m11").as_double();
+        
+        this->declare_parameter("m33_bar", 1.0);
+        m33_bar = this->get_parameter("m33_bar").as_double();
+        
+        this->declare_parameter("m22", 1.0);
+        m22 = this->get_parameter("m22").as_double();
+        
+        this->declare_parameter("k_u", 1.0);
+        k_u = this->get_parameter("k_u").as_double();
+        
+        this->declare_parameter("k_r", 1.0);
+        k_r = this->get_parameter("k_r").as_double();
+        
+        this->declare_parameter("Sigma", 1.0);
+        Sigma = this->get_parameter("Sigma").as_double();
+        
+        // Valores por defecto para otros parámetros
+        this->declare_parameter("d_cn", 10.0);
+        d_cn = this->get_parameter("d_cn").as_double();
+        
+        this->declare_parameter("theta_cn", 1.0);
+        theta_cn = this->get_parameter("theta_cn").as_double();
+        
+        this->declare_parameter("d_cl", 5.0);
+        d_cl = this->get_parameter("d_cl").as_double();
+        
+        this->declare_parameter("theta_cl", 0.5);
+        theta_cl = this->get_parameter("theta_cl").as_double();
+        
+        this->declare_parameter("Kd", 1.0);
+        Kd = this->get_parameter("Kd").as_double();
+        
+        this->declare_parameter("Ktheta", 1.0);
+        Ktheta = this->get_parameter("Ktheta").as_double();
+        
+        this->declare_parameter("b_dinf", 0.1);
+        b_dinf = this->get_parameter("b_dinf").as_double();
+        
+        this->declare_parameter("b_thetainf", 0.1);
+        b_thetainf = this->get_parameter("b_thetainf").as_double();
+        
+        this->declare_parameter("ref_d", 0.0);
+        ref_d = this->get_parameter("ref_d").as_double();
+        
+        this->declare_parameter("ref_theta", 0.0);
+        ref_theta = this->get_parameter("ref_theta").as_double();
+        
+        this->declare_parameter("eps_i", 0.1);
+        eps_i = this->get_parameter("eps_i").as_double();
+        
+
+        // Inicialización de flags y estados iniciales
+        isFirstStep_HGO = true;
+        isFirstStep_EHG = true;
+        isFirstStep_DSC = true;
+        h_hat = 0.0;
+        alpha_fui = 0.0;
+        alpha_fri = 0.0;
+
+        // Inicialización de vectores de referencia para DSC
+        R1 = Eigen::Vector2d(1.0, 0.0);
+        R2 = Eigen::Vector2d(0.0, 1.0);
 
         cb_group_sensors_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
         cb_group_obs_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
         auto options_sensors_ = rclcpp::SubscriptionOptions();
-        options_sensors_.callback_group=cb_group_sensors_;
+        options_sensors_.callback_group = cb_group_sensors_;
 
-        timer_ = this -> create_wall_timer(std::chrono::milliseconds(int(Ts*1000.0)),
+        timer_ = this->create_wall_timer(std::chrono::milliseconds(int(Ts * 1000.0)),
                 std::bind(&LyapHlcNode::calculateHighLevelController, this), cb_group_obs_);
 
-        params_callback_handle_ = this->add_on_set_parameters_callback(std::bind(&LyapHlcNode::param_callback, this, _1));
+        // TODO: crear un param callback que actualice ciertos datos
+        // params_callback_handle_ = this->add_on_set_parameters_callback(std::bind(&LyapHlcNode::param_callback, this, _1));
 
         subscriber_states_obs_ = this-> create_subscription<asv_interfaces::msg::StateObserver>(
             "/" + my_id + "/observer/state_observer",rclcpp::SensorDataQoS(), std::bind(&LyapHlcNode::callbackStates,
             this, std::placeholders::_1), options_sensors_);
-        subscriber_references_ = this-> create_subscription<std_msgs::msg::Float64>(
-            "/" + my_id + "/control/reference_hlc", 1, std::bind(&LyapHlcNode::callbackVelReference,
-            this, std::placeholders::_1), options_sensors_);
+        // subscriber_references_ = this-> create_subscription<std_msgs::msg::Float64>(
+        //     "/" + my_id + "/control/reference_hlc", 1, std::bind(&LyapHlcNode::callbackVelReference,
+        //     this, std::placeholders::_1), options_sensors_);
         subscriber_state = this-> create_subscription<mavros_msgs::msg::State>("/" + my_id + "/mavros/state",1,
                 std::bind(&LyapHlcNode::callbackStateData, this, std::placeholders::_1), options_sensors_);
         
+        }
 
 private:
     void calculateHighLevelController()
     {
-        float x_hat_i;
-        float y_hat_i;
-        float psi_hat_i;
-        float u_hat_i;
-        float v_hat_i;
-        float r_hat_i;
-        float sig_u_i;
-        float sig_v_i;
-        float sig_r_i;
+        
+        if(armed==false){
+            count = 0;
+            // TODO: reiniciar datos que varian con el tiempo
+        }else{
+            if(count > 7){
+        float x_hat_i, y_hat_i, psi_hat_i, u_hat_i, v_hat_i, r_hat_i, sig_u_i, sig_v_i, sig_r_i;
+        float x_hat_l_i, y_hat_l_i, psi_hat_l_i, u_hat_l_i, v_hat_l_i, r_hat_l_i;
         {
             std::lock_guard<std::mutex> lock(mutex_);
             x_hat_i = x_hat;
@@ -81,12 +176,21 @@ private:
             sig_u_i = sig_u;
             sig_v_i = sig_v;
             sig_r_i = sig_r;
+
+            x_hat_l_i = x_hat_l;
+            y_hat_l_i = y_hat_l;
+            psi_hat_l_i = psi_hat_l;
+            u_hat_l_i = u_hat_l;
+            v_hat_l_i = v_hat_l;
+            r_hat_l_i = r_hat_l;
+            
         }
 
         Eigen::VectorXd Xf_est(6);
         Xf_est << x_hat_i, y_hat_i, psi_hat_i, u_hat_i, v_hat_i, r_hat_i;
         Eigen::VectorXd Xl_est(6);
         // (Xl_est << 1.5, 2.5, 0.9, 0.0, 3.5, 0.3;)
+        Xl_est << x_hat_l_i, y_hat_l_i, psi_hat_l_i, u_hat_l_i, v_hat_l_i, r_hat_l_i;
         Eigen::Vector3d sigmaf_est;
         sigmaf_est << sig_u_i, sig_v_i, sig_r_i;
         double t = this->now().seconds(); 
@@ -107,10 +211,8 @@ private:
         sigmaf_est = Rs2pb * sigmaf_est;
 
         // --- Coordinate Transformation ---
-        std::vector<double> Xf_est_vec(Xf_est.data(), Xf_est.data() + Xf_est.size());
-        Eigen::Vector3d Xf_bar = CoordinateTransformation(Xf_est_vec);
-        std::vector<double> Xl_est_vec(Xl_est.data(), Xl_est.data() + Xl_est.size());
-        Eigen::Vector3d Xl_bar = CoordinateTransformation(Xl_est_vec);
+        Eigen::Vector3d Xf_bar = CoordinateTransformation(Xf_est);
+        Eigen::Vector3d Xl_bar = CoordinateTransformation(Xl_est);
 
         double xf = Xf_bar(0);
         double yf = Xf_bar(1);
@@ -159,6 +261,7 @@ private:
         double alpha_ui = (1 / std::cos(theta)) * (var1_u * var2_u * var3_u - var4_u - var5_u + var6_u + var7_u);
         double alpha_ri = var1_r * var2_r * var3_r - var4_r + (var5_r - var6_r + var7_r) / d + var8_r;
 
+        //TODO: cuidado alpha no se está utilizando
         Eigen::Vector2d alpha = Eigen::Vector2d(alpha_ui, alpha_ri);
         Eigen::Vector2d alpha_f = DSC(alpha_ui, alpha_ri, e_d, e_theta, q, theta);
 
@@ -178,21 +281,33 @@ private:
         Tau_real << tau_u, 0, tau_r;
         
         Tau_real = Rs2pb.transpose() * Tau_real;
+        // Aquí se publicaría Tau_real usando el publisher (si estuviera habilitado)
+
+        RCLCPP_INFO(this->get_logger(), "Tau_real: %f, %f, %f", Tau_real(0), Tau_real(1), Tau_real(2));
+        }
+        else{
+            Eigen::Vector3d Tau_real;
+            Tau_real << 0, 0, 0;
+        RCLCPP_INFO(this->get_logger(), "Tau_real: %f, %f, %f", Tau_real(0), Tau_real(1), Tau_real(2));
+
+            count++;
+        }
+        }
+        // el siguiente paso es pasar de Tau a PWM
     }
 
 //Coordinate Transformation   
-    std::vector<double> CoordinateTransformation(const std::vector<double>& X_est) {
+    Eigen::Vector3d CoordinateTransformation(Eigen::VectorXd& X_est) {
         double x_bar = X_est[0] + eps_i * std::cos(X_est[2]);
         double y_bar = X_est[1] + eps_i * std::sin(X_est[2]);
         double v_bar = X_est[4] + eps_i * X_est[5];
-    
-        
-        return { x_bar, y_bar, v_bar };
+        Eigen::Vector3d res;
+        res << x_bar, y_bar, v_bar;
+        return res;
       }
 
 //Beta Function
     Eigen::Vector4d betaFunction(double t) {
-        
         Eigen::Vector2d lim_cn;
         lim_cn << d_cn, theta_cn;
         Eigen::Vector2d lim_cl;
@@ -222,14 +337,13 @@ private:
     }    
 
     //High gain observer
-    Eigen::Vector2d HighGainObserver(const Eigen::Vector2d &Xl_bar) {
+    Eigen::Vector2d HighGainObserver(const Eigen::Vector3d &Xl_bar) {
         if (isFirstStep_HGO) {
           // Initial Condition
           eps1_0 = Eigen::Vector2d::Zero();
           eps2_0 = Eigen::Vector2d::Zero();
           isFirstStep_HGO = false;
         } else {
-          
           Eigen::Vector2d eps1 = eps1_0;
           Eigen::Vector2d eps2 = eps2_0;
           
@@ -243,7 +357,6 @@ private:
           eps1(1) += dx2 * Ts;
           eps2(0) += dx3 * Ts;
           eps2(1) += dx4 * Ts;
-          
         
           eps1_0 = eps1;
           eps2_0 = eps2;
@@ -254,21 +367,24 @@ private:
 
     //Compute errorHG
     double ComputeErrorHG(const Eigen::VectorXd &beta, double d, double e_d, double e_theta) {
-        
         Eigen::VectorXd q = Compute_q(beta, e_d, e_theta);
     
         if (isFirstStep_EHG) {
-          
           h_hat = 0.0;
           isFirstStep_EHG = false;
         } else {
-          
           double dh = gamma * ( std::abs(e_d * q(0)) + (1.0 / d) * std::abs(e_theta * q(1)) - sigma_h * h_hat );
-          
           h_hat += Ts * dh;
         }
         return h_hat;
       }
+
+    //Compute q
+    Eigen::VectorXd Compute_q(const Eigen::VectorXd &beta, double e_d, double e_theta) {
+        Eigen::VectorXd q(2);
+        //TODO: compute q
+        return q;
+    }
     
     //DSC
     Eigen::Vector2d DSC(double alpha_ui, double alpha_ri,
@@ -276,12 +392,10 @@ private:
         const Eigen::VectorXd &q, double theta)
     {
         if (isFirstStep_DSC) {
-        
         alpha_fui = alpha_ui + mu_u * e_d * q(0) * std::cos(theta);
         alpha_fri = alpha_ri + mu_r * e_theta * q(1);
         isFirstStep_DSC = false;
         } else {
-        
         double alpha_fu = alpha_fui;
         double alpha_fr = alpha_fri;
 
@@ -301,7 +415,6 @@ private:
     }
     //
     void callbackStates(const asv_interfaces::msg::StateObserver::SharedPtr msg)
-    {
         {
             std::lock_guard<std::mutex> lock(mutex_);
             x_hat = msg->point.x;
@@ -314,35 +427,50 @@ private:
             sig_v = msg->disturbances.y;
             sig_r = msg->disturbances.z;
         }
-    }
-}
-    float x_hat = 0, y_hat = 0, u_hat = 0, v_hat = 0, r_hat = 0, psi_hat = 0, sig_u = 0, sig_v = 0, sig_r = 0;
     
-    double d_cn, theta_cn, d_cl, theta_cl;
-    double Kd, Ktheta, b_dinf, b_thetainf;
-    double ref_d, ref_theta;
-    float eps_i;
-    double lambda;  
-    double Ts;      
-    double zeta;    
+        void callbackStateData(const mavros_msgs::msg::State::SharedPtr msg)
+        {
+            armed= msg->armed;
+            // RCLCPP_INFO(this->get_logger(), "PWM left: %d and PWM right:%d", pwm_left, pwm_right);
+        }
+    
+    bool armed = false;
+    int count = 0;
+    float x_hat = 0, y_hat = 0, u_hat = 0, v_hat = 0, r_hat = 0, psi_hat = 0, sig_u = 0, sig_v = 0, sig_r = 0;
+    float x_hat_l = 0, y_hat_l = 0, u_hat_l = 0, v_hat_l = 0, r_hat_l = 0, psi_hat_l = 0;
+    
+    double d_cn = 0.0, theta_cn = 0.0, d_cl = 0.0, theta_cl = 0.0;
+    double Kd = 0.0, Ktheta = 0.0, b_dinf = 0.0, b_thetainf = 0.0;
+    double ref_d = 0.0, ref_theta = 0.0;
+    float eps_i = 0.0;
+    double taud = 0.0;
+    double Ts = 0.0;      
+    double lambda = 0.0;  
+    double zeta = 0.0;
+    double gamma = 0.0;
+    double sigma_h = 0.0;
+    double mu_u = 0.0;    
+    double mu_r = 0.0;    
+    double m11 = 0.0, m33_bar = 0.0, m22 = 0.0;
+    double k_d = 0.0, k_theta = 0.0;
+    double k_u = 0.0, k_r = 0.0;
+    double Sigma = 0.0;
+    Eigen::Vector2d R1;
+    Eigen::Vector2d R2;
+
+    std::vector<double> memory_u;
+    std::vector<double> memory_r;
 
     Eigen::Vector2d eps1_0;
     Eigen::Vector2d eps2_0;
 
-    bool isFirstStep_HGO;
-    double gamma;
-    double sigma_h;
-    double Ts;
-    double h_hat;
-    bool isFirstStep_EHG;
-
-    double Ts;    
-    double mu_u;    
-    double mu_r;    
+    bool isFirstStep_HGO = true;
+    bool isFirstStep_EHG = true;
+    double h_hat = 0.0;
+    bool isFirstStep_DSC = true;
   
-    double alpha_fui;  
-    double alpha_fri;
-    bool isFirstStep_DSC;
+    double alpha_fui = 0.0;
+    double alpha_fri = 0.0;
 
     rclcpp::Subscription<asv_interfaces::msg::StateObserver>::SharedPtr subscriber_states_obs_;
     rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr subscriber_references_;
@@ -350,18 +478,16 @@ private:
    //rclcpp::Publisher<asv_interfaces::msg::PwmValues>::SharedPtr publisher_pwm;
     rclcpp::TimerBase::SharedPtr timer_;
 
-    // mutex callback group: 
     std::mutex mutex_;
     rclcpp::CallbackGroup::SharedPtr cb_group_sensors_;
     rclcpp::CallbackGroup::SharedPtr cb_group_obs_;
-
-    OnSetParametersCallbackHandle::SharedPtr params_callback_handle_;
+    rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr params_callback_handle_;
 };
 
 int main(int argc, char **argv)
 {
     rclcpp::init(argc, argv);
-    auto node = std::make_shared<IfacLlcNode>();
+    auto node = std::make_shared<LyapHlcNode>();
     rclcpp::executors::MultiThreadedExecutor executor;
     executor.add_node(node);
     executor.spin();
