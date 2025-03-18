@@ -380,6 +380,7 @@ private:
 
     rcl_interfaces::msg::SetParametersResult param_callback(const std::vector<rclcpp::Parameter> &params){
         rcl_interfaces::msg::SetParametersResult result;
+        RCLCPP_INFO(this->get_logger(), "Recibi solicitud de cambio de parametros");
         for (const auto &param: params){
             if (param.get_name() == "Max_n_p"){
                 if(param.as_double() >= 0.0 and param.as_double() < 100.0){
