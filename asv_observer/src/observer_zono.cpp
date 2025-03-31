@@ -1,13 +1,9 @@
 #include "rclcpp/rclcpp.hpp"
 #include "asv_library/Zonotopo.h"
-#include "sensor_msgs/msg/imu.hpp"                  //Interface Imu data
-#include "sensor_msgs/msg/nav_sat_fix.hpp"          //Interface gps global data
-#include "std_msgs/msg/float64.hpp"                 //Interface yaw data topic compass_hdg
-#include "mavros_msgs/msg/rc_out.hpp"               //Interface rc out pwm value actual
 #include "mavros_msgs/msg/state.hpp"               //Interface state ardupilot
 #include "geometry_msgs/msg/pose_stamped.hpp"       //Interface gps local data
 #include "asv_interfaces/msg/state_observer.hpp"    //Interface state observer
-#include "nav_msgs/msg/odometry.hpp"                //Interface gps global local data
+#include "std_msgs/msg/float32_multi_array.hpp"
 
 #include "tf2/exceptions.h"
 #include "tf2_ros/transform_listener.h"
@@ -30,23 +26,9 @@ public:
           //---------Parámetros del ASV-------------------//
         this-> declare_parameter("Ts", 100.0);
         
-        this-> declare_parameter("Xu6", -0.003148);
-        this-> declare_parameter("Xu7", 0.0810014);
-        this-> declare_parameter("Xv10", -0.00394830);
-        this-> declare_parameter("Xv11", -0.0183636);
-        this-> declare_parameter("Xv12", 0.0);
-        this-> declare_parameter("Xv13", -0.0200932);
-        this-> declare_parameter("Xr10", -0.0129643);
-        this-> declare_parameter("Xr11", -0.0110386);
-        this-> declare_parameter("Xr12", 0.0);
-        this-> declare_parameter("Xr13", 0.1717909);
-
-        this-> declare_parameter("Dz_up", 0.0750);
-        this-> declare_parameter("Dz_down", -0.08);
-
-        this-> declare_parameter("Xu", std::vector<float>{1.0, 1.0, 1.0, 1.0});
-        this-> declare_parameter("Xv", std::vector<float>{1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0});
-        this-> declare_parameter("Xr", std::vector<float>{1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0});
+        this-> declare_parameter("Xu", std::vector<double>{1.0, 1.0, 1.0, 1.0, 1.0, 1.0});
+        this-> declare_parameter("Xv", std::vector<double>{1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0});
+        this-> declare_parameter("Xr", std::vector<double>{1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0});
 
         this-> declare_parameter("Max_n_psi", 0.01);
         this-> declare_parameter("Max_n_r", 0.01);
@@ -67,23 +49,9 @@ public:
         Ts = this->get_parameter("Ts").as_double();
         t_s = Ts/1000; // En segundos
 
-        Xu6 = this->get_parameter("Xu6").as_double();
-        Xu7 = this->get_parameter("Xu7").as_double();
-        Xv10 = this->get_parameter("Xv10").as_double();
-        Xv11 = this->get_parameter("Xv11").as_double();
-        Xv12 = this->get_parameter("Xv12").as_double();
-        Xv13 = this->get_parameter("Xv13").as_double();
-        Xr10 = this->get_parameter("Xr10").as_double();
-        Xr11 = this->get_parameter("Xr11").as_double();
-        Xr12 = this->get_parameter("Xr12").as_double();
-        Xr13 = this->get_parameter("Xr13").as_double();
-
         Xu = this->get_parameter("Xu").as_double_array();
         Xv = this->get_parameter("Xv").as_double_array();
         Xr = this->get_parameter("Xr").as_double_array();
-
-        Dz_up  = this->get_parameter("Dz_up").as_double();
-        Dz_down = this->get_parameter("Dz_down").as_double();
 
         Max_n_psi = this->get_parameter("Max_n_psi").as_double();
         Max_n_r = this->get_parameter("Max_n_r").as_double(); // pequeños Metodo 2
@@ -167,23 +135,17 @@ public:
         Yp.setZero();
     
         cb_group_sensors_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
-        cb_group_obs_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
         auto options_sensors_ = rclcpp::SubscriptionOptions();
         options_sensors_.callback_group=cb_group_sensors_;
 
-        timer_ = this -> create_wall_timer(std::chrono::milliseconds(int(Ts)),
-                                          std::bind(&ObserverZonoNode::calculateState, this), cb_group_obs_);
 
         params_callback_handle_ = this->add_on_set_parameters_callback(std::bind(&ObserverZonoNode::param_callback, this, _1));
 
         // suscribir a IMU 
-        subscriber_imu = this-> create_subscription<sensor_msgs::msg::Imu>("/" + my_id + "/comunication/imu_ext/data",
-                rclcpp::SensorDataQoS(), std::bind(&ObserverZonoNode::callbackImuData,
-                this, std::placeholders::_1), options_sensors_);
-        subscriber_gps_local= this-> create_subscription<nav_msgs::msg::Odometry>("/" + my_id + "/mavros/global_position/local",
-                rclcpp::SensorDataQoS(), std::bind(&ObserverZonoNode::callbackGpsLocalData, this, std::placeholders::_1), options_sensors_);
-        subscriber_rcout = this-> create_subscription<mavros_msgs::msg::RCOut>("/" + my_id + "/mavros/rc/out",1,
-                std::bind(&ObserverZonoNode::callbackRcoutData, this, std::placeholders::_1), options_sensors_);
+
+        subscription_data = this->create_subscription<std_msgs::msg::Float32MultiArray>("/" + my_id + "/observer/data_sensors", rclcpp::SensorDataQoS(),
+            std::bind(&ObserverZonoNode::calculateState, this, std::placeholders::_1),options_sensors_);
+
         subscriber_state = this-> create_subscription<mavros_msgs::msg::State>("/" + my_id + "/mavros/state",1,
                 std::bind(&ObserverZonoNode::callbackStateData, this, std::placeholders::_1), options_sensors_);
         publisher_state = this-> create_publisher<asv_interfaces::msg::StateObserver>("/" + my_id + "/observer/state_observer_zono",
@@ -201,7 +163,7 @@ public:
     }
 
 private:
-    void calculateState()
+    void calculateState(const std_msgs::msg::Float32MultiArray::SharedPtr msg_data)
     {
         auto msg = asv_interfaces::msg::StateObserver();
         if(armed==false){ 
@@ -210,15 +172,6 @@ private:
             Zr_prior= Zonotopo(VectorXd::Zero(3), MatrixXd::Identity(3,3));
             Zp_prior = Zonotopo(VectorXd::Zero(6), MatrixXd::Identity(6,6));
             Sigmas.setZero();
-            {
-                std::lock_guard<std::mutex> lock(mutex_);
-                Yp.setZero();
-                delta_diff=0;
-                delta_mean=0;
-                beta=0;
-                psi = 0.0;
-                r = 0.0;
-            }
         }else{
             if(count > 6){
                 //ssauto start = std::chrono::high_resolution_clock::now();
@@ -227,15 +180,16 @@ private:
                 float delta_diff_i;
                 float delta_mean_i;
                 int beta_i;
-                {
-                    std::lock_guard<std::mutex> lock(mutex_);
-                    Yr_i << psi,
-                            r;
-                    Yp_i = Yp;
-                    delta_diff_i = delta_diff;
-                    delta_mean_i = delta_mean;
-                    beta_i=beta;
-                }
+
+                Yp_i << static_cast<double>(msg_data->data[0]),
+                        static_cast<double>(msg_data->data[1]);
+                Yr_i << static_cast<double>(msg_data->data[2]),
+                        static_cast<double>(msg_data->data[3]);
+
+                delta_diff_i = msg_data->data[4];
+                delta_mean_i = msg_data->data[5];
+                beta_i=static_cast<int>(msg_data->data[6]);
+
 
                 float delta_mean_i_2 = delta_mean_i*delta_mean_i;
                 float delta_diff_i_2 = delta_diff_i*delta_diff_i;
@@ -260,9 +214,9 @@ private:
                     count=count+1;
                 }
 
-                IGp(2,0) = (Xu6*sum_1)+(Xu7*delta_mean_i);
-                IGp(3,0) = (Xv10*sum_1*(1-beta_i)*sig)+(Xv11*delta_mean_i*delta_diff_i)+(Xv12*delta_mean_i*(1-beta_i)*sig)+(Xv13*delta_diff_i/2.0);
-                IGr(1,0)=(Xr10*sum_1*(1-beta_i)*sig)+(Xr11*delta_mean_i*delta_diff_i)+(Xr12*delta_mean_i*(1-beta_i)*sig)+(Xr13*delta_diff_i/2.0);
+                IGp(2,0) = (Xu[4]*sum_1)+(Xu[5]*delta_mean_i);
+                IGp(3,0) = (Xv[8]*sum_1*(1-beta_i)*sig)+(Xv[9]*delta_mean_i*delta_diff_i)+(Xv[10]*delta_mean_i*(1-beta_i)*sig)+(Xv[11]*delta_diff_i/2.0);
+                IGr(1,0) = (Xr[8]*sum_1*(1-beta_i)*sig)+(Xr[9]*delta_mean_i*delta_diff_i)+(Xr[10]*delta_mean_i*(1-beta_i)*sig)+(Xr[11]*delta_diff_i/2.0);
 
                 if(Sig_on){
                     Sigmas(0) = (Xu[0] * Zp_next.c(2) * std::abs(Zp_next.c(2)) + Xu[1] * Zp_next.c(3) * Zr_next.c(1) + Xu[2] * Zr_next.c(1) * Zr_next.c(1)
@@ -391,118 +345,6 @@ private:
         }
     }
 
-    // void callaback IMU
-    void callbackImuData( const sensor_msgs::msg::Imu::SharedPtr msg)
-    {
-        if(armed==true){
-            {
-                std::lock_guard<std::mutex> lock(mutex_);
-                r = -1*msg->angular_velocity.z;                
-            }   
-        }
-    }
-
-    void callbackGpsLocalData(const nav_msgs::msg::Odometry::SharedPtr msg)
-    {
-        if(armed==true){
-            float y = msg->pose.pose.position.x;
-            float x = msg->pose.pose.position.y;
-            float psi_rad = quat2EulerAngles_XYZ(msg->pose.pose.orientation.w, msg->pose.pose.orientation.x,
-                                                msg->pose.pose.orientation.y, msg->pose.pose.orientation.z);
-            psi_rad=-psi_rad+(M_PI/2);
-            if (psi_rad<0){
-                psi_rad=psi_rad+(2*M_PI);
-            }
-
-            float dy = -0.2750;            //distancia de la antena del GPS al navio coordenada x
-            float dx = 0.2625;           //distancia de la antena del GPS al navio coordenada y
-            // 1) Xp = Xo + R(psi)*OP
-            x = x + cos(psi_rad)*dx - sin(psi_rad)*dy;
-            y = y + sin(psi_rad)*dx + cos(psi_rad)*dy;
-            if(armed_act==false){
-                psi_ant = psi_rad;
-                laps = 0;
-                {
-                    std::lock_guard<std::mutex> lock(mutex_);
-                    Yp << x,
-                        y;
-                    psi = psi_rad;
-                }
-            }else{
-                psi_act = psi_rad;
-                if((psi_act - psi_ant) > M_PI){
-                    laps = laps - 1;
-                }else if((psi_act - psi_ant) < -M_PI){
-                    laps = laps + 1;
-                }
-                {
-                    std::lock_guard<std::mutex> lock(mutex_);
-                    Yp << x,
-                        y;
-                    psi = psi_act + 2*M_PI*laps;
-                }
-                psi_ant=psi_act;
-            }
-            //RCLCPP_INFO(this->get_logger(), "n is: %d", int(laps));
-            //RCLCPP_INFO(this->get_logger(), "Heading is: %f", psi);
-        }else{
-            psi_ant=0;
-            laps=0;
-        }
-        armed_act=armed;
-    }
-
-    float quat2EulerAngles_XYZ(float q0, float q1, float q2,float q3)
-    {
-        const double q0_2 = q0 * q0;
-        const double q1_2 = q1 * q1;
-        const double q2_2 = q2 * q2;
-        const double q3_2 = q3 * q3;
-        const double x2q1q2 = 2.0 * q1 * q2;
-        const double x2q0q3 = 2.0 * q0 * q3;
-        const double m11 = q0_2 + q1_2 - q2_2 - q3_2;
-        const double m12 = x2q1q2 + x2q0q3;
-        const double psic = atan2(m12, m11);
-        return static_cast<float>(psic);
-    }
-
-    void callbackRcoutData(const mavros_msgs::msg::RCOut::SharedPtr msg)
-    {
-        if(armed==true){
-            uint16_t pwm_left=msg->channels[2];
-            uint16_t pwm_right=msg->channels[0];
-            int beta_a = 0;
-            if(pwm_left>=1500 && pwm_right>=1500){
-                beta_a=1;
-            }else{
-                beta_a=0;
-            }
-            float delta_left =  ((pwm_left/400.0) -3.75);    //normalized pwm
-            float delta_right = ((pwm_right/400.0) -3.75);  //normalized pwm
-
-            delta_left = deleteDeadZone(delta_left);
-            delta_right = deleteDeadZone(delta_right);
-            {
-                std::lock_guard<std::mutex> lock(mutex_);
-                delta_diff = delta_left-delta_right;
-                delta_mean = (delta_left+delta_right)/2.0;
-                beta=beta_a;
-            }
-            // RCLCPP_INFO(this->get_logger(), "PWM left: %d and PWM right:%d", pwm_left, pwm_right);
-        }
-    }
-
-    float deleteDeadZone(float delta)
-    {
-        if(delta>Dz_down && delta<Dz_up){
-            delta = 0;
-        }else if(delta <= Dz_down){
-            delta = delta-Dz_down;
-        }else if(delta >= Dz_up){
-            delta = delta-Dz_up;
-        }
-        return delta;
-    }
 
     // Función que calcula los mínimos y máximos de las variables de estado
     MatrixXd rs_z(const Zonotopo& z) {
@@ -534,11 +376,11 @@ private:
     void callbackStateData(const mavros_msgs::msg::State::SharedPtr msg)
     {
         armed= msg->armed;
-        // RCLCPP_INFO(this->get_logger(), "PWM left: %d and PWM right:%d", pwm_left, pwm_right);
     }
 
     rcl_interfaces::msg::SetParametersResult param_callback(const std::vector<rclcpp::Parameter> &params){
         rcl_interfaces::msg::SetParametersResult result;
+        // RCLCPP_INFO(this->get_logger(), "Recibi solicitud de cambio de parametros");
         for (const auto &param: params){
             if (param.get_name() == "Max_n_p"){
                 if(param.as_double() >= 0.0 and param.as_double() < 100.0){
@@ -655,6 +497,39 @@ private:
                     return result;
                 }
             }
+            if (param.get_name() == "Xu"){
+                if(param.as_double_array().size() == 6){
+                    // RCLCPP_INFO(this->get_logger(), "changed param value");
+                    Xu = this->get_parameter("Xu").as_double_array();
+                }else{
+                    RCLCPP_INFO(this->get_logger(), "could not change parameter value, array size must be 6");
+                    result.successful = false;
+                    result.reason = "Value out of range";
+                    return result;
+                }
+            }
+            if (param.get_name() == "Xv"){
+                if(param.as_double_array().size() == 12){
+                    // RCLCPP_INFO(this->get_logger(), "changed param value");
+                    Xv = this->get_parameter("Xv").as_double_array();
+                }else{
+                    RCLCPP_INFO(this->get_logger(), "could not change parameter value, array size must be 12");
+                    result.successful = false;
+                    result.reason = "Value out of range";
+                    return result;
+                }
+            }
+            if (param.get_name() == "Xr"){
+                if(param.as_double_array().size() == 12){
+                    // RCLCPP_INFO(this->get_logger(), "changed param value");
+                    Xr = this->get_parameter("Xr").as_double_array();
+                }else{
+                    RCLCPP_INFO(this->get_logger(), "could not change parameter value, array size must be 12");
+                    result.successful = false;
+                    result.reason = "Value out of range";
+                    return result;
+                }
+            }
             if (param.get_name() == "IMU_on"){
                 RCLCPP_INFO(this->get_logger(), "changed param value");
                 IMU_on = this->get_parameter("IMU_on").as_bool();
@@ -676,8 +551,7 @@ private:
 
  //------Params-------//
     std::string my_id;
-    float Ts, t_s, Xu6, Xu7, Xv10, Xv11, Xv12, Xv13, Xr10, Xr11 ,Xr12, Xr13;  
-    float Dz_up, Dz_down;  
+    float Ts, t_s; 
 
     std::vector<double> Xu, Xv, Xr;
 
@@ -709,8 +583,7 @@ private:
     
     Zonotopo Zp_prior, Zr_prior, Zp_next, Zr_next;
 
-    rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr subscriber_gps_local;
-    rclcpp::Subscription<mavros_msgs::msg::RCOut>::SharedPtr subscriber_rcout;
+    rclcpp::Subscription<std_msgs::msg::Float32MultiArray>::SharedPtr subscription_data;
     rclcpp::Subscription<mavros_msgs::msg::State>::SharedPtr subscriber_state;
     rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr subscriber_imu;
 
@@ -722,10 +595,7 @@ private:
 
     rclcpp::TimerBase::SharedPtr timer_;
 
-    // mutex callback group: 
-    std::mutex mutex_;
     rclcpp::CallbackGroup::SharedPtr cb_group_sensors_;
-    rclcpp::CallbackGroup::SharedPtr cb_group_obs_;
 
     OnSetParametersCallbackHandle::SharedPtr params_callback_handle_;
 };

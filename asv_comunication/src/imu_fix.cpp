@@ -28,7 +28,7 @@ public:
 
         params_callback_handle_ = this->add_on_set_parameters_callback(std::bind(&ImuFixNode::param_callback, this, _1));
 
-        subscriber_imu = this-> create_subscription<sensor_msgs::msg::Imu>("/" + my_id + "/mavros/imu/data",rclcpp::SensorDataQoS(),
+        subscriber_imu = this-> create_subscription<sensor_msgs::msg::Imu>("/" + my_id + "/comunication/imu_ext/data",rclcpp::SensorDataQoS(),
                 std::bind(&ImuFixNode::callbackImuData, this, std::placeholders::_1));
         subscriber_state = this-> create_subscription<mavros_msgs::msg::State>("/" + my_id + "/mavros/state",1,
                 std::bind(&ImuFixNode::callbackStateData, this, std::placeholders::_1));

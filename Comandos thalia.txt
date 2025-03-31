@@ -1,0 +1,17 @@
+colcon build --executor sequential 
+
+source .bashrc
+
+ros2 launch asv_bringup observer_test.launch.py my_id:=1 rec:=true
+
+
+cd Documents/Rosbags\ 20-02-2025/
+ros2 launch asv_bringup play_bag.launch.xml bag_name:=ASV1-20-2-bag-1
+
+
+ros2 topic echo /ASV1/observer/observer_param 
+ros2 topic echo /ASV1/observer/kalman_gains
+ros2 topic echo /ASV1/observer/velocities 
+
+
+mantener limpio el home, no almacenar rosbags

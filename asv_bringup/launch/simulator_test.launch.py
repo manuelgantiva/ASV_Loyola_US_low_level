@@ -158,7 +158,6 @@ def generate_launch_description():
         parameters=[{'my_id': my_id},
                     config],
     )
-    nodes.append(asv_simulator_node)
 
     ###################################################################
     ##--------------------Comunication Nodes-------------------------##
@@ -173,7 +172,6 @@ def generate_launch_description():
         ],
         condition=IfCondition(rec)
     )
-    nodes.append(record)
 
     rc_handler_node = Node(
         package="asv_comunication",
@@ -183,7 +181,6 @@ def generate_launch_description():
             {'my_id': my_namespace},
             config_gen]
     )
-    nodes.append(rc_handler_node)
 
     ref_llc_node = Node(
         package="asv_comunication",
@@ -267,6 +264,23 @@ def generate_launch_description():
     )
 
     nodes.append(transceiver_sim_node)
+    transceiver_xbee_node = Node(
+        package="asv_comunication",
+        executable="transceiver_xbee.py",
+        namespace= namespace_comunication,
+        parameters = [
+            {'my_id': my_namespace},
+        ]
+    )
+
+    xbee_master_node = Node(
+        package="asv_comunication",
+        executable="xbee_master.py",
+        namespace= namespace_comunication,
+        parameters = [
+            {'my_id': my_namespace},
+        ]
+    )
 
     ###################################################################
     ##-----------------------Control Nodes---------------------------##
@@ -280,7 +294,6 @@ def generate_launch_description():
             {'my_id': my_namespace}
         ]
     )
-    nodes.append(asv_tf_broadcast_node)
 
     pwm_mapper_node = Node(
         package="asv_control",
@@ -290,7 +303,6 @@ def generate_launch_description():
             {'my_id': my_namespace},
         ]
     )
-    nodes.append(pwm_mapper_node)
     
     mux_llc_node = Node(
         package="asv_control",
@@ -300,7 +312,6 @@ def generate_launch_description():
             {'my_id': my_namespace},
         ]
     )
-    nodes.append(mux_llc_node)
 
     ifac_llc_node = Node(
         package="asv_control",
@@ -309,16 +320,14 @@ def generate_launch_description():
         parameters = [{'my_id': my_namespace},
             config],
     )
-    nodes.append(ifac_llc_node)
 
-    mpc_llc_node = Node(
-        package="asv_control",
-        executable="mpc_llc",
-        namespace= namespace_control,
-        parameters = [{'my_id': my_namespace},
-            config],
-    )
-    # nodes.append(mpc_llc_node)
+    # mpc_llc_node = Node(
+    #     package="asv_control",
+    #     executable="mpc_llc",
+    #     namespace= namespace_control,
+    #     parameters = [{'my_id': my_namespace},
+    #         config],
+    # )
 
     wang_mlc_node = Node(
         package="asv_control",
@@ -353,6 +362,13 @@ def generate_launch_description():
 
     nodes.append(morel_hlc_node)
 
+    mpc_hlc_node = Node(
+        package="asv_control",
+        executable="mpc_hlc",
+        namespace= namespace_control,
+        parameters = [{'my_id': my_namespace},
+            config],
+    )
 
     ###################################################################
     ## -----------------------Observer Nodes--------------------------##
@@ -366,7 +382,6 @@ def generate_launch_description():
             {'my_id': my_namespace},
         ]
     )
-    nodes.append(mux_obs_node)
 
     observer_guille = Node(
         package="asv_observer",
@@ -403,8 +418,45 @@ def generate_launch_description():
         ]
     )
 
+    ###################################################################
+    ##-------------------------ASVs Nodes----------------------------##
+    ################################################################### 
+    nodes.append(asv_simulator_node)
+    nodes.append(neighbor_robot_state_publisher_node)
+    nodes.append(own_robot_state_publisher_node)
+
+    ###################################################################
+    ##--------------------Comunication Nodes-------------------------##
+    ################################################################### 
+    # nodes.append(imu_fix_node)
+    nodes.append(apm_llc_node)
+    nodes.append(ref_mlc_node)
+    # nodes.append(ref_hlc_node)
+    nodes.append(ref_llc_node)
+    nodes.append(rc_handler_node)
+    nodes.append(record)
+    # nodes.append(transceiver_xbee_node)
+    # nodes.append(xbee_master_node)
+
+    ###################################################################
+    ##-----------------------Observer Nodes--------------------------##
+    ################################################################### 
+    nodes.append(mux_obs_node)
+    nodes.append(observer_guille)
+    nodes.append(observer_liu)
     nodes.append(observer_zono)
 
+    ###################################################################
+    ##-----------------------Control Nodes---------------------------##
+    ################################################################### 
+    nodes.append(ifac_llc_node)
+    nodes.append(mux_llc_node)
+    nodes.append(pwm_mapper_node)
+    nodes.append(wang_mlc_node)
+    # nodes.append(mpc_hlc_node)
+    # nodes.append(filter_hlc_node)
+    # nodes.append(asv_tf_broadcast_node)
+    # nodes.append(mpc_llc_node)
 
     return LaunchDescription(
         [arg_my_id, arg_rec, arg_pub2neigh, param_id, arg_worker_mode,

@@ -1,0 +1,13 @@
+<launch>
+
+   <arg name="bag_name" default="default_bag" />
+
+  <executable
+    cmd="ros2 topic pub --once /ASV1/mavros/state mavros_msgs/msg/State '{armed: true}'"
+    output="screen"/>
+
+  <executable
+    cmd="ros2 bag play $(var bag_name) --topics /ASV1/comunication/imu_ext/data /ASV1/mavros/global_position/compass_hdg /ASV1/mavros/global_position/global /ASV1/mavros/global_position/local /ASV1/mavros/imu/data /ASV1/mavros/imu/data_raw /ASV1/mavros/local_position/pose /ASV1/mavros/local_position/velocity_body /ASV1/mavros/local_position/velocity_local /ASV1/mavros/rc/in /ASV1/mavros/rc/out /ASV1/mavros/rc/override /ASV1/mavros/setpoint_velocity/cmd_vel_unstamped"
+    output="screen" />
+
+</launch>

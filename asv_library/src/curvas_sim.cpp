@@ -6,6 +6,7 @@ void recta(float w, Target* px, float ax, float by, float mx, float my){
     px->xp = ax + mx * w;
     px->dyp = my;
     px->dxp = mx;
+    px->f_c = 1/ std::sqrt(my * my + mx * mx);
 }
 
 void arco(float w, Target* px, float ax, float by, float r, bool sig) {
@@ -18,9 +19,10 @@ void arco(float w, Target* px, float ax, float by, float r, bool sig) {
     }
     px->xp = ax + r * sin(w);
     px->dxp = r * cos(w);
+    px->f_c = 1/r;
 }
 
-Target curva_1_i(float w) {
+Target curva_sim_1_6(float w) {
     Target result;
     while(w >= 26.283185307179586){
         w = w - 26.283185307179586;
@@ -60,7 +62,7 @@ Target curva_1_i(float w) {
     return result;
 }
 
-Target curva_1_c(float w) {
+Target curva_sim_1_4(float w) {
     Target result;
     while(w >= 36.283185307179586){
         w = w - 36.283185307179586;
@@ -102,7 +104,7 @@ Target curva_1_c(float w) {
 }
 
 
-Target curva_1_d(float w) {
+Target curva_sim_1_2(float w) {
     Target result;
     while(w >= 66.283185307179586){
         w = w - 66.283185307179586;
@@ -140,5 +142,181 @@ Target curva_1_d(float w) {
         arco(w - 64.71238898038469 - 1.5707963267948966, &result, 10.0, 26.0, 2.0, false);
     }
     
+    return result;
+}
+
+
+//Trayectoria interna
+Target curva_sim_2_6(float w) {
+    Target result;
+    while(w >= 22.94985){
+        w = w - 22.94985;
+    }
+    if (w < 8.33334) {
+        // Línea recta 
+        recta(w, &result, 50, 20, 0,  6);
+    } 
+    else if (w >=8.33334 && w < 11.47493) {
+        //curva
+        arco(w - 8.33334 + 1.5707963267948966, &result,  44, 70.0, 6.0, false);
+    }
+    else if (w >= 11.47493 && w < 19.80826) {
+        // Línea recta 
+        recta(w - 11.47493, &result, 38 , 70, 0, -6.0);
+    }
+    else if (w >=19.80826 && w < 22.94985) {
+        //curva
+        arco(w - 19.80826 - 1.5707963267948966, &result,  44, 20.0, 6.0, false);
+    }
+    return result;
+}
+
+//Trayectoria central
+Target curva_sim_2_8(float w) {
+    Target result;
+    while(w >= 22.94985){
+        w = w - 22.94985;
+    }
+    if (w < 8.33333) {
+        // Línea recta 
+        recta(w, &result, 52, 20, 0,  6);
+    } 
+    else if (w >=8.33333 && w < 11.47493) {
+        //curva
+        arco(w - 8.33333 + 1.5707963267948966, &result,  44, 70.0, 8.0, false);
+    }
+    else if (w >= 11.47493 && w < 19.80826) {
+        // Línea recta 
+        recta(w - 11.47493, &result, 36 , 70, 0, -6.0);
+    }
+    else if (w >=19.80826 && w < 22.94985) {
+        //curva
+        arco(w - 19.80826 - 1.5707963267948966, &result,  44, 20.0, 8.0, false);
+    }
+    return result;
+}
+
+//Trayectoria externa
+Target curva_sim_2_10(float w) {
+    Target result;
+    while(w >= 22.94985){
+        w = w - 22.94985;
+    }
+    if (w < 8.33333) {
+        // Línea recta 
+        recta(w, &result, 54, 20, 0,  6);
+    } 
+    else if (w >=8.33333 && w < 11.47493) {
+        //curva
+        arco(w - 8.33333 + 1.5707963267948966, &result,  44, 70.0, 10.0, false);
+    }
+    else if (w >= 11.47493 && w < 19.80826) {
+        // Línea recta 
+        recta(w - 11.47493, &result, 34 , 70, 0, -6.0);
+    }
+    else if (w >=19.80826 && w < 22.94985) {
+        //curva
+        arco(w - 19.80826 - 1.5707963267948966, &result,  44, 20.0, 10.0, false);
+    }
+    return result;
+}
+
+//Trayectoria interna
+Target curva_sim_3_6(float w) {
+    Target result;
+    while(w >= 39.61651){
+        w = w - 39.61651;
+    }
+    if (w < 8.33333) {
+        recta(w, &result, 50, 20, 0,  6);
+    } 
+    else if (w >=8.33333 && w < 9.90413) {
+        arco(w - 8.33333 - 1.5707963267948966, &result,  56, 70.0, 6.0, true);
+    }
+    else if (w >= 9.90413 && w < 18.23746) {
+        recta(w - 9.90413, &result, 56 , 76, 6.0, 0);
+    }
+    else if (w >= 18.23746 && w < 19.80826) {
+        arco(w - 18.23746, &result,  106.0, 70.0, 6.0, true);
+    }
+    else if (w >= 19.80826 && w < 28.14159) {
+        recta(w - 19.80826, &result, 112 , 70, 0, -6.0);
+    }
+    else if (w >= 28.14159 && w < 29.71238) {
+        arco(w - 28.14159 + 1.5707963267948966, &result,  106.0, 20.0 , 6.0, true);
+    }
+    else if (w >= 29.71238 && w < 38.04571) {
+        recta(w - 29.71238, &result, 106 , 14, -6, 0);
+    }
+    else if (w >= 38.04571 && w < 39.61651) {
+        arco(w - 38.04571 + 3.141592653589793, &result,  56.0, 20.0, 6.0, true);
+    }
+    return result;
+}
+
+//Trayectoria central
+Target curva_sim_3_8(float w) {
+    Target result;
+    while (w >= 39.61652) { 
+        w -= 39.61652;
+    }
+
+    if (w < 8.33333) {
+        recta(w, &result, 48, 20, 0, 6.0);
+    }
+    else if (w >= 8.33333 && w < 9.90413) {  
+        arco(w - 8.33333 - 1.57080, &result, 56, 70.0, 8.0, true);
+    } 
+    else if (w >= 9.90413 && w < 18.23746) {  
+        recta(w - 9.90413, &result, 56, 78, 6.0, 0);
+    } 
+    else if (w >= 18.23746 && w < 19.80826) {  
+        arco(w - 18.23746, &result, 106.0, 70.0, 8.0, true);
+    } 
+    else if (w >= 19.80826 && w < 28.14159) {  
+        recta(w - 19.80826, &result, 114, 70, 0, -6.0);
+    } 
+    else if (w >= 28.14159 && w < 29.71239) {  
+        arco(w - 28.14159 + 1.57080, &result, 106.0, 20.0, 8.0, true);
+    } 
+    else if (w >= 29.71239 && w < 38.04572) {  
+        recta(w - 29.71239, &result, 106, 12, -6.0, 0);
+    } 
+    else if (w >= 38.04572 && w < 39.61652) { 
+        arco(w - 38.04572 + 3.14159, &result, 56.0, 20.0, 8.0, true);
+    }
+    return result;
+}
+
+Target curva_sim_3_10(float w) {
+    Target result;
+    while (w >= 39.61652) {
+        w -= 39.61652;
+    }
+
+    if (w < 8.33333) {
+        recta(w, &result, 46, 20, 0, 6);
+    } 
+    else if (w >= 8.33333 && w < 9.90413) {
+        arco(w - 8.33333 - 1.57080, &result, 56, 70.0, 10.0, true);
+    } 
+    else if (w >= 9.90413 && w < 18.23746) {
+        recta(w - 9.90413, &result, 56, 80, 6.0, 0);
+    } 
+    else if (w >= 18.23746 && w < 19.80826) {
+        arco(w - 18.23746, &result, 106.0, 70.0, 10.0, true);
+    } 
+    else if (w >= 19.80826 && w < 28.14159) {
+        recta(w - 19.80826, &result, 116, 70, 0, -6.0);
+    } 
+    else if (w >= 28.14159 && w < 29.71239) {
+        arco(w - 28.14159 + 1.57080, &result, 106.0, 20.0, 10.0, true);
+    } 
+    else if (w >= 29.71239 && w < 38.04572) {
+        recta(w - 29.71239, &result, 106, 10, -6, 0);
+    } 
+    else if (w >= 38.04572 && w < 39.61652) {
+        arco(w - 38.04572 + 3.14159, &result, 56.0, 20.0, 10.0, true);
+    }
     return result;
 }

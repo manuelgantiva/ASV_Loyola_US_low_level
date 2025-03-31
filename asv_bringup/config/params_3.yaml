@@ -69,7 +69,7 @@ ASV3:
     ifac_llc:
       ros__parameters:
         Ts: 100.0         #ms
-        ku: 0.4
+        ku: 0.1
         ki: 0.0
         kpsi: 0.3
         kr: 0.8
