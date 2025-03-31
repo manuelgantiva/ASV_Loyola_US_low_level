@@ -137,7 +137,7 @@ def generate_launch_description():
     ################################################################### 
    
     asv_simulator_node = Node(
-        package="asv_sim",
+        package="asv_simulator",
         executable="simulator",
         namespace='control',
         parameters=[{'my_id': my_id},
@@ -380,29 +380,29 @@ def generate_launch_description():
     ###################################################################
     ##-------------------------ASVs Nodes----------------------------##
     ################################################################### 
-    # nodes.append(asv_simulator_node)
-    # nodes.append(neighbor_robot_state_publisher_node)
-    # nodes.append(own_robot_state_publisher_node)
+    nodes.append(asv_simulator_node)
+    nodes.append(neighbor_robot_state_publisher_node)
+    nodes.append(own_robot_state_publisher_node)
 
     ###################################################################
     ##--------------------Comunication Nodes-------------------------##
     ################################################################### 
     # nodes.append(imu_fix_node)
-    # nodes.append(apm_llc_node)
-    # nodes.append(ref_mlc_node)
-    nodes.append(ref_hlc_node)
-    # nodes.append(ref_llc_node)
+    nodes.append(apm_llc_node)
+    nodes.append(ref_mlc_node)
+    # nodes.append(ref_hlc_node)
+    nodes.append(ref_llc_node)
     nodes.append(rc_handler_node)
     nodes.append(record)
     # nodes.append(transceiver_xbee_node)
-    nodes.append(xbee_master_node)
+    # nodes.append(xbee_master_node)
 
     ###################################################################
     ##-----------------------Observer Nodes--------------------------##
     ################################################################### 
     nodes.append(mux_obs_node)
-    # nodes.append(observer_guille)
-    # nodes.append(observer_liu)
+    nodes.append(observer_guille)
+    nodes.append(observer_liu)
     nodes.append(observer_zono)
 
     ###################################################################
@@ -412,8 +412,8 @@ def generate_launch_description():
     nodes.append(mux_llc_node)
     nodes.append(pwm_mapper_node)
     nodes.append(wang_mlc_node)
-    nodes.append(mpc_hlc_node)
-    nodes.append(filter_hlc_node)
+    # nodes.append(mpc_hlc_node)
+    # nodes.append(filter_hlc_node)
     # nodes.append(asv_tf_broadcast_node)
     # nodes.append(mpc_llc_node)
 

@@ -380,7 +380,7 @@ private:
 
     rcl_interfaces::msg::SetParametersResult param_callback(const std::vector<rclcpp::Parameter> &params){
         rcl_interfaces::msg::SetParametersResult result;
-        RCLCPP_INFO(this->get_logger(), "Recibi solicitud de cambio de parametros");
+        // RCLCPP_INFO(this->get_logger(), "Recibi solicitud de cambio de parametros");
         for (const auto &param: params){
             if (param.get_name() == "Max_n_p"){
                 if(param.as_double() >= 0.0 and param.as_double() < 100.0){
@@ -499,7 +499,7 @@ private:
             }
             if (param.get_name() == "Xu"){
                 if(param.as_double_array().size() == 6){
-                    RCLCPP_INFO(this->get_logger(), "changed param value");
+                    // RCLCPP_INFO(this->get_logger(), "changed param value");
                     Xu = this->get_parameter("Xu").as_double_array();
                 }else{
                     RCLCPP_INFO(this->get_logger(), "could not change parameter value, array size must be 6");
@@ -510,7 +510,7 @@ private:
             }
             if (param.get_name() == "Xv"){
                 if(param.as_double_array().size() == 12){
-                    RCLCPP_INFO(this->get_logger(), "changed param value");
+                    // RCLCPP_INFO(this->get_logger(), "changed param value");
                     Xv = this->get_parameter("Xv").as_double_array();
                 }else{
                     RCLCPP_INFO(this->get_logger(), "could not change parameter value, array size must be 12");
@@ -521,7 +521,7 @@ private:
             }
             if (param.get_name() == "Xr"){
                 if(param.as_double_array().size() == 12){
-                    RCLCPP_INFO(this->get_logger(), "changed param value");
+                    // RCLCPP_INFO(this->get_logger(), "changed param value");
                     Xr = this->get_parameter("Xr").as_double_array();
                 }else{
                     RCLCPP_INFO(this->get_logger(), "could not change parameter value, array size must be 12");

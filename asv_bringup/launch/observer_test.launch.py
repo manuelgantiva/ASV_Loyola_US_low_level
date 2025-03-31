@@ -199,30 +199,30 @@ def generate_launch_description():
     ###################################################################
     ##-------------------------ASVs Nodes----------------------------##
     ################################################################### 
-    # nodes.append(own_robot_state_publisher_node)
-    # nodes.append(tf_map_node)
+    nodes.append(own_robot_state_publisher_node)
+    nodes.append(tf_map_node)
     
 
     ###################################################################
     ##--------------------Comunication Nodes-------------------------##
     ################################################################### 
     nodes.append(record)
-    # nodes.append(rvz)
-    # nodes.append(rqt_node)
+    nodes.append(rvz)
+    nodes.append(rqt_node)
     
     ###################################################################
     ##-----------------------Observer Nodes--------------------------##
     ################################################################### 
-    # nodes.append(observer_zono_1)
+    nodes.append(observer_zono_1)
     nodes.append(observer_zono_2)
-    #nodes.append(observer_param)
-    # nodes.append(observer_core)
+    nodes.append(observer_param)
+    nodes.append(observer_core)
     
 
     ###################################################################
     ##-----------------------Control Nodes---------------------------##
     ################################################################### 
-    # nodes.append(asv_tf_broadcast_node)
+    nodes.append(asv_tf_broadcast_node)
 
     
 
