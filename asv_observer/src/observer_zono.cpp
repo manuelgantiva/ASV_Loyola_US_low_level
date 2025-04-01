@@ -585,7 +585,6 @@ private:
 
     rclcpp::Subscription<std_msgs::msg::Float32MultiArray>::SharedPtr subscription_data;
     rclcpp::Subscription<mavros_msgs::msg::State>::SharedPtr subscriber_state;
-    rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr subscriber_imu;
 
     rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr publisher_obs;
     rclcpp::Publisher<asv_interfaces::msg::StateObserver>::SharedPtr publisher_state;

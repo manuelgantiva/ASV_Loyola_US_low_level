@@ -93,7 +93,7 @@ public:
         publisher_setparam = this-> create_publisher<std_msgs::msg::Bool>("/" + my_id + "/observer/set_param",
                     1);
         
-        this-> client_setparam = this->create_client<rcl_interfaces::srv::SetParameters>("/" + my_id + "/observer/observer_zono_2/set_parameters");
+        this-> client_setparam = this->create_client<rcl_interfaces::srv::SetParameters>("/" + my_id + "/observer/observer_zono/set_parameters");
            
         // std::vector<bool> myVector = {true, false, false};
         // threads_.push_back(std::thread(std::bind(&ObserverParamNode::callSetParametersService, this, Xu, Xv, Xr, myVector)));
@@ -303,9 +303,9 @@ private:
                     // diferencias en porcentaje
 
                     
-                    RCLCPP_INFO(this->get_logger(), "Diferencias en Xu: %f, %f, %f, %f, %f, %f, %f", diff_Xu(0,0), diff_Xu(1,0), diff_Xu(2,0), diff_Xu(3,0), diff_Xu(4,0), diff_Xu(5,0), diff_Xu(6,0));
-                    RCLCPP_INFO(this->get_logger(), "Diferencias en Xv: %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f", diff_Xv(0,0), diff_Xv(1,0), diff_Xv(2,0), diff_Xv(3,0), diff_Xv(4,0), diff_Xv(5,0), diff_Xv(6,0), diff_Xv(7,0), diff_Xv(8,0), diff_Xv(9,0), diff_Xv(10,0), diff_Xv(11,0), diff_Xv(12,0));
-                    RCLCPP_INFO(this->get_logger(), "Diferencias en Xr:  %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f", diff_Xr(0,0), diff_Xr(1,0), diff_Xr(2,0), diff_Xr(3,0), diff_Xr(4,0), diff_Xr(5,0), diff_Xr(6,0), diff_Xr(7,0), diff_Xr(8,0), diff_Xr(9,0), diff_Xr(10,0), diff_Xr(11,0), diff_Xr(12,0));
+                    // RCLCPP_INFO(this->get_logger(), "Diferencias en Xu: %f, %f, %f, %f, %f, %f, %f", diff_Xu(0,0), diff_Xu(1,0), diff_Xu(2,0), diff_Xu(3,0), diff_Xu(4,0), diff_Xu(5,0), diff_Xu(6,0));
+                    // RCLCPP_INFO(this->get_logger(), "Diferencias en Xv: %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f", diff_Xv(0,0), diff_Xv(1,0), diff_Xv(2,0), diff_Xv(3,0), diff_Xv(4,0), diff_Xv(5,0), diff_Xv(6,0), diff_Xv(7,0), diff_Xv(8,0), diff_Xv(9,0), diff_Xv(10,0), diff_Xv(11,0), diff_Xv(12,0));
+                    // RCLCPP_INFO(this->get_logger(), "Diferencias en Xr:  %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f", diff_Xr(0,0), diff_Xr(1,0), diff_Xr(2,0), diff_Xr(3,0), diff_Xr(4,0), diff_Xr(5,0), diff_Xr(6,0), diff_Xr(7,0), diff_Xr(8,0), diff_Xr(9,0), diff_Xr(10,0), diff_Xr(11,0), diff_Xr(12,0));
 
 
                     // Verifica las diferencias en Xu
@@ -378,7 +378,7 @@ private:
                     P_bar_r = Eigen::MatrixXd::Identity(13, 13);
                     // Matriz de covarianza del ruido de medida (R)
                     R = Eigen::Matrix<double, 1, 1> {R_value};
-                    RCLCPP_INFO(this->get_logger(),  "Valores de R : %f.", R(0,0));
+                    // RCLCPP_INFO(this->get_logger(),  "Valores de R : %f.", R(0,0));
                 }
                 count=count+1;
             }
@@ -548,9 +548,9 @@ private:
             result.first->parameters.size();
             for (size_t i = 0; i < result.first->parameters.size(); ++i) {
                 if (result.second->results[i].successful) {
-                    RCLCPP_INFO(this->get_logger(), "Parameter %s set successfully", result.first->parameters[i].name.c_str());
+                    // RCLCPP_INFO(this->get_logger(), "Parameter %s set successfully", result.first->parameters[i].name.c_str());
                 } else {
-                    RCLCPP_INFO(this->get_logger(), "Parameter %s could not be set", result.first->parameters[i].name.c_str());
+                    // RCLCPP_INFO(this->get_logger(), "Parameter %s could not be set", result.first->parameters[i].name.c_str());
                 }
             }
         } catch (const std::exception& e) {

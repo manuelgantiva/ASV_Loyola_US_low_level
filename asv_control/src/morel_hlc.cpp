@@ -269,8 +269,8 @@ public:
         RCLCPP_INFO(this->get_logger(), "d_alpha = %f", d_alpha);
         
         h = this->get_parameter("h").as_double();
-        a = this->get_parameter("a").as_double();
-        b = this->get_parameter("b").as_double();
+        // a = this->get_parameter("a").as_double();
+        // b = this->get_parameter("b").as_double();
 
         c1_gamma = this->get_parameter("c1_gamma").as_double();
         c2_gamma = this->get_parameter("c2_gamma").as_double();
@@ -373,7 +373,7 @@ private:
 
 
                 // Test particle motion
-                float w = 0.0;
+                // TODO: cambiar a que w sea global float w = 0.0;
                 Target p_i = currentTarget(w);
                 Matrix<float, 2, 1> qr = {p_i.xp, p_i.yp};
                 Matrix<float, 2, 1> pr = {p_i.dxp, p_i.dyp};
@@ -409,7 +409,7 @@ private:
             for (int i = 0; i < numParticles; ++i)
             {                
                 
-                if (i == my_id)
+                if (i == 0)
                 {
                     auto msg = asv_interfaces::msg::StateObserver();// point, velocity
                     msg.header.stamp = this->now();
@@ -460,7 +460,7 @@ private:
     {
         {
             std::lock_guard<std::mutex> lock(mutex_);
-            int id = msg->msg_from;
+            int id = msg->msg_from; // esto no significa ID sino worker_mode
             X_s[id] = msg->point.x; // X
             Y_s[id] = msg->point.y; // Y
             PSI_s[id] = msg->point.z; // psi
@@ -592,6 +592,7 @@ private:
     int max_sim_k = 500; // k = Ts
     float Ts;
     float delta_w = 0.0;
+    float w = 0.0;
     float c1_alpha = 0.5;
     float c2_alpha = 0.5; 
     float d = 20.0;

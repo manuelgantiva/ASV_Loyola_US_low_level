@@ -165,8 +165,9 @@ ASV0:
     morel_hlc:
       ros__parameters:
         Ts: 100.0
-        numParticles: 3
+        numParticles: 1
         path_d: 24
+        leader_delta_w: 0.01
         d: 8.0
         c1_alpha: 0.5
         c2_alpha: 0.5
@@ -177,7 +178,6 @@ ASV0:
         c1_gamma: 3.0
         c2_gamma: 1.0
         max_sim_k: 50
-        leader_delta_w: 0.01
     mod_wang_mlc:
       ros__parameters:
         Ts: 100.0

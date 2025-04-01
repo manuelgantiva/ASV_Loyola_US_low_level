@@ -1,12 +1,10 @@
-transceiver simulator no funciona
-
-
 from launch import LaunchDescription
 from launch_ros.actions import Node
 
 # Exec robot description node with xacro
 from launch_ros.parameter_descriptions import ParameterValue
 from launch.substitutions import Command
+from launch.actions import ExecuteProcess
 
 # Retrieving path information
 import os
@@ -50,11 +48,6 @@ def generate_launch_description():
         default_value="false",
         description='Record bag file'
     )
-    arg_pub2neigh = DeclareLaunchArgument(
-        'pub2neigh',
-        default_value="false",
-        description='Publish to neighbor'
-    )
     arg_worker_mode = DeclareLaunchArgument(
         'worker_mode',
         default_value="1",
@@ -63,9 +56,7 @@ def generate_launch_description():
 
     my_id = LaunchConfiguration('my_id')
     rec = LaunchConfiguration('rec')
-    pub2neigh = LaunchConfiguration('pub2neigh')
     worker_mode = LaunchConfiguration('worker_mode')
-
     my_namespace = PythonExpression(["'ASV' + str(", my_id, ")"])
     namespace_control = PythonExpression(
         ["'ASV' + str(", my_id, ") + '/control'"])
@@ -99,23 +90,17 @@ def generate_launch_description():
             ("/robot_description", "/own_description")
         ]
     )
-    # nodes.append(own_robot_state_publisher_node)
 
-    neighbor_description = ParameterValue(Command(['xacro ', urdf_path, ' id:=n', ' own:=false']),
-                                          value_type=str)
-    neighbor_robot_state_publisher_node = Node(
-        package="robot_state_publisher",
-        executable="robot_state_publisher",
-        name="neighbor_robot_state_publisher",
-        namespace=my_namespace,
-        parameters=[{'robot_description': neighbor_description},
-                    {'publish_frequency': 10.0}],
-        remappings=[
-            ("/robot_description", "/neighbor_description")
+    tf_map_node = ExecuteProcess(
+        cmd=[
+            "ros2", "run", "tf2_ros", "static_transform_publisher",
+            "0", "0", "0",  # x, y, z
+            "1.5708", "0", "3.1415",  # roll, pitch, yaw
+            "map", "map_ned"  # Frame de origen y destino
         ],
-        condition=IfCondition(pub2neigh)
+        output="screen"
     )
-    # nodes.append(neighbor_robot_state_publisher_node)
+
 
     ###################################################################
     ## ------------------------Mavros Launch--------------------------##
@@ -171,6 +156,14 @@ def generate_launch_description():
             {'my_id': my_id}
         ],
         condition=IfCondition(rec)
+    )
+
+    rvz = Node(
+        package='rviz2',
+        namespace='',
+        executable='rviz2',
+        name='rviz2',
+        arguments=['-d' + os.path.join(get_package_share_directory('asv_bringup'), 'config', 'test_obs.rviz')],
     )
 
     rc_handler_node = Node(
@@ -255,7 +248,7 @@ def generate_launch_description():
     
     transceiver_sim_node = Node(
         package="asv_comunication",
-        executable="transceiver_simulator",
+        executable="transceiver_simulator.py",
         namespace= namespace_comunication,
         parameters = [
             {'my_id': my_namespace,
@@ -263,7 +256,7 @@ def generate_launch_description():
         ]
     )
 
-    nodes.append(transceiver_sim_node)
+
     transceiver_xbee_node = Node(
         package="asv_comunication",
         executable="transceiver_xbee.py",
@@ -344,7 +337,8 @@ def generate_launch_description():
         parameters = [{'my_id': my_namespace},
                 config],
     )
-    nodes.append(mod_wang_mlc_node)
+
+
 
     morel_hlc_node = Node(
         package="asv_control",
@@ -359,8 +353,6 @@ def generate_launch_description():
                     )
                 )
     )
-
-    nodes.append(morel_hlc_node)
 
     mpc_hlc_node = Node(
         package="asv_control",
@@ -418,25 +410,51 @@ def generate_launch_description():
         ]
     )
 
+
+    observer_param = Node(
+        package="asv_observer",
+        executable="observer_param",
+        name="observer_param",
+        namespace=namespace_observer,
+        parameters=[
+            {'my_id': my_namespace},
+            config
+        ]
+    )
+
+    observer_core = Node(
+        package="asv_observer",
+        executable="observer_core",
+        name="observer_core",
+        namespace=namespace_observer,
+        parameters=[
+            {'my_id': my_namespace},
+            config
+        ]
+    )
+
     ###################################################################
     ##-------------------------ASVs Nodes----------------------------##
     ################################################################### 
     nodes.append(asv_simulator_node)
-    nodes.append(neighbor_robot_state_publisher_node)
     nodes.append(own_robot_state_publisher_node)
+    nodes.append(tf_map_node)
+
 
     ###################################################################
     ##--------------------Comunication Nodes-------------------------##
     ################################################################### 
     # nodes.append(imu_fix_node)
-    nodes.append(apm_llc_node)
-    nodes.append(ref_mlc_node)
+    # nodes.append(apm_llc_node)
+    # nodes.append(ref_mlc_node)
     # nodes.append(ref_hlc_node)
     nodes.append(ref_llc_node)
     nodes.append(rc_handler_node)
     nodes.append(record)
     # nodes.append(transceiver_xbee_node)
     # nodes.append(xbee_master_node)
+    nodes.append(transceiver_sim_node)
+    nodes.append(asv_tf_broadcast_node)
 
     ###################################################################
     ##-----------------------Observer Nodes--------------------------##
@@ -445,6 +463,8 @@ def generate_launch_description():
     nodes.append(observer_guille)
     nodes.append(observer_liu)
     nodes.append(observer_zono)
+    nodes.append(observer_param)
+    nodes.append(observer_core)
 
     ###################################################################
     ##-----------------------Control Nodes---------------------------##
@@ -452,13 +472,15 @@ def generate_launch_description():
     nodes.append(ifac_llc_node)
     nodes.append(mux_llc_node)
     nodes.append(pwm_mapper_node)
-    nodes.append(wang_mlc_node)
+    nodes.append(mod_wang_mlc_node)
+    nodes.append(morel_hlc_node)
+    # nodes.append(wang_mlc_node)
     # nodes.append(mpc_hlc_node)
     # nodes.append(filter_hlc_node)
     # nodes.append(asv_tf_broadcast_node)
     # nodes.append(mpc_llc_node)
 
     return LaunchDescription(
-        [arg_my_id, arg_rec, arg_pub2neigh, param_id, arg_worker_mode,
+        [arg_my_id, arg_rec, param_id, arg_worker_mode,
             *nodes]
     )

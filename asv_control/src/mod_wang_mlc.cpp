@@ -116,11 +116,13 @@ private:
                 // msg_e.z = w;
 
                 float k1_i = k1, k2_i = k2;
-                float u_ref = p_i.norm()  + k1_i * std::abs(ye);
+                float u_ref = p_i.norm() + k1_i * std::abs(ye);
                 float b_ref = 0.0;
                 b_ref = atan2(v_hat_i, u_ref);
                 
                 float psi_ref = psip_i - b_ref - atan2(ye, k2_i*std::abs(xe));
+
+
                 // Corrijo el angulo de referencia teniendo en cuenta las vueltas sobre la trayectoria
                 
                 if(psi_ref<0){
