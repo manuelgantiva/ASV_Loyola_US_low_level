@@ -127,3 +127,32 @@ ASV4:
         taud: 5.0
         path_d: 3
         flag: False     #True signo igual False invertido
+    lyap_hlc:
+      ros_parameters:
+        taud: 1.0
+        Ts: 0.01
+        lambda: 1.0
+        zeta: 1.0
+        gamma: 1.0
+        sigma_h: 1.0
+        mu_u: 1.0
+        mu_r: 1.0
+        k_d: 1.0
+        k_theta: 1.0
+        m11: 1.0
+        m33_bar: 1.0
+        m22: 1.0
+        k_u: 1.0
+        k_r: 1.0
+        Sigma: 1.0
+        d_cn: 10.0
+        theta_cn: 1.0
+        d_cl: 5.0
+        theta_cl: 0.5
+        Kd: 1.0
+        Ktheta: 1.0
+        b_dinf: 0.1
+        b_thetainf: 0.1
+        ref_d: 0.0
+        ref_theta: 0.0
+        eps_i: 0.1

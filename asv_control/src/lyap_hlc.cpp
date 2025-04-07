@@ -29,96 +29,73 @@ public:
     LyapHlcNode() : Node("lyap_hlc")
     { 
         std::string my_id; 
-        this->declare_parameter("my_id", "ASV0");   
-        my_id = this->get_parameter("my_id").as_string();
 
         //---------Parámetros del HLC-------------------// 
 
         memory_u.assign(4, 0.0);
         memory_r.assign(4, 0.0);
 
+        // Declare parameters
+        this->declare_parameter("my_id", "ASV0"); 
+        
         this->declare_parameter("taud", 1.0);
-        taud = this->get_parameter("taud").as_double();
-        
         this->declare_parameter("Ts", 0.01);
-        Ts = this->get_parameter("Ts").as_double();
-        
         this->declare_parameter("lambda", 1.0);
-        lambda = this->get_parameter("lambda").as_double();
-        
         this->declare_parameter("zeta", 1.0);
-        zeta = this->get_parameter("zeta").as_double();
-        
         this->declare_parameter("gamma", 1.0);
-        gamma = this->get_parameter("gamma").as_double();
-        
         this->declare_parameter("sigma_h", 1.0);
-        sigma_h = this->get_parameter("sigma_h").as_double();
-        
         this->declare_parameter("mu_u", 1.0);
-        mu_u = this->get_parameter("mu_u").as_double();
-        
         this->declare_parameter("mu_r", 1.0);
-        mu_r = this->get_parameter("mu_r").as_double();
-        
         this->declare_parameter("k_d", 1.0);
-        k_d = this->get_parameter("k_d").as_double();
-        
         this->declare_parameter("k_theta", 1.0);
-        k_theta = this->get_parameter("k_theta").as_double();
-        
         this->declare_parameter("m11", 1.0);
-        m11 = this->get_parameter("m11").as_double();
-        
         this->declare_parameter("m33_bar", 1.0);
-        m33_bar = this->get_parameter("m33_bar").as_double();
-        
         this->declare_parameter("m22", 1.0);
-        m22 = this->get_parameter("m22").as_double();
-        
         this->declare_parameter("k_u", 1.0);
-        k_u = this->get_parameter("k_u").as_double();
-        
         this->declare_parameter("k_r", 1.0);
-        k_r = this->get_parameter("k_r").as_double();
-        
         this->declare_parameter("Sigma", 1.0);
-        Sigma = this->get_parameter("Sigma").as_double();
-        
-        // Valores por defecto para otros parámetros
         this->declare_parameter("d_cn", 10.0);
-        d_cn = this->get_parameter("d_cn").as_double();
-        
         this->declare_parameter("theta_cn", 1.0);
-        theta_cn = this->get_parameter("theta_cn").as_double();
-        
         this->declare_parameter("d_cl", 5.0);
-        d_cl = this->get_parameter("d_cl").as_double();
-        
         this->declare_parameter("theta_cl", 0.5);
-        theta_cl = this->get_parameter("theta_cl").as_double();
-        
         this->declare_parameter("Kd", 1.0);
-        Kd = this->get_parameter("Kd").as_double();
-        
         this->declare_parameter("Ktheta", 1.0);
-        Ktheta = this->get_parameter("Ktheta").as_double();
-        
         this->declare_parameter("b_dinf", 0.1);
-        b_dinf = this->get_parameter("b_dinf").as_double();
-        
         this->declare_parameter("b_thetainf", 0.1);
-        b_thetainf = this->get_parameter("b_thetainf").as_double();
-        
         this->declare_parameter("ref_d", 0.0);
-        ref_d = this->get_parameter("ref_d").as_double();
-        
         this->declare_parameter("ref_theta", 0.0);
-        ref_theta = this->get_parameter("ref_theta").as_double();
-        
         this->declare_parameter("eps_i", 0.1);
-        eps_i = this->get_parameter("eps_i").as_double();
+
+        // Get parameters
+        my_id = this->get_parameter("my_id").as_string();
         
+        taud = this->get_parameter("taud").as_double();
+        Ts = this->get_parameter("Ts").as_double();
+        lambda = this->get_parameter("lambda").as_double();
+        zeta = this->get_parameter("zeta").as_double();
+        gamma = this->get_parameter("gamma").as_double();
+        sigma_h = this->get_parameter("sigma_h").as_double();
+        mu_u = this->get_parameter("mu_u").as_double();
+        mu_r = this->get_parameter("mu_r").as_double();
+        k_d = this->get_parameter("k_d").as_double();
+        k_theta = this->get_parameter("k_theta").as_double();
+        m11 = this->get_parameter("m11").as_double();
+        m33_bar = this->get_parameter("m33_bar").as_double();
+        m22 = this->get_parameter("m22").as_double();
+        k_u = this->get_parameter("k_u").as_double();
+        k_r = this->get_parameter("k_r").as_double();
+        Sigma = this->get_parameter("Sigma").as_double();
+        d_cn = this->get_parameter("d_cn").as_double();
+        theta_cn = this->get_parameter("theta_cn").as_double();
+        d_cl = this->get_parameter("d_cl").as_double();
+        theta_cl = this->get_parameter("theta_cl").as_double();
+        Kd = this->get_parameter("Kd").as_double();
+        Ktheta = this->get_parameter("Ktheta").as_double();
+        b_dinf = this->get_parameter("b_dinf").as_double();
+        b_thetainf = this->get_parameter("b_thetainf").as_double();
+        ref_d = this->get_parameter("ref_d").as_double();
+        ref_theta = this->get_parameter("ref_theta").as_double();
+        eps_i = this->get_parameter("eps_i").as_double();
 
         // Inicialización de flags y estados iniciales
         isFirstStep_HGO = true;
@@ -263,7 +240,7 @@ private:
 
         //TODO: cuidado alpha no se está utilizando
         Eigen::Vector2d alpha = Eigen::Vector2d(alpha_ui, alpha_ri);
-        Eigen::Vector2d alpha_f = DSC(alpha_ui, alpha_ri, e_d, e_theta, q, theta);
+        Eigen::Vector2d alpha_f = DSC(alpha, e_d, e_theta, q, theta);
 
         double e21 = Xf_est(3) - alpha_f(0); 
         double e22 = Xf_est(5) - alpha_f(1); 
@@ -382,12 +359,13 @@ private:
     //Compute q
     Eigen::VectorXd Compute_q(const Eigen::VectorXd &beta, double e_d, double e_theta) {
         Eigen::VectorXd q(2);
-        //TODO: compute q
+        q(0) = pow(1.0 / cos((M_PI * pow(e_d, 2)) / (2 * pow(beta(0), 2))), 2);
+        q(1) = pow(1.0 / cos((M_PI * pow(e_theta, 2)) / (2 * pow(beta(1), 2))), 2);
         return q;
     }
     
     //DSC
-    Eigen::Vector2d DSC(double alpha_ui, double alpha_ri,
+    Eigen::Vector2d DSC(const Eigen::Vector2d& alpha,
         double e_d, double e_theta,
         const Eigen::VectorXd &q, double theta)
     {
