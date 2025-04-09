@@ -4,7 +4,7 @@
 #include "std_msgs/msg/float64.hpp"  
 #include "asv_interfaces/msg/pwm_values.hpp"        //Interface ref vel mid level controller
 #include "asv_interfaces/msg/state_observer.hpp"    //Interface state observer
-
+#include "asv_interfaces/msg/state_neighbor.hpp"     //Interface state neighbor
 #include <cmath>
 #include <thread>
 #include <vector>
@@ -40,31 +40,65 @@ public:
         
         this->declare_parameter("taud", 1.0);
         this->declare_parameter("Ts", 0.01);
-        this->declare_parameter("lambda", 1.0);
-        this->declare_parameter("zeta", 1.0);
-        this->declare_parameter("gamma", 1.0);
-        this->declare_parameter("sigma_h", 1.0);
-        this->declare_parameter("mu_u", 1.0);
-        this->declare_parameter("mu_r", 1.0);
-        this->declare_parameter("k_d", 1.0);
-        this->declare_parameter("k_theta", 1.0);
+        this->declare_parameter("lambda", 20.0);
+        this->declare_parameter("zeta", 0.95);
+        this->declare_parameter("gamma", 0.75);
+        this->declare_parameter("sigma_h", 0.5);
+        this->declare_parameter("mu_u", 2.0);
+        this->declare_parameter("mu_r", 0.09);
+        this->declare_parameter("k_d", 3.0);
+        this->declare_parameter("k_theta", 3.0);
         this->declare_parameter("m11", 1.0);
         this->declare_parameter("m33_bar", 1.0);
         this->declare_parameter("m22", 1.0);
-        this->declare_parameter("k_u", 1.0);
-        this->declare_parameter("k_r", 1.0);
-        this->declare_parameter("Sigma", 1.0);
-        this->declare_parameter("d_cn", 10.0);
-        this->declare_parameter("theta_cn", 1.0);
-        this->declare_parameter("d_cl", 5.0);
-        this->declare_parameter("theta_cl", 0.5);
-        this->declare_parameter("Kd", 1.0);
-        this->declare_parameter("Ktheta", 1.0);
-        this->declare_parameter("b_dinf", 0.1);
-        this->declare_parameter("b_thetainf", 0.1);
-        this->declare_parameter("ref_d", 0.0);
-        this->declare_parameter("ref_theta", 0.0);
+        this->declare_parameter("k_u", 0.49);
+        this->declare_parameter("k_r", 0.9);
+        this->declare_parameter("Sigma", 0.08);
+        this->declare_parameter("d_cn", 5.5);
+        this->declare_parameter("theta_cn", 3*M_PI/8);
+        this->declare_parameter("d_cl", 4.5);
+        this->declare_parameter("theta_cl", M_PI/8);
+        this->declare_parameter("Kd", 0.08);
+        this->declare_parameter("Ktheta", 0.1);
+        this->declare_parameter("b_dinf", 0.05);
+        this->declare_parameter("b_thetainf", 0.05);
+        this->declare_parameter("ref_d", 5.0);
+        this->declare_parameter("ref_theta", 0.29*M_PI);
         this->declare_parameter("eps_i", 0.1);
+
+        this-> declare_parameter("mf0", 0.0013545);
+        this-> declare_parameter("mf1", 6.0977);
+        this-> declare_parameter("mf2", 0.0);
+        this-> declare_parameter("mf3", -2.769);
+        this-> declare_parameter("mf4", 0.0);
+        this-> declare_parameter("mf5", -1.0978);
+        this-> declare_parameter("mr0", -0.0059858);
+        this-> declare_parameter("mr1", 6.1789);
+        this-> declare_parameter("mr2", 0.20095);
+        this-> declare_parameter("mr3", -5.1266);
+        this-> declare_parameter("mr4", 1.048);
+        this-> declare_parameter("mr5", -2.5286);
+        this-> declare_parameter("df0", 0.0);
+        this-> declare_parameter("df1", 0.0);
+        this-> declare_parameter("df2", 6.3681);
+        this-> declare_parameter("df3", 0.0);
+        this-> declare_parameter("df4", 8.2298);
+        this-> declare_parameter("df5", 0.0);
+        this-> declare_parameter("dr0", 0.030548);
+        this-> declare_parameter("dr1", -2.8142);
+        this-> declare_parameter("dr2", 5.3685);
+        this-> declare_parameter("dr3", 27.237);
+        this-> declare_parameter("dr4", 4.2689);
+        this-> declare_parameter("dr5", 13.881);
+
+        this-> declare_parameter("IGumax_ff", 0.17794);
+        this-> declare_parameter("IGumax_rf", 0.08897),
+        this-> declare_parameter("IGumin_rf", -0.07331);
+        this-> declare_parameter("IGrmax_ff", 0.14128);
+        this-> declare_parameter("IGrmax_rf", 0.22898);
+
+        this-> declare_parameter("Dz_up", 0.0750);
+        this-> declare_parameter("Dz_down", -0.08);
 
         // Get parameters
         my_id = this->get_parameter("my_id").as_string();
@@ -97,6 +131,42 @@ public:
         ref_theta = this->get_parameter("ref_theta").as_double();
         eps_i = this->get_parameter("eps_i").as_double();
 
+        mf0 = this->get_parameter("mf0").as_double();
+        mf1 = this->get_parameter("mf1").as_double();
+        mf2 = this->get_parameter("mf2").as_double();
+        mf3 = this->get_parameter("mf3").as_double();
+        mf4 = this->get_parameter("mf4").as_double();
+        mf5 = this->get_parameter("mf5").as_double();
+        mr0 = this->get_parameter("mr0").as_double();
+        mr1 = this->get_parameter("mr1").as_double();
+        mr2 = this->get_parameter("mr2").as_double();
+        mr3 = this->get_parameter("mr3").as_double();
+        mr4 = this->get_parameter("mr4").as_double();
+        mr5 = this->get_parameter("mr5").as_double();
+        df0 = this->get_parameter("df0").as_double();
+        df1 = this->get_parameter("df1").as_double();
+        df2 = this->get_parameter("df2").as_double();
+        df3 = this->get_parameter("df3").as_double();
+        df4 = this->get_parameter("df4").as_double();
+        df5 = this->get_parameter("df5").as_double();
+        dr0 = this->get_parameter("dr0").as_double();
+        dr1 = this->get_parameter("dr1").as_double();
+        dr2 = this->get_parameter("dr2").as_double();
+        dr3 = this->get_parameter("dr3").as_double();
+        dr4 = this->get_parameter("dr4").as_double();
+        dr5 = this->get_parameter("dr5").as_double();
+
+        IGumax_ff = this->get_parameter("IGumax_ff").as_double();
+        IGumax_rf = this->get_parameter("IGumax_rf").as_double();
+        IGumin_rf = this->get_parameter("IGumin_rf").as_double();
+        IGrmax_ff = this->get_parameter("IGrmax_ff").as_double();
+        IGrmax_rf = this->get_parameter("IGrmax_rf").as_double();
+
+        Dz_2  = this->get_parameter("Dz_up").as_double();
+        Dz_1 = this->get_parameter("Dz_down").as_double();
+        p = 1 - Dz_2;
+        q = -1 - Dz_1;
+
         // Inicialización de flags y estados iniciales
         isFirstStep_HGO = true;
         isFirstStep_EHG = true;
@@ -104,7 +174,7 @@ public:
         h_hat = 0.0;
         alpha_fui = 0.0;
         alpha_fri = 0.0;
-
+        
         // Inicialización de vectores de referencia para DSC
         R1 = Eigen::Vector2d(1.0, 0.0);
         R2 = Eigen::Vector2d(0.0, 1.0);
@@ -128,9 +198,17 @@ public:
         //     this, std::placeholders::_1), options_sensors_);
         subscriber_state = this-> create_subscription<mavros_msgs::msg::State>("/" + my_id + "/mavros/state",1,
                 std::bind(&LyapHlcNode::callbackStateData, this, std::placeholders::_1), options_sensors_);
+
+        subscriber_state_neighbor_ = this->create_subscription<asv_interfaces::msg::StateNeighbor>("/"+ my_id +
+            "/neighbors/output_leader",rclcpp::SensorDataQoS(), std::bind(&LyapHlcNode::callbackNeighbor,
+            this, std::placeholders::_1), options_sensors_);
+
+        publisher_pwm = this-> create_publisher<asv_interfaces::msg::PwmValues>("/" + my_id + "/control/pwm_value_ifac",
+                    10);
+        publisher_IG = this-> create_publisher<geometry_msgs::msg::Vector3>("/" + my_id + "/control/IG_lyap",1);
         
         }
-
+        
 private:
     void calculateHighLevelController()
     {
@@ -139,6 +217,11 @@ private:
             count = 0;
             // TODO: reiniciar datos que varian con el tiempo
         }else{
+        auto msg = asv_interfaces::msg::PwmValues();
+        auto msg_Igu = geometry_msgs::msg::Vector3();
+        auto msg_Igr = geometry_msgs::msg::Vector3();
+        auto msg_Ig = geometry_msgs::msg::Vector3();
+        float zone;
             if(count > 7){
         float x_hat_i, y_hat_i, psi_hat_i, u_hat_i, v_hat_i, r_hat_i, sig_u_i, sig_v_i, sig_r_i;
         float x_hat_l_i, y_hat_l_i, psi_hat_l_i, u_hat_l_i, v_hat_l_i, r_hat_l_i;
@@ -162,17 +245,20 @@ private:
             r_hat_l_i = r_hat_l;
             
         }
-
-        Eigen::VectorXd Xf_est(6);
+        
+        Eigen::Vector<double, 6> Xf_est;
         Xf_est << x_hat_i, y_hat_i, psi_hat_i, u_hat_i, v_hat_i, r_hat_i;
-        Eigen::VectorXd Xl_est(6);
+        
+        Eigen::Vector<double, 6> Xl_est;
         // (Xl_est << 1.5, 2.5, 0.9, 0.0, 3.5, 0.3;)
         Xl_est << x_hat_l_i, y_hat_l_i, psi_hat_l_i, u_hat_l_i, v_hat_l_i, r_hat_l_i;
+        
         Eigen::Vector3d sigmaf_est;
         sigmaf_est << sig_u_i, sig_v_i, sig_r_i;
-        double t = this->now().seconds(); 
+        double t = this->now().seconds() + this->now().nanoseconds(); 
 
         // --- Rotational matrices --- (From Simulator to paper)
+        
         Eigen::Matrix3d Rs2pg, Rs2pb;
         Rs2pg << 0, 1, 0,
                  1, 0, 0,
@@ -188,6 +274,7 @@ private:
         sigmaf_est = Rs2pb * sigmaf_est;
 
         // --- Coordinate Transformation ---
+        
         Eigen::Vector3d Xf_bar = CoordinateTransformation(Xf_est);
         Eigen::Vector3d Xl_bar = CoordinateTransformation(Xl_est);
 
@@ -203,17 +290,19 @@ private:
         double d = std::sqrt(std::pow(xl - xf, 2) + std::pow(yl - yf, 2));
         double theta = std::atan2(e2, e1);
 
+        
         Eigen::Vector2d ref;
         ref << d, theta;
 
         double e_d = d - ref_d;
         double e_theta = theta - ref_theta;
 
+
         Eigen::Vector4d beta = betaFunction(t);
 
         Eigen::Vector2d p_dot_l_est = HighGainObserver(Xl_bar);
-
-        Eigen::VectorXd q = Compute_q(beta, e_d, e_theta); 
+       
+        Eigen::Vector2d q = Compute_q(beta, e_d, e_theta); 
 
         double H_hat = ComputeErrorHG(beta, d, e_d, e_theta);
 
@@ -238,9 +327,8 @@ private:
         double alpha_ui = (1 / std::cos(theta)) * (var1_u * var2_u * var3_u - var4_u - var5_u + var6_u + var7_u);
         double alpha_ri = var1_r * var2_r * var3_r - var4_r + (var5_r - var6_r + var7_r) / d + var8_r;
 
-        //TODO: cuidado alpha no se está utilizando
-        Eigen::Vector2d alpha = Eigen::Vector2d(alpha_ui, alpha_ri);
-        Eigen::Vector2d alpha_f = DSC(alpha, e_d, e_theta, q, theta);
+    
+        Eigen::Vector2d alpha_f = DSC(alpha_ui,alpha_ri, e_d, e_theta, q, theta);
 
         double e21 = Xf_est(3) - alpha_f(0); 
         double e22 = Xf_est(5) - alpha_f(1); 
@@ -251,33 +339,125 @@ private:
         Eigen::Vector2d e_alpha;
         e_alpha << e_alpha1, e_alpha2;
 
-        double tau_u = m11 * (-k_u * e21 - e_alpha1 / mu_u + 2 * e_d * q(0) * std::cos(theta)) - sigmaf_est(0);
-        double tau_r = (m33_bar / m22) * (-k_r * e22 - e_alpha2 / mu_r + 2 * e_theta * q(1)) - sigmaf_est(2);
+        double IG_u = (-k_u * e21 - e_alpha1 / mu_u + 2 * e_d * q(0) * std::cos(theta)) - sigmaf_est(0);
+        double IG_r = (-k_r * e22 - e_alpha2 / mu_r + 2 * e_theta * q(1)) - sigmaf_est(2);
 
-        Eigen::Vector3d Tau_real;
-        Tau_real << tau_u, 0, tau_r;
         
-        Tau_real = Rs2pb.transpose() * Tau_real;
+        Eigen::Matrix<double, 3, 1> IG_real;
+        IG_real << IG_u, 0, IG_r;
+        
+        IG_real = Rs2pb.transpose() * IG_real;
+        IG_u = IG_real(0);
+        IG_r = IG_real(2);
         // Aquí se publicaría Tau_real usando el publisher (si estuviera habilitado)
+        // New Code
+        float m, d_;
+        
+        if(IG_u>IGumax_ff){
+            IG_u=IGumax_ff;
+        }
 
-        RCLCPP_INFO(this->get_logger(), "Tau_real: %f, %f, %f", Tau_real(0), Tau_real(1), Tau_real(2));
+        if(IG_u<IGumin_rf){
+            IG_u=IGumin_rf;
         }
-        else{
-            Eigen::Vector3d Tau_real;
-            Tau_real << 0, 0, 0;
-        RCLCPP_INFO(this->get_logger(), "Tau_real: %f, %f, %f", Tau_real(0), Tau_real(1), Tau_real(2));
 
-            count++;
+        if(IG_r>IGrmax_rf){
+            IG_r=IGrmax_rf;
         }
+
+        if(IG_r<-IGrmax_rf){
+            IG_r=-IGrmax_rf;
         }
-        // el siguiente paso es pasar de Tau a PWM
+        
+        if(IG_u>IGumax_rf){
+            // Zona Roja
+            m = mf0+mf1*IG_u+mf2*IG_r+mf3*IG_u*IG_u+mf4*IG_u*IG_r+mf5*IG_r*IG_r;
+            d_ = df0+df1*IG_u+df2*IG_r+df3*IG_u*IG_u+df4*IG_u*IG_r+df5*IG_r*IG_r;
+            zone = 0;
+        }else if(IG_r>IGrmax_ff){
+            // Zona Azul
+            m = mr0+mr1*IG_u+mr2*IG_r+mr3*IG_u*IG_u+mr4*IG_u*IG_r+mr5*IG_r*IG_r;
+            d_ = dr0+dr1*IG_u+dr2*IG_r+dr3*IG_u*IG_u+dr4*IG_u*IG_r+dr5*IG_r*IG_r;
+            zone = 1;
+        }else if(IG_r<-IGrmax_ff){
+            // Zona Verde
+            m = mr0+mr1*IG_u-mr2*IG_r+mr3*IG_u*IG_u-mr4*IG_u*IG_r+mr5*IG_r*IG_r;
+            d_ = dr0-dr1*IG_u+dr2*IG_r-dr3*IG_u*IG_u+dr4*IG_u*IG_r-dr5*IG_r*IG_r;
+            zone = -1;
+        }else{
+            // Zona Roja
+            m = mf0+mf1*IG_u+mf2*IG_r+mf3*IG_u*IG_u+mf4*IG_u*IG_r+mf5*IG_r*IG_r;
+            d_ = df0+df1*IG_u+df2*IG_r+df3*IG_u*IG_u+df4*IG_u*IG_r+df5*IG_r*IG_r;
+            zone = 0;
+            if((m<=0.5*d) || (m<=-0.5*d)){
+                if(IG_r>=0){
+                    //Zona Azul
+                    m = mr0+mr1*IG_u+mr2*IG_r+mr3*IG_u*IG_u+mr4*IG_u*IG_r+mr5*IG_r*IG_r;
+                    d_ = dr0+dr1*IG_u+dr2*IG_r+dr3*IG_u*IG_u+dr4*IG_u*IG_r+dr5*IG_r*IG_r;
+                    zone = 1;
+                }else{
+                    //Zona Verde
+                    m = mr0+mr1*IG_u-mr2*IG_r+mr3*IG_u*IG_u-mr4*IG_u*IG_r+mr5*IG_r*IG_r;
+                    d_ = dr0-dr1*IG_u+dr2*IG_r-dr3*IG_u*IG_u+dr4*IG_u*IG_r-dr5*IG_r*IG_r;
+                    zone = -1;
+                }
+            }
+        }
+
+        double L, R;
+        L = ((2 * m + d_) / 2);
+        R = ((2 * m - d_) / 2);
+
+        if (L > 0) {
+            L = L + Dz_2;
+        } else if (L < 0){
+            L = L + Dz_1;
+        }
+
+        if (R > 0) {
+            R = R + Dz_2;;
+        } else if (R < 0){
+            R = R + Dz_1;
+        }
+        
+        // Publish pwms
+        msg.t_left=400 * L + 1500;
+        msg.t_righ=400 * R + 1500;
+        if(msg.t_left<1100){
+            msg.t_left=1100;
+        }else if (msg.t_left > 1900) {
+            msg.t_left=1900;
+        }
+        if(msg.t_righ<1100){
+            msg.t_righ=1100;
+        }else if (msg.t_righ > 1900) {
+            msg.t_righ=1900;
+        }
+        msg_Ig.x = IG_u;
+        msg_Ig.y = IG_r;
+        msg_Ig.z = zone;
+        publisher_pwm->publish(msg);
+        publisher_IG->publish(msg_Ig);
+
+
+    }else{
+        msg.t_left= 1500;
+        msg.t_righ= 1500; 
+        count=count+1;
+        publisher_pwm->publish(msg);
+        publisher_IG->publish(msg_Ig);
     }
+        
+
+    }
+}
+
 
 //Coordinate Transformation   
-    Eigen::Vector3d CoordinateTransformation(Eigen::VectorXd& X_est) {
-        double x_bar = X_est[0] + eps_i * std::cos(X_est[2]);
-        double y_bar = X_est[1] + eps_i * std::sin(X_est[2]);
-        double v_bar = X_est[4] + eps_i * X_est[5];
+    Eigen::Vector3d CoordinateTransformation(Eigen::Vector<double, 6>& X_est) {
+        double x_bar = X_est(0) + eps_i * std::cos(X_est(2));
+        double y_bar = X_est(1) + eps_i * std::sin(X_est(2));
+        double v_bar = X_est(4) + eps_i * X_est(5);
         Eigen::Vector3d res;
         res << x_bar, y_bar, v_bar;
         return res;
@@ -343,8 +523,8 @@ private:
       }
 
     //Compute errorHG
-    double ComputeErrorHG(const Eigen::VectorXd &beta, double d, double e_d, double e_theta) {
-        Eigen::VectorXd q = Compute_q(beta, e_d, e_theta);
+    double ComputeErrorHG(const Eigen::Vector4d &beta, double d, double e_d, double e_theta) {
+        Eigen::Vector2d q = Compute_q(beta, e_d, e_theta);
     
         if (isFirstStep_EHG) {
           h_hat = 0.0;
@@ -357,17 +537,17 @@ private:
       }
 
     //Compute q
-    Eigen::VectorXd Compute_q(const Eigen::VectorXd &beta, double e_d, double e_theta) {
-        Eigen::VectorXd q(2);
+    Eigen::VectorXd Compute_q(const Eigen::Vector4d &beta, double e_d, double e_theta) {
+        Eigen::Vector2d q;
         q(0) = pow(1.0 / cos((M_PI * pow(e_d, 2)) / (2 * pow(beta(0), 2))), 2);
         q(1) = pow(1.0 / cos((M_PI * pow(e_theta, 2)) / (2 * pow(beta(1), 2))), 2);
         return q;
     }
     
     //DSC
-    Eigen::Vector2d DSC(const Eigen::Vector2d& alpha,
+    Eigen::Vector2d DSC(double alpha_ui, double alpha_ri,
         double e_d, double e_theta,
-        const Eigen::VectorXd &q, double theta)
+        const Eigen::Vector2d &q, double theta)
     {
         if (isFirstStep_DSC) {
         alpha_fui = alpha_ui + mu_u * e_d * q(0) * std::cos(theta);
@@ -406,13 +586,24 @@ private:
             sig_r = msg->disturbances.z;
         }
     
+    void callbackNeighbor(const asv_interfaces::msg::StateNeighbor::SharedPtr msg)
+       {
+            std::lock_guard<std::mutex> lock(mutex_);
+            x_hat = msg->point.x;
+            y_hat = msg->point.y;
+            psi_hat = msg->point.z;
+            u_hat = msg->velocity.x;
+            v_hat = msg->velocity.y;
+            r_hat = msg->velocity.z;
+        }
+    
         void callbackStateData(const mavros_msgs::msg::State::SharedPtr msg)
         {
             armed= msg->armed;
             // RCLCPP_INFO(this->get_logger(), "PWM left: %d and PWM right:%d", pwm_left, pwm_right);
         }
     
-    bool armed = false;
+    bool armed = true;
     int count = 0;
     float x_hat = 0, y_hat = 0, u_hat = 0, v_hat = 0, r_hat = 0, psi_hat = 0, sig_u = 0, sig_v = 0, sig_r = 0;
     float x_hat_l = 0, y_hat_l = 0, u_hat_l = 0, v_hat_l = 0, r_hat_l = 0, psi_hat_l = 0;
@@ -433,6 +624,12 @@ private:
     double k_d = 0.0, k_theta = 0.0;
     double k_u = 0.0, k_r = 0.0;
     double Sigma = 0.0;
+
+    float mf0, mf1, mf2, mf3, mf4, mf5;
+    float mr0, mr1, mr2, mr3, mr4, mr5;
+    float df0, df1, df2, df3, df4, df5;
+    float dr0, dr1, dr2, dr3, dr4, dr5;
+
     Eigen::Vector2d R1;
     Eigen::Vector2d R2;
 
@@ -449,12 +646,18 @@ private:
   
     double alpha_fui = 0.0;
     double alpha_fri = 0.0;
+    float IGumax_ff, IGumax_rf, IGumin_rf;
+    float IGrmax_ff, IGrmax_rf;
+    float Dz_1, Dz_2, p, q;
+
 
     rclcpp::Subscription<asv_interfaces::msg::StateObserver>::SharedPtr subscriber_states_obs_;
+    rclcpp::Subscription<asv_interfaces::msg::StateNeighbor>::SharedPtr subscriber_state_neighbor_;
     rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr subscriber_references_;
     rclcpp::Subscription<mavros_msgs::msg::State>::SharedPtr subscriber_state;
-   //rclcpp::Publisher<asv_interfaces::msg::PwmValues>::SharedPtr publisher_pwm;
+    rclcpp::Publisher<asv_interfaces::msg::PwmValues>::SharedPtr publisher_pwm;
     rclcpp::TimerBase::SharedPtr timer_;
+    rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr publisher_IG;
 
     std::mutex mutex_;
     rclcpp::CallbackGroup::SharedPtr cb_group_sensors_;

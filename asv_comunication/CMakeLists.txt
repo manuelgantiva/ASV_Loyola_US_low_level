@@ -68,6 +68,8 @@ install(PROGRAMS
   scripts/test_observer.py 
   scripts/test_xbee.py 
   scripts/imu_driver.py 
+  scripts/simulator_follower.py
+  scripts/simulator_leader.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
