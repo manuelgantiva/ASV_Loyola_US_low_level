@@ -207,15 +207,18 @@ private:
                         // Actualizar matriz de covarianza (P_bar)
                         P_bar_u = (Eigen::MatrixXd::Identity(7, 7) - L_u * Au) * P_bar_u;
                     }
-                    // Etapa de Filtrado
-                    Xv = Xv_km1 + L_v * (bv - Av*Xv_km1);
-                    Xr = Xr_km1 + L_r * (br - Ar*Xr_km1);
-                    // Actualizar ganancias de Kalman
-                    L_v = P_bar_v * Av.transpose() * (Av * P_bar_v * Av.transpose() + R).inverse();
-                    L_r = P_bar_r * Ar.transpose() * (Ar * P_bar_r * Ar.transpose() + R).inverse();
-                    // Actualizar matriz de covarianza (P_bar)
-                    P_bar_v = (Eigen::MatrixXd::Identity(13, 13) - L_v * Av) * P_bar_v;
-                    P_bar_r = (Eigen::MatrixXd::Identity(13, 13) - L_r * Ar) * P_bar_r;
+                    if(delta_diff_km1 != 0){
+                        // Etapa de Filtrado
+                        Xv = Xv_km1 + L_v * (bv - Av*Xv_km1);
+                        Xr = Xr_km1 + L_r * (br - Ar*Xr_km1);
+                        // Actualizar ganancias de Kalman
+                        L_v = P_bar_v * Av.transpose() * (Av * P_bar_v * Av.transpose() + R).inverse();
+                        L_r = P_bar_r * Ar.transpose() * (Ar * P_bar_r * Ar.transpose() + R).inverse();
+                        // Actualizar matriz de covarianza (P_bar)
+                        P_bar_v = (Eigen::MatrixXd::Identity(13, 13) - L_v * Av) * P_bar_v;
+                        P_bar_r = (Eigen::MatrixXd::Identity(13, 13) - L_r * Ar) * P_bar_r;
+                    }
+                    
                     
 
 
