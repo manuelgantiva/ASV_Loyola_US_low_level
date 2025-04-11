@@ -1,5 +1,7 @@
 colcon build --executor sequential 
 
+source ~/.bashrc
+
 source .bashrc
 
 ros2 launch asv_bringup observer_test.launch.py my_id:=1 rec:=true
@@ -15,3 +17,7 @@ ros2 topic echo /ASV1/observer/velocities
 
 
 mantener limpio el home, no almacenar rosbags
+
+
+// cambios en yaml
+colcon build --symlink-install --executor sequential
