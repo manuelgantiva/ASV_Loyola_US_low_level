@@ -93,7 +93,7 @@ public:
         publisher_setparam = this-> create_publisher<std_msgs::msg::Bool>("/" + my_id + "/observer/set_param",
                     1);
         
-        this-> client_setparam = this->create_client<rcl_interfaces::srv::SetParameters>("/" + my_id + "/observer/observer_zono/set_parameters");
+        this-> client_setparam = this->create_client<rcl_interfaces::srv::SetParameters>("/" + my_id + "/observer/observer_zono_2/set_parameters");
            
         // std::vector<bool> myVector = {true, false, false};
         // threads_.push_back(std::thread(std::bind(&ObserverParamNode::callSetParametersService, this, Xu, Xv, Xr, myVector)));
@@ -117,7 +117,7 @@ private:
                 bufferdelta_diff.clear();
                 bufferdelta_mean.clear();
                 // Inicializar ganancias  1, 1, 1, 1, 1, 1, 1
-                L_u = Eigen::Matrix<double, 7, 1> {1, 1, 1, 1, 1, 1, 1};
+                L_u = Eigen::Matrix<double, 7, 1> {0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1};
                 L_v = Eigen::Matrix<double, 13, 1> {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
                 L_r = Eigen::Matrix<double, 13, 1> {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
                 
@@ -180,42 +180,70 @@ private:
                     d = delta_mean_km1*delta_mean_km1 + 0.25*delta_diff_km1*delta_diff_km1;
                     // RCLCPP_INFO(this->get_logger(), "Antes de definir matrices A");
                     Eigen::Matrix<double, 1, 7> Au = {u_km1*abs(u_km1), v_km1*r_km1, r_km1*r_km1, u_km1, d, delta_mean_km1, 1};
+                    
                     Eigen::Matrix<double, 1, 13> Av = {v_km1*abs(v_km1), v_km1*abs(r_km1), r_km1*abs(v_km1), r_km1*abs(r_km1), u_km1*v_km1, u_km1*r_km1, v_km1, r_km1, sig*(1-beta_km1)*d, delta_diff_km1*delta_mean_km1, sig*(1-beta_km1)*delta_mean_km1, delta_diff_km1/2, 1};
                     Eigen::Matrix<double, 1, 13> Ar = Av;
 
+                    
                     bu << u_k - u_km1;
+                
                     bv << v_k - v_km1;
                     br << r_k - r_km1;
+                    
 
                     // Filtro de Kalman para obtener Xu, Xv, Xr
                     // RCLCPP_INFO(this->get_logger(), "Despues de definir matrices A, antes de X");
                     Eigen::Matrix<double, 7, 1> Xu_km1 = {Xu[0], Xu[1], Xu[2], Xu[3], Xu[4], Xu[5], Xu[6]};
+                
                     Eigen::Matrix<double, 13, 1> Xv_km1 = {Xv[0], Xv[1], Xv[2], Xv[3], Xv[4], Xv[5], Xv[6], Xv[7], Xv[8], Xv[9], Xv[10], Xv[11], Xv[12]};
                     Eigen::Matrix<double, 13, 1> Xr_km1 = {Xr[0], Xr[1], Xr[2], Xr[3], Xr[4], Xr[5], Xr[6], Xr[7], Xr[8], Xr[9], Xr[10], Xr[11], Xr[12]};
                     
-                    // Etapa de Filtrado
-                    // RCLCPP_INFO(this->get_logger(), "Despues de definir matrices X");
-                    Xu = Xu_km1 + L_u * (bu - Au*Xu_km1);
-                    Xv = Xv_km1 + L_v * (bv - Av*Xv_km1);
-                    Xr = Xr_km1 + L_r * (br - Ar*Xr_km1);
+
+                    if(delta_mean_km1>0.5*delta_diff_km1 && delta_mean_km1>-0.5*delta_diff_km1){
+                        // Etapa de Filtrado
+                        Xu = Xu_km1 + L_u * (bu - Au*Xu_km1);
+                        // Actualizar ganancias de Kalman
+                        L_u = P_bar_u * Au.transpose() * (Au * P_bar_u * Au.transpose() + R).inverse();
+                        // Actualizar matriz de covarianza (P_bar)
+                        P_bar_u = (Eigen::MatrixXd::Identity(7, 7) - L_u * Au) * P_bar_u;
+                    }
+                    if(delta_diff_km1 != 0){
+                        // Etapa de Filtrado
+                        Xv = Xv_km1 + L_v * (bv - Av*Xv_km1);
+                        Xr = Xr_km1 + L_r * (br - Ar*Xr_km1);
+                        // Actualizar ganancias de Kalman
+                        L_v = P_bar_v * Av.transpose() * (Av * P_bar_v * Av.transpose() + R).inverse();
+                        L_r = P_bar_r * Ar.transpose() * (Ar * P_bar_r * Ar.transpose() + R).inverse();
+                        // Actualizar matriz de covarianza (P_bar)
+                        P_bar_v = (Eigen::MatrixXd::Identity(13, 13) - L_v * Av) * P_bar_v;
+                        P_bar_r = (Eigen::MatrixXd::Identity(13, 13) - L_r * Ar) * P_bar_r;
+                    }
+                    
+                    
 
 
-                    //  RCLCPP_INFO(this->get_logger(),  "Valores actualizados de X : %f, %f, %f.", Xu(0,0), Xv(0,0), Xr(0,0));
+                    
+                    // // RCLCPP_INFO(this->get_logger(), "Despues de definir matrices X");
+                    // if(delta_mean_km1>0.5*delta_diff_km1 && delta_mean_km1>-0.5*delta_diff_km1){
+                    //     // Etapa de Filtrado
+                    //     Xu = Xu_km1 + L_u * (bu - Au*Xu_km1);
+                    //     // Actualizar ganancias de Kalman
+                    //     L_u = P_bar_u * Au.transpose() * (Au * P_bar_u * Au.transpose() + R).inverse();
+                    //     // Actualizar matriz de covarianza (P_bar)
+                    //     P_bar_u = (Eigen::MatrixXd::Identity(7, 7) - L_u * Au) * P_bar_u;
+                    // }else{
+                    //     // Etapa de Filtrado
+                    //     Xv = Xv_km1 + L_v * (bv - Av*Xv_km1);
+                    //     Xr = Xr_km1 + L_r * (br - Ar*Xr_km1);
+                    //     // Actualizar ganancias de Kalman
+                    //     L_v = P_bar_v * Av.transpose() * (Av * P_bar_v * Av.transpose() + R).inverse();
+                    //     L_r = P_bar_r * Ar.transpose() * (Ar * P_bar_r * Ar.transpose() + R).inverse();
+                    //     // Actualizar matriz de covarianza (P_bar)
+                    //     P_bar_v = (Eigen::MatrixXd::Identity(13, 13) - L_v * Av) * P_bar_v;
+                    //     P_bar_r = (Eigen::MatrixXd::Identity(13, 13) - L_r * Ar) * P_bar_r;
+                    // }
 
-                    // Actualizar ganancias de Kalman
-                    L_u = P_bar_u * Au.transpose() * (Au * P_bar_u * Au.transpose() + R).inverse();
-                    L_v = P_bar_v * Av.transpose() * (Av * P_bar_v * Av.transpose() + R).inverse();
-                    L_r = P_bar_r * Ar.transpose() * (Ar * P_bar_r * Ar.transpose() + R).inverse();
-                    //  RCLCPP_INFO(this->get_logger(), "Valores actualizados de L 1: %f, %f, %f.", L_u(0,0), L_v(0,0), L_r(0,0));
-                    // RCLCPP_INFO(this->get_logger(), "ganancias %f,  %f", (Av * P_bar_v * Av.transpose() + R).determinant(), (Ar * P_bar_r * Ar.transpose() + R).determinant());
-
-
-                    // Actualizar matriz de covarianza (P_bar)
-                    P_bar_u = (Eigen::MatrixXd::Identity(7, 7) - L_u * Au) * P_bar_u;
-                    P_bar_v = (Eigen::MatrixXd::Identity(13, 13) - L_v * Av) * P_bar_v;
-                    P_bar_r = (Eigen::MatrixXd::Identity(13, 13) - L_r * Ar) * P_bar_r;
-
-
+                
                     // Publicar los valores de Xu, Xv, Xr
                     std_msgs::msg::Float32MultiArray msg;
 
@@ -300,8 +328,6 @@ private:
                     Eigen::Matrix<double, 13, 1> diff_Xv = Xv - Xv_km1;
                     Eigen::Matrix<double, 13, 1> diff_Xr = Xr - Xr_km1;
 
-                    // diferencias en porcentaje
-
                     
                     // RCLCPP_INFO(this->get_logger(), "Diferencias en Xu: %f, %f, %f, %f, %f, %f, %f", diff_Xu(0,0), diff_Xu(1,0), diff_Xu(2,0), diff_Xu(3,0), diff_Xu(4,0), diff_Xu(5,0), diff_Xu(6,0));
                     // RCLCPP_INFO(this->get_logger(), "Diferencias en Xv: %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f", diff_Xv(0,0), diff_Xv(1,0), diff_Xv(2,0), diff_Xv(3,0), diff_Xv(4,0), diff_Xv(5,0), diff_Xv(6,0), diff_Xv(7,0), diff_Xv(8,0), diff_Xv(9,0), diff_Xv(10,0), diff_Xv(11,0), diff_Xv(12,0));
@@ -313,7 +339,7 @@ private:
                         diff_Xu(i,0) = Xu[i] - Xu_km1[i];
                         if (std::abs(Xu[i] - Xu_km1[i]) > max_diff_Xu[i]) {
                             set_Xu = true;
-                            break;
+                            // break;
                         }
                     }
 
@@ -322,7 +348,7 @@ private:
                         diff_Xv(i,0) = Xv[i] - Xv_km1[i];
                         if (std::abs(Xv[i] - Xv_km1[i]) > max_diff_Xv[i]) {
                             set_Xv = true;
-                            break;
+                            // break;
                         }
                     }
 
@@ -331,7 +357,7 @@ private:
                         diff_Xr(i,0) = Xr[i] - Xr_km1[i];
                         if (std::abs(Xr[i] - Xr_km1[i]) > max_diff_Xr[i]) {
                             set_Xr = true;
-                            break;
+                            // break;
                         }
                     }
 
@@ -368,7 +394,7 @@ private:
                     bufferdelta_diff.clear();
                     bufferdelta_mean.clear();
                     // Inicializar ganancias  1, 1, 1, 1, 1, 1, 1
-                    L_u = Eigen::Matrix<double, 7, 1> {1, 1, 1, 1, 1, 1, 1};
+                    L_u = Eigen::Matrix<double, 7, 1> {0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1};
                     L_v = Eigen::Matrix<double, 13, 1> {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
                     L_r = Eigen::Matrix<double, 13, 1> {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
                     
@@ -378,7 +404,7 @@ private:
                     P_bar_r = Eigen::MatrixXd::Identity(13, 13);
                     // Matriz de covarianza del ruido de medida (R)
                     R = Eigen::Matrix<double, 1, 1> {R_value};
-                    // RCLCPP_INFO(this->get_logger(),  "Valores de R : %f.", R(0,0));
+                    RCLCPP_INFO(this->get_logger(),  "Valores de R : %f.", R(0,0));
                 }
                 count=count+1;
             }
@@ -434,17 +460,17 @@ private:
 
             constexpr size_t n_SG = 25;
             const float sgCoeffs25[n_SG] = {
-                -0.013058f, -0.011245f, -0.009432f, -0.007619f, -0.005806f,
-                -0.003993f, -0.002180f, -0.000367f,  0.001446f,  0.003259f,
-                 0.005073f,  0.006886f,  0.000000f, -0.006886f, -0.005073f,
-                -0.003259f, -0.001446f,  0.000367f,  0.002180f,  0.003993f,
-                 0.005806f,  0.007619f,  0.009432f,  0.011245f,  0.013058f
+                -0.019389f, 0.014035f, 0.022376f, 0.015544f, 0.001269f,
+                -0.014681f, -0.02828f, -0.03704f,  -0.03975f,  -0.03633f,
+                -0.02754f,  -0.01481f,  0.000000f, 0.01481f, 0.02754f,
+                0.03633f, 0.03975f,  0.03704f,  0.02828f,  0.014681f,
+                -0.001269f,  -0.015544f,  -0.022376f,  -0.014035f,  0.019389f
             };
             
             // Se aplica la convolución utilizando los 25 coeficientes
             for (size_t i = 0; i < n_SG; i++) {
-                velX += sgCoeffs25[i] * bufferX[i];
-                velY += sgCoeffs25[i] * bufferY[i];
+                velX += sgCoeffs25[i] * bufferX[i] / 0.1;
+                velY += sgCoeffs25[i] * bufferY[i] / 0.1;
             }
             validSG = true;
         }
@@ -509,7 +535,7 @@ private:
     void callSetParametersService(Eigen::Matrix<double, 7, 1>& Xu, Eigen::Matrix<double, 13, 1>& Xv,
                                 Eigen::Matrix<double, 13, 1>& Xr, std::vector<bool> setters_X) {
         while (!client_setparam->wait_for_service(std::chrono::seconds(1))) {
-            RCLCPP_INFO(this->get_logger(), "service not available, waiting again...");
+            // RCLCPP_INFO(this->get_logger(), "service not available, waiting again...");
         }
 
         auto request = std::make_shared<rcl_interfaces::srv::SetParameters::Request>();

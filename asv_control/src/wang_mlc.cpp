@@ -104,7 +104,7 @@ private:
                     y_hat_i = y_hat;
                     v_hat_i=v_hat;
                     psi_hat_i=psi_hat;
-                    u_d_i=u_d;
+                    u_d_i=0.8;
                 }
                 Target p_i = currentTarget(w);
                 xp_i=p_i.xp;
@@ -311,7 +311,7 @@ private:
                 result = curva_lissajous_2(w);
                 break;
             default:
-                result.xp =0.0;
+                result.xp =1.0;
                 result.yp = 0.0;
                 result.dxp = 0.0;
                 result.dyp = 0.0;     

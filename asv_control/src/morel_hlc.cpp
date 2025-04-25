@@ -558,9 +558,9 @@ private:
                 result = curva_iav_1(w);
                 break;
             default:
-                result.xp =0.0;
+                result.xp =1.0;
                 result.yp = 0.0;
-                result.dxp = 0.0;
+                result.dxp = 1.0;
                 result.dyp = 0.0;     
         }
         return result;
