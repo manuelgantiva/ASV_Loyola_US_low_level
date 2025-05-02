@@ -99,6 +99,7 @@ private:
                     psi_hat_i=psi_hat;
                     u_d_i=u_d;
                 }
+                u_d_i = 0.6;
                 Target p_i = currentTarget(w);
                 xp_i=p_i.xp;
                 yp_i=p_i.yp;
@@ -116,7 +117,7 @@ private:
                 msg_e.z = w;
 
                 float k1_i = u_d_i / delta_SGLOS;
-                float u_ref = k1_i * std::sqrt(delta_SGLOS*delta_SGLOS + ye*ye);
+                float u_ref = 1.0; // k1_i * std::sqrt(delta_SGLOS*delta_SGLOS + ye*ye);
                 float b_ref = 0.0;
                 if(flag){
                     b_ref = atan2(v_hat_i, u_ref);
@@ -127,6 +128,7 @@ private:
                 float U_ref = std::sqrt(u_ref*u_ref + v_hat_i*v_hat_i);
                 float u_tar = k_u_tar*xe + U_ref*cos(psi_hat_i-psip_i+b_ref);
                 float w_dot = u_tar / (std::sqrt(dxp_i*dxp_i + dyp_i*dyp_i));
+                
 
                 w += Ts*w_dot;
                 // Corrijo el angulo de referencia teniendo en cuenta las vueltas sobre la trayectoria
@@ -225,9 +227,9 @@ private:
         Target result;
         switch(path_d) {
             case 0:
-                result.xp = -w;
+                result.xp = w;
                 result.yp = 0;
-                result.dxp = -1;
+                result.dxp = 1;
                 result.dyp = 0;
                 break;
             case 1:

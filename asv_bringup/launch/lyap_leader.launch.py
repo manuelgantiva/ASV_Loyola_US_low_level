@@ -448,7 +448,7 @@ def generate_launch_description():
     # nodes.append(apm_llc_node)
     # nodes.append(ref_mlc_node)
     # nodes.append(ref_hlc_node)
-    nodes.append(ref_llc_node)
+    # nodes.append(ref_llc_node)
     nodes.append(rc_handler_node)
     nodes.append(record)
     # nodes.append(transceiver_xbee_node)
@@ -460,8 +460,8 @@ def generate_launch_description():
     ##-----------------------Observer Nodes--------------------------##
     ################################################################### 
     nodes.append(mux_obs_node)
-    nodes.append(observer_guille)
-    nodes.append(observer_liu)
+    #nodes.append(observer_guille)
+    #nodes.append(observer_liu)
     nodes.append(observer_zono)
     #nodes.append(observer_param)
     #nodes.append(observer_core)

@@ -12,6 +12,9 @@
 #include <mutex>
 #include <Eigen/Dense>
 #include <unsupported/Eigen/Polynomials>
+#include <sstream>
+#include <string>
+
 
 using namespace std;
 using namespace Eigen;
@@ -39,7 +42,7 @@ public:
         this->declare_parameter("my_id", "ASV0"); 
         
         this->declare_parameter("taud", 1.0);
-        this->declare_parameter("Ts", 0.01);
+        this->declare_parameter("Ts", 100.0);
         this->declare_parameter("lambda", 20.0);
         this->declare_parameter("zeta", 0.95);
         this->declare_parameter("gamma", 0.75);
@@ -104,7 +107,7 @@ public:
         my_id = this->get_parameter("my_id").as_string();
         
         taud = this->get_parameter("taud").as_double();
-        Ts = this->get_parameter("Ts").as_double();
+        Ts = this->get_parameter("Ts").as_double()/1000.0;
         lambda = this->get_parameter("lambda").as_double();
         zeta = this->get_parameter("zeta").as_double();
         gamma = this->get_parameter("gamma").as_double();
@@ -199,8 +202,8 @@ public:
         subscriber_state = this-> create_subscription<mavros_msgs::msg::State>("/" + my_id + "/mavros/state",1,
                 std::bind(&LyapHlcNode::callbackStateData, this, std::placeholders::_1), options_sensors_);
 
-        subscriber_state_neighbor_ = this->create_subscription<asv_interfaces::msg::StateNeighbor>("/"+ my_id +
-            "/neighbors/output_leader",rclcpp::SensorDataQoS(), std::bind(&LyapHlcNode::callbackNeighbor,
+        subscriber_state_neighbor_ = this-> create_subscription<asv_interfaces::msg::StateNeighbor>(
+            "/" + my_id + "/neighbors/output_leader",rclcpp::SensorDataQoS(), std::bind(&LyapHlcNode::callbackNeighbor,
             this, std::placeholders::_1), options_sensors_);
 
         publisher_pwm = this-> create_publisher<asv_interfaces::msg::PwmValues>("/" + my_id + "/control/pwm_value_ifac",
@@ -222,6 +225,8 @@ private:
         auto msg_Igr = geometry_msgs::msg::Vector3();
         auto msg_Ig = geometry_msgs::msg::Vector3();
         float zone;
+        d = 0.0; 
+        theta = 0.0;
             if(count > 7){
         float x_hat_i, y_hat_i, psi_hat_i, u_hat_i, v_hat_i, r_hat_i, sig_u_i, sig_v_i, sig_r_i;
         float x_hat_l_i, y_hat_l_i, psi_hat_l_i, u_hat_l_i, v_hat_l_i, r_hat_l_i;
@@ -247,28 +252,45 @@ private:
         }
         
         Eigen::Vector<double, 6> Xf_est;
+        Xf_est.setZero();
         Xf_est << x_hat_i, y_hat_i, psi_hat_i, u_hat_i, v_hat_i, r_hat_i;
+        std::stringstream ss;
+        ss << "Xf_est: " << Xf_est.transpose(); // transpose() per stamparlo in riga
+
+        RCLCPP_INFO(this->get_logger(), "%s", ss.str().c_str());
         
         Eigen::Vector<double, 6> Xl_est;
+        Xl_est.setZero();
         // (Xl_est << 1.5, 2.5, 0.9, 0.0, 3.5, 0.3;)
         Xl_est << x_hat_l_i, y_hat_l_i, psi_hat_l_i, u_hat_l_i, v_hat_l_i, r_hat_l_i;
-        
+        std::stringstream ss1;
+        ss1 << "Xl_est: " << Xl_est.transpose(); // transpose() per stamparlo in riga
+
+        RCLCPP_INFO(this->get_logger(), "%s", ss1.str().c_str());
         Eigen::Vector3d sigmaf_est;
+        sigmaf_est.setZero();
         sigmaf_est << sig_u_i, sig_v_i, sig_r_i;
         double t = this->now().seconds() + this->now().nanoseconds(); 
 
         // --- Rotational matrices --- (From Simulator to paper)
         
         Eigen::Matrix3d Rs2pg, Rs2pb;
+        Rs2pg.setZero();
+        Rs2pb.setZero();
         Rs2pg << 0, 1, 0,
                  1, 0, 0,
                  0, 0, -1;
         Rs2pb << 1, 0, 0,
                  0, -1, 0,
                  0, 0, -1;
-
+         
         Xf_est.segment(0, 3) = Rs2pg * Xf_est.segment(0, 3);
         Xf_est.segment(3, 3) = Rs2pb * Xf_est.segment(3, 3);
+        // std::stringstream ss2;
+        // ss2 << "Xf_est2: " << Xf_est.segment(0, 6).transpose(); // transpose() per stamparlo in riga
+
+        // RCLCPP_INFO(this->get_logger(), "%s", ss2.str().c_str());
+
         Xl_est.segment(0, 3) = Rs2pg * Xl_est.segment(0, 3);
         Xl_est.segment(3, 3) = Rs2pb * Xl_est.segment(3, 3);
         sigmaf_est = Rs2pb * sigmaf_est;
@@ -277,6 +299,16 @@ private:
         
         Eigen::Vector3d Xf_bar = CoordinateTransformation(Xf_est);
         Eigen::Vector3d Xl_bar = CoordinateTransformation(Xl_est);
+        
+        // std::stringstream ss2;
+        // ss2 << "Xf_bar: " << Xf_bar.transpose(); // transpose() per stamparlo in riga
+
+        // RCLCPP_INFO(this->get_logger(), "%s", ss2.str().c_str());
+        // std::stringstream ss3;
+        // ss3 << "Xl_bar: " << Xl_bar.transpose(); // transpose() per stamparlo in riga
+
+        // RCLCPP_INFO(this->get_logger(), "%s", ss3.str().c_str());
+        //RCLCPP_INFO(this->get_logger(), "Xf_bar: %d and Xl_bar:%d", Xf_bar, Xl_bar);
 
         double xf = Xf_bar(0);
         double yf = Xf_bar(1);
@@ -284,34 +316,43 @@ private:
         double psi = Xf_est(2);
         double xl = Xl_bar(0);
         double yl = Xl_bar(1);
-
+        //RCLCPP_INFO(this->get_logger(), "coseno di psi: %d", std::cos(psi));
         double e1 = std::cos(psi) * (xl - xf) + std::sin(psi) * (yl - yf);
         double e2 = -std::sin(psi) * (xl - xf) + std::cos(psi) * (yl - yf);
-        double d = std::sqrt(std::pow(xl - xf, 2) + std::pow(yl - yf, 2));
+        //RCLCPP_INFO(this->get_logger(), "e1: %.5f and e2: %.5f", e1, e2);
+        double d = std::sqrt(std::pow(xl - xf, 2) + std::pow(yl - yf, 2)); 
         double theta = std::atan2(e2, e1);
 
+        RCLCPP_INFO(this->get_logger(), "distance: %.5f and theta: %.5f", d, theta);
         
         Eigen::Vector2d ref;
+        ref.setZero();
         ref << d, theta;
 
         double e_d = d - ref_d;
         double e_theta = theta - ref_theta;
 
+        RCLCPP_INFO(this->get_logger(), "e_d: %.5f and e_theta: %.5f", e_d, e_theta);
+
 
         Eigen::Vector4d beta = betaFunction(t);
+        //RCLCPP_INFO(this->get_logger(), "beta_d(1): %.5f, beta_d(2): %.5f, beta_theta(1): %.5f", beta(0), beta(1), beta(2), beta(3));
 
         Eigen::Vector2d p_dot_l_est = HighGainObserver(Xl_bar);
+        //RCLCPP_INFO(this->get_logger(), "p_dot_l_est %.5f", p_dot_l_est(0));
        
         Eigen::Vector2d q = Compute_q(beta, e_d, e_theta); 
+        //RCLCPP_INFO(this->get_logger(), "q_d: %.5f and q_theta: %.5f", q(0), q(1));
 
         double H_hat = ComputeErrorHG(beta, d, e_d, e_theta);
+        RCLCPP_INFO(this->get_logger(), "H_hat %.5f", H_hat);
 
         double var1_u = std::pow(beta(0), 2) / (2 * M_PI * e_d);
         double var2_u = (2 * beta(2) / beta(0)) + k_d;
         double var3_u = std::sin(M_PI * std::pow(e_d, 2)) / std::pow(beta(0), 2);
         double var4_u = (beta(2) * e_d) / beta(0);
         double var5_u = Xf_bar(2) * std::sin(theta);
-        double var6_u = p_dot_l_est.dot(R1);
+        double var6_u = Xl_est(3); //p_dot_l_est.dot(R1);
         double var7_u = H_hat * std::tanh(e_d * q(0) * H_hat / Sigma);
 
         double var1_r = std::pow(beta(1), 2) / (2 * M_PI * e_theta);
@@ -321,22 +362,28 @@ private:
         
         double var5_r = Xf_est(3) * std::sin(theta);
         double var6_r = Xf_bar(2) * std::cos(theta);
-        double var7_r = p_dot_l_est.dot(R2);
+        double var7_r = Xl_est(5); //p_dot_l_est.dot(R2);
         double var8_r = (H_hat / d) * std::tanh(e_theta * q(1) * H_hat / (Sigma * d));
 
-        double alpha_ui = (1 / std::cos(theta)) * (var1_u * var2_u * var3_u - var4_u - var5_u + var6_u + var7_u);
+        double alpha_ui = (var1_u * var2_u * var3_u - var4_u - var5_u + var6_u + var7_u);
         double alpha_ri = var1_r * var2_r * var3_r - var4_r + (var5_r - var6_r + var7_r) / d + var8_r;
+        RCLCPP_INFO(this->get_logger(), "alpha_ui: %.5f and alpha_ri: %.5f", alpha_ui, alpha_ri);
 
     
         Eigen::Vector2d alpha_f = DSC(alpha_ui,alpha_ri, e_d, e_theta, q, theta);
+        RCLCPP_INFO(this->get_logger(), "alpha_fu: %.5f and alpha_fr: %.5f", alpha_f(0), alpha_f(1));
 
         double e21 = Xf_est(3) - alpha_f(0); 
         double e22 = Xf_est(5) - alpha_f(1); 
+        RCLCPP_INFO(this->get_logger(), "e21: %.5f and e22:%.5f", e21, e22);
         Eigen::Vector2d e2i;
+        e2i.setZero();
         e2i << e21, e22;
         double e_alpha1 = alpha_f(0) - alpha_ui;
         double e_alpha2 = alpha_f(1) - alpha_ri;
+        RCLCPP_INFO(this->get_logger(), "e_alpha1: %.5f and e_alpha2: %.5f", e_alpha1, e_alpha2);
         Eigen::Vector2d e_alpha;
+        e_alpha.setZero();
         e_alpha << e_alpha1, e_alpha2;
 
         double IG_u = (-k_u * e21 - e_alpha1 / mu_u + 2 * e_d * q(0) * std::cos(theta)) - sigmaf_est(0);
@@ -344,6 +391,7 @@ private:
 
         
         Eigen::Matrix<double, 3, 1> IG_real;
+        IG_real.setZero();
         IG_real << IG_u, 0, IG_r;
         
         IG_real = Rs2pb.transpose() * IG_real;
@@ -459,6 +507,7 @@ private:
         double y_bar = X_est(1) + eps_i * std::sin(X_est(2));
         double v_bar = X_est(4) + eps_i * X_est(5);
         Eigen::Vector3d res;
+        res.setZero();
         res << x_bar, y_bar, v_bar;
         return res;
       }
@@ -466,14 +515,19 @@ private:
 //Beta Function
     Eigen::Vector4d betaFunction(double t) {
         Eigen::Vector2d lim_cn;
+        lim_cn.setZero();
         lim_cn << d_cn, theta_cn;
         Eigen::Vector2d lim_cl;
+        lim_cl.setZero();
         lim_cl << d_cl, theta_cl;
         Eigen::Vector2d K;
+        K.setZero();
         K << Kd, Ktheta;
         Eigen::Vector2d binf;
+        binf.setZero();
         binf << b_dinf, b_thetainf;
         Eigen::Vector2d ref;
+        ref.setZero();
         ref << ref_d, ref_theta;
         
         // Calcola b0 = lim_cn - ref
@@ -489,6 +543,7 @@ private:
         
         // Restituisce un vettore a 4 elementi
         Eigen::Vector4d out;
+        out.setZero();
         out << beta_d, beta_theta, beta_ddot, beta_thetadot;
         return out;
     }    
@@ -517,6 +572,7 @@ private:
         
           eps1_0 = eps1;
           eps2_0 = eps2;
+          //RCLCPP_INFO(this->get_logger(), "eps2_0(0): %.5f and eps2_0(1): %.5f", eps2_0(0), eps2_0(1));
         }
     
         return eps2_0 / zeta;
@@ -537,7 +593,7 @@ private:
       }
 
     //Compute q
-    Eigen::VectorXd Compute_q(const Eigen::Vector4d &beta, double e_d, double e_theta) {
+    Eigen::Vector2d Compute_q(const Eigen::Vector4d &beta, double e_d, double e_theta) {
         Eigen::Vector2d q;
         q(0) = pow(1.0 / cos((M_PI * pow(e_d, 2)) / (2 * pow(beta(0), 2))), 2);
         q(1) = pow(1.0 / cos((M_PI * pow(e_theta, 2)) / (2 * pow(beta(1), 2))), 2);
@@ -568,6 +624,7 @@ private:
         }
 
         Eigen::Vector2d out;
+        out.setZero();
         out << alpha_fui, alpha_fri;
         return out;
     }
@@ -589,12 +646,12 @@ private:
     void callbackNeighbor(const asv_interfaces::msg::StateNeighbor::SharedPtr msg)
        {
             std::lock_guard<std::mutex> lock(mutex_);
-            x_hat = msg->point.x;
-            y_hat = msg->point.y;
-            psi_hat = msg->point.z;
-            u_hat = msg->velocity.x;
-            v_hat = msg->velocity.y;
-            r_hat = msg->velocity.z;
+            x_hat_l = msg->point.x;
+            y_hat_l = msg->point.y;
+            psi_hat_l = msg->point.z;
+            u_hat_l = msg->velocity.x;
+            v_hat_l = msg->velocity.y;
+            r_hat_l = msg->velocity.z;
         }
     
         void callbackStateData(const mavros_msgs::msg::State::SharedPtr msg)
@@ -607,7 +664,7 @@ private:
     int count = 0;
     float x_hat = 0, y_hat = 0, u_hat = 0, v_hat = 0, r_hat = 0, psi_hat = 0, sig_u = 0, sig_v = 0, sig_r = 0;
     float x_hat_l = 0, y_hat_l = 0, u_hat_l = 0, v_hat_l = 0, r_hat_l = 0, psi_hat_l = 0;
-    
+    double d = 0.0, theta = 0.0;
     double d_cn = 0.0, theta_cn = 0.0, d_cl = 0.0, theta_cl = 0.0;
     double Kd = 0.0, Ktheta = 0.0, b_dinf = 0.0, b_thetainf = 0.0;
     double ref_d = 0.0, ref_theta = 0.0;
