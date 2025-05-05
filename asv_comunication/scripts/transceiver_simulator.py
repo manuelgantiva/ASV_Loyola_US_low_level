@@ -30,6 +30,11 @@ class TransceiverSimulator(Node):
             self.publisher_hlc = self.create_publisher(StateNeighbor, "/" + self.my_string_id +"/neighbors/state_observer", 1)
             self.subscriber_state = self.create_subscription(StateNeighbor, "/" + self.my_string_id +"/neighbors/output_hlc",
                             self.callback_state_observer,qos_profile_sensor_data)
+        elif self.worker_mode == -1:
+            self.subscriber_state = self.create_subscription(StateObserver, "/" + self.my_string_id +"/observer/state_observer",
+                            self.callback_state_observer,qos_profile_sensor_data)
+            self.publisher_hlc = self.create_publisher(StateNeighbor, "/" + self.my_string_id +"/neighbors/state_observer", 1)
+            self.timer_ = self.create_timer(0.1, self.publish_incoming_msgs)
         else:
             self.publisher_hlc = self.create_publisher(StateObserver, "/" + self.my_string_id +"/control/output_hlc", qos_profile_sensor_data)
             self.subscriber_state = self.create_subscription(StateObserver, "/" + self.my_string_id +"/observer/state_observer",
@@ -50,11 +55,15 @@ class TransceiverSimulator(Node):
         my_msg = StateNeighbor()
         if self.worker_mode == 0:
             my_msg.id = msg.id
-        elif self.worker_mode == 1:
+            my_msg.msg_from = self.worker_mode
+        elif self.worker_mode == -1:
             my_msg.id = self.my_string_id
+            my_msg.msg_from = int(self.my_string_id[3])
+        else:
+            my_msg.id = self.my_string_id
+            my_msg.msg_from = self.worker_mode
         my_msg.point = msg.point
         my_msg.velocity = msg.velocity
-        my_msg.msg_from = self.worker_mode
         self.xbee.publish(my_msg)
         # elif self.worker_mode == 1:
         #     my_msg = StateNeighbor()
@@ -68,7 +77,12 @@ class TransceiverSimulator(Node):
 
  
     def callback_received_data(self, xbee_message):
-        if xbee_message.msg_from != self.worker_mode:
+        if self.worker_mode == -1:
+            if xbee_message.id != self.my_string_id:
+                msg = deepcopy(xbee_message)
+                self.states.append(msg)
+                self.publish_incoming_msgs()
+        elif xbee_message.msg_from != self.worker_mode:
             if self.worker_mode == 0 and  xbee_message.id != self.my_string_id:
                 msg = deepcopy(xbee_message)
                 self.states.append(msg)
@@ -95,7 +109,7 @@ class TransceiverSimulator(Node):
 
    
     def publish_incoming_msgs(self):
-        if self.worker_mode == 0:
+        if self.worker_mode == 0 or self.worker_mode == -1:
             while(len(self.states) > 0):
                 msg = self.states.popleft()
                 self.publisher_hlc.publish(msg)

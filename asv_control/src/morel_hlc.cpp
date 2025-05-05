@@ -226,15 +226,26 @@ public:
     {
         
         this-> declare_parameter("my_id", "ASV0");
+        this-> declare_parameter("worker_mode", -1);
         this-> declare_parameter("Ts", 100.0);
         this-> declare_parameter("numParticles", 1);
         this-> declare_parameter("path_d", 0); // path_d = #Path deseado #
 
 
         my_string_id = (this->get_parameter("my_id").as_string());
+        miid = std::stoi(my_string_id.substr(3));
+        if (miid > 1)
+            miid--;
         Ts = this->get_parameter("Ts").as_double()/1000.0;
-        my_id = 0;
-        numParticles = this->get_parameter("numParticles").as_int();
+        worker_mode = this->get_parameter("worker_mode").as_int();
+        if (worker_mode == -1)
+        {
+            numParticles = 4;
+        }
+        else
+        {
+            numParticles = this->get_parameter("numParticles").as_int();
+        }
         path_d  = this->get_parameter("path_d").as_int();
         
         RCLCPP_INFO(this->get_logger(),"Num Particles = %d",  numParticles);    
@@ -393,48 +404,74 @@ private:
                     p_i = currentTarget(w);
                     qr = {p_i.xp, p_i.yp};
                     pr = {p_i.dxp, p_i.dyp};
+                    if (worker_mode == -1){
+                            qx_s.push(agents[miid].q[0]);
+                            qy_s.push(agents[miid].q[1]);
+                            px_s.push(agents[miid].p[0]);
+                            py_s.push(agents[miid].p[1]);
+                    }
+                    else{
+                        for (int i = 0; i < numParticles; ++i)
+                        {
 
-                    for (int i = 0; i < numParticles; ++i)
-                    {
-                        qx_s.push(agents[i].q[0]);
-                        qy_s.push(agents[i].q[1]);
-                        px_s.push(agents[i].p[0]);
-                        py_s.push(agents[i].p[1]);
+                            qx_s.push(agents[i].q[0]);
+                            qy_s.push(agents[i].q[1]);
+                            px_s.push(agents[i].p[0]);
+                            py_s.push(agents[i].p[1]);
+                        }
                     }
                 }
                 RCLCPP_INFO(this->get_logger(), "Finished Flocking, sending data");
             }
 
 
-            for (int i = 0; i < numParticles; ++i)
-            {                
-                
-                if (i == 0)
-                {
-                    auto msg = asv_interfaces::msg::StateObserver();// point, velocity
-                    msg.header.stamp = this->now();
-                    msg.header.frame_id = my_string_id; 
-                    msg.point.x = qx_s.front();
-                    msg.point.y = qy_s.front();
-                    msg.velocity.x = px_s.front();
-                    msg.velocity.y = py_s.front();
-                    publisher_mlc_->publish(msg);
-                }
-                else
-                {
-                    auto msg = asv_interfaces::msg::StateNeighbor();// point, velocity, id, msg_from
-                    msg.id = std::to_string(i);
-                    msg.msg_from = 0;
-                    msg.point.x = qx_s.front();
-                    msg.point.y = qy_s.front();
-                    msg.velocity.x = px_s.front();
-                    msg.velocity.y = py_s.front();
-                    publisher_neighbor_mlc_->publish(msg);
-                }
+            if (worker_mode == -1){
+                auto msg = asv_interfaces::msg::StateObserver();// point, velocity
+                msg.header.stamp = this->now();
+                msg.header.frame_id = my_string_id; 
+                msg.point.x = qx_s.front();
+                msg.point.y = qy_s.front();
+                msg.velocity.x = px_s.front();
+                msg.velocity.y = py_s.front();
+                publisher_mlc_->publish(msg);
+
                 qx_s.pop();
                 qy_s.pop();
                 px_s.pop();
                 py_s.pop();
+            }
+            else{
+                
+                for (int i = 0; i < numParticles; ++i)
+                {                
+                    
+                    if (i == 0)
+                    {
+                        auto msg = asv_interfaces::msg::StateObserver();// point, velocity
+                        msg.header.stamp = this->now();
+                        msg.header.frame_id = my_string_id; 
+                        msg.point.x = qx_s.front();
+                        msg.point.y = qy_s.front();
+                        msg.velocity.x = px_s.front();
+                        msg.velocity.y = py_s.front();
+                        publisher_mlc_->publish(msg);
+                    }
+                    else
+                    {
+                        auto msg = asv_interfaces::msg::StateNeighbor();// point, velocity, id, msg_from
+                        msg.id = std::to_string(i);
+                        msg.msg_from = 0;
+                        msg.point.x = qx_s.front();
+                        msg.point.y = qy_s.front();
+                        msg.velocity.x = px_s.front();
+                        msg.velocity.y = py_s.front();
+                        publisher_neighbor_mlc_->publish(msg);
+                    }
+                    qx_s.pop();
+                    qy_s.pop();
+                    px_s.pop();
+                    py_s.pop();
+                }
             }
         }
     }
@@ -447,12 +484,23 @@ private:
     void callbackStates(const asv_interfaces::msg::StateObserver::SharedPtr msg)
     {
         {
-            std::lock_guard<std::mutex> lock(mutex_);
-            X_s[my_id] = msg->point.x; // X
-            Y_s[my_id] = msg->point.y; // Y
-            PSI_s[my_id] = msg->point.z; // psi
-            u_s[my_id] =  msg->velocity.x;
-            v_s[my_id] = msg->velocity.y;
+            if (worker_mode == -1)
+            {
+                std::lock_guard<std::mutex> lock(mutex_);
+                X_s[miid] = msg->point.x; // X
+                Y_s[miid] = msg->point.y; // Y
+                PSI_s[miid] = msg->point.z; // psi
+                u_s[miid] =  msg->velocity.x;
+                v_s[miid] = msg->velocity.y;
+            }
+            else{
+                std::lock_guard<std::mutex> lock(mutex_);
+                X_s[0] = msg->point.x; // X
+                Y_s[0] = msg->point.y; // Y
+                PSI_s[0] = msg->point.z; // psi
+                u_s[0] =  msg->velocity.x;
+                v_s[0] = msg->velocity.y;
+            }
         }
     }
 
@@ -461,6 +509,8 @@ private:
         {
             std::lock_guard<std::mutex> lock(mutex_);
             int id = msg->msg_from; // esto no significa ID sino worker_mode
+            if (id > 1)
+                id--;
             X_s[id] = msg->point.x; // X
             Y_s[id] = msg->point.y; // Y
             PSI_s[id] = msg->point.z; // psi
@@ -588,7 +638,7 @@ private:
     bool armed = false;
     std::string my_string_id; 
     // TODO: cambiar a parametros y luego agregar servicios para cambiarlos
-    int my_id = 0, numParticles = 0;
+    int miid= 0, numParticles = 0, worker_mode= 0;
     int max_sim_k = 500; // k = Ts
     float Ts;
     float delta_w = 0.0;

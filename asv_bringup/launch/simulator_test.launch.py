@@ -347,11 +347,13 @@ def generate_launch_description():
         parameters = [{'my_id': my_namespace,
                     'worker_mode': worker_mode},
                 config],
-                condition=IfCondition(
+                # OR condition
+                condition = IfCondition(
                     PythonExpression(
-                        [worker_mode, ' == 0']
-                    )
+                        [worker_mode, ' == -1 or ', worker_mode, ' == 0']
+                    ),
                 )
+                    
     )
 
     mpc_hlc_node = Node(
