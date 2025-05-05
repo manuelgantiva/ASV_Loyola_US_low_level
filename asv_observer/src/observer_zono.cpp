@@ -229,9 +229,9 @@ private:
                                 + Xr[6] * Zp_next.c(3) + Xr[7] * Zr_next.c(1));
                 }
 
-                IGp(2,0) = (IGp(2,0) + Sigmas(0))*0.1;
-                IGp(3,0) = (IGp(3,0) + Sigmas(1))*0.1;
-                IGr(1,0) = (IGr(1,0) + Sigmas(2))*0.1;
+                IGp(2,0) = (IGp(2,0) + Sigmas(0))*t_s;
+                IGp(3,0) = (IGp(3,0) + Sigmas(1))*t_s;
+                IGr(1,0) = (IGr(1,0) + Sigmas(2))*t_s;
 
                 // Llamar al método de filtrado
                 if(IMU_on){

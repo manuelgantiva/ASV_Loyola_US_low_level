@@ -469,8 +469,8 @@ private:
             
             // Se aplica la convolución utilizando los 25 coeficientes
             for (size_t i = 0; i < n_SG; i++) {
-                velX += sgCoeffs25[i] * bufferX[i] / 0.1;
-                velY += sgCoeffs25[i] * bufferY[i] / 0.1;
+                velX += sgCoeffs25[i] * bufferX[i] / t_s;
+                velY += sgCoeffs25[i] * bufferY[i] / t_s;
             }
             validSG = true;
         }
