@@ -371,7 +371,7 @@ def generate_launch_description():
     ##-----------------------Observer Nodes--------------------------##
     ################################################################### 
     nodes.append(mux_obs_node)
-    nodes.append(observer_guille)
+    # nodes.append(observer_guille)
     # nodes.append(observer_liu)
     nodes.append(observer_zono)
 
