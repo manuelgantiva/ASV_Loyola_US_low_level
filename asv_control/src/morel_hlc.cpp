@@ -234,13 +234,24 @@ public:
 
         my_string_id = (this->get_parameter("my_id").as_string());
         miid = std::stoi(my_string_id.substr(3));
-        if (miid > 1)
-            miid--;
+        //{// prueba de los 4 simulados
+        // if (miid > 1)
+        //     miid--;}
+        {
+                // prueba de los drones 1 y 3
+                if (miid == 1){
+                    miid = 0;
+                }
+                else if (miid == 3){
+                    miid = 1;
+                }
+            }
         Ts = this->get_parameter("Ts").as_double()/1000.0;
         worker_mode = this->get_parameter("worker_mode").as_int();
         if (worker_mode == -1)
         {
-            numParticles = 4;
+            numParticles = 4; // 4 drones simulados
+            numParticles = 2; // 1 y 3
         }
         else
         {
@@ -509,8 +520,17 @@ private:
         {
             std::lock_guard<std::mutex> lock(mutex_);
             int id = msg->msg_from; // esto no significa ID sino worker_mode
-            if (id > 1)
-                id--;
+            //{ // Prueba de 4 drones simulados 
+            // if (miid > 1)
+            //     miid--;}
+            { //prueba de los drones 1 y 3
+                if (id == 1){
+                    id = 0;
+                }
+                else if (id == 3){
+                    id = 1;
+                }
+            }
             X_s[id] = msg->point.x; // X
             Y_s[id] = msg->point.y; // Y
             PSI_s[id] = msg->point.z; // psi
@@ -637,7 +657,6 @@ private:
     
     bool armed = false;
     std::string my_string_id; 
-    // TODO: cambiar a parametros y luego agregar servicios para cambiarlos
     int miid= 0, numParticles = 0, worker_mode= 0;
     int max_sim_k = 500; // k = Ts
     float Ts;

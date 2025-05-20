@@ -21,7 +21,7 @@ class TransceiverSimulator(Node):
             self.xbee = self.create_publisher(StateNeighbor, "/simulated_env", qos_profile_sensor_data) # un topico en simulacion 
             self.get_logger().info("\033[32mSerial Sim port opened successfully...\033[0m")
         except Exception as e:
-            self.get_logger().info("\033[31mSerial Sim port opening failure\033[0m")
+            self.get_logger().info("Serial Sim port opening failure !!!!!!!!!!!!!!!!")
 
         self.states = deque([])
         self.subscriber_xbee = self.create_subscription(StateNeighbor, "/simulated_env",
@@ -81,7 +81,7 @@ class TransceiverSimulator(Node):
             if xbee_message.id != self.my_string_id:
                 msg = deepcopy(xbee_message)
                 self.states.append(msg)
-                self.publish_incoming_msgs()
+                # self.publish_incoming_msgs()
         elif xbee_message.msg_from != self.worker_mode:
             if self.worker_mode == 0 and  xbee_message.id != self.my_string_id:
                 msg = deepcopy(xbee_message)

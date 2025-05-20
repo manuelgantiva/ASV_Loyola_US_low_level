@@ -5,28 +5,37 @@ from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 from digi.xbee.devices import XBeeDevice
 import struct
-from asv_interfaces.msg import StateNeighbor
+from asv_interfaces.msg import StateObserver, StateNeighbor
+from collections import deque
 
 class XbeeTransceiverDSG(Node):
     def __init__(self):
         super().__init__("xbee_transceiver")
         self.declare_parameter("my_id", "ASV0")
-        my_id = self.get_parameter("my_id").get_parameter_value().string_value
+        self.declare_parameter("worker_mode", 0)  # 0: Master, 1, 2, ..: Slave -1:Bidir
+
+        self.my_string_id = self.get_parameter("my_id").get_parameter_value().string_value
+        self.worker_mode = self.get_parameter("worker_mode").get_parameter_value().integer_value
         try:
             self.xbee = XBeeDevice("/dev/xbee_usb", 115200)#<-----------------------------------------------------------------------------cambiar el puerto
             self.get_logger().info("\033[32mSerial Xbee port opened successfully...\033[0m")
         except Exception as e:
-            self.get_logger().info("\033[31mSerial XBee port opening failure\033[0m")
+            self.get_logger().info("Serial Sim port opening failure !!!!!!!!!!!!!!!!")
+
 
         self.xbee.open()
         self.xbee.add_data_received_callback(self.callback_received_data) # Agregar el callback de recepción de datos
 
-        self.publisher_ = self.create_publisher(StateNeighbor, "/" + my_id +"/reception/received_data", 10)
-        self.subscriber_ = self.create_subscription(StateNeighbor, "/" + my_id +"/emission/sent_data", self.callback_ref, 10)
+        # por ahora solo -1
+        self.states = deque([])
+        self.subscriber_state = self.create_subscription(StateObserver, "/" + self.my_string_id +"/observer/state_observer",
+                        self.callback_state_observer,qos_profile_sensor_data)
+        self.publisher_hlc = self.create_publisher(StateNeighbor, "/" + self.my_string_id +"/neighbors/state_observer", 1)
+        self.timer_ = self.create_timer(0.1, self.publish_incoming_msgs)
+        
+        self.get_logger().info("Xbee Transceiver Node in " + self.my_string_id + " has been started")
 
-        self.get_logger().info("Xbee Transceiver Node in " + my_id + " has been started")
-
-    def callback_ref(self, msg: StateNeighbor):
+    def callback_state_observer(self, msg: StateObserver):
 
         byte_array = bytearray() # Crear arreglo de bytes
         
@@ -38,7 +47,7 @@ class XbeeTransceiverDSG(Node):
             msg.velocity.y,
             msg.velocity.z]
 
-        int_value = int(msg.id)
+        int_value = int(self.my_string_id[3])
 
         byte_array = struct.pack('!6fI', *data_list, int_value) # Paquete 6 floats + 1 int
 
@@ -62,9 +71,16 @@ class XbeeTransceiverDSG(Node):
         info_rcv.velocity.z = data_f[5]
 
         info_rcv.id = "ASV" + str(id_ASV)
+        info_rcv.msg_from = id_ASV # distributed, for centralized will be worker_mode
 
-        self.publisher_.publish(info_rcv)
+        self.states.append(info_rcv)
 
+
+    def publish_incoming_msgs(self):
+        if self.worker_mode == -1:
+            while(len(self.states) > 0):
+                msg = self.states.popleft()
+                self.publisher_hlc.publish(msg)
 
 def main(args=None):
     rclpy.init(args=args)
