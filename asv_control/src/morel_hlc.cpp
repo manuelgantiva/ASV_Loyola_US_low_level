@@ -3,7 +3,7 @@
 #include "asv_interfaces/msg/state_observer.hpp"    //Interface state observer
 #include "asv_interfaces/msg/state_neighbor.hpp"    //Interface state observer
 // #include "asv_dev_library/HighLevelFlocking.hpp"  // todo create library
-#include "asv_library/curvas_alamillo.h"
+#include "asv_library/curvas_loyola.h"
 
 #include <cmath>
 #include <thread>
@@ -524,88 +524,14 @@ private:
         Target result;
         switch(path_d) {
             case 0:
-                result.xp = w*Ts;
+                result.xp = -w*Ts;
                 result.yp = 0;
-                result.dxp = delta_w;
+                result.dxp = -delta_w;
                 result.dyp = 0;
                 break;
             case 1:
                 // result = curva_sim_2_6(w);
-                result = curva_ala_1_2(w);
-                break;
-            case 2:
-                // result = curva_sim_2_8(w);
-                result = curva_ala_1_4(w);
-                break;
-            case 3:
-                // result = curva_sim_2_10(w);
-                result = curva_ala_1_6(w);
-                break;
-            case 4:
-                // result = curva_sim_3_6(w);
-                result = curva_ala_2_2(w);
-                break;
-            case 5:
-                // result = curva_sim_3_8(w);
-                result = curva_ala_2_4(w);
-                break;
-            case 6:
-                // result = curva_sim_3_10(w);
-                result = curva_ala_2_6(w);
-                break;
-            case 7:
-                result = curva_ala_3_1(w);
-                break;
-            case 8:
-                result = curva_ala_3_2(w);
-                break;
-            case 9:
-                result = curva_ala_3_3(w);
-                break;
-            case 10:
-                result = curva_ala_4_2(w);
-                break;
-            case 11:
-                result = curva_ala_4_3(w);
-                break;
-            case 12:
-                result = curva_ala_4_4(w);
-                break;
-            case 13:
-                result = curva_ala_5_4(w);
-                break;
-            case 14:
-                result = curva_ala_5_5(w);
-                break;
-            case 15:
-                result = curva_ala_5_6(w);
-                break;
-            case 16:
-                result = curva_ala_6_2(w);
-                break;
-            case 17:
-                result = curva_ala_6_3(w);
-                break;
-            case 18:
-                result = curva_ala_6_4(w);
-                break;
-            case 19:
-                result = curva_ala_7_4(w);
-                break;
-            case 20:
-                result = curva_ala_7_5(w);
-                break;
-            case 21:
-                result = curva_ala_7_6(w);
-                break;
-            case 22:
-                result = curva_lissajous_1(w);
-                break;
-            case 23:
-                result = curva_lissajous_2(w);
-                break;
-            case 24:
-                result = curva_iav_1(w);
+                result = curva_flocking(w);
                 break;
             default:
                 result.xp =1.0;

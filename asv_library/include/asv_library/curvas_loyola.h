@@ -19,6 +19,8 @@ Target curva_2_i(const float w);
 Target curva_2_c(const float w);
 // Closed semicircle radius 4, straight line 20
 Target curva_2_d(const float w);
+// curva para prueba flocking lago vida - linea recta
+Target curva_flocking(const float w);
 
 
 #endif

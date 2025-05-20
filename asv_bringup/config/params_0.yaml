@@ -170,7 +170,7 @@ ASV0: #/**
       ros__parameters:
         Ts: 100.0
         numParticles: 1
-        path_d: 24
+        path_d: 1
         leader_delta_w: 0.2
         d: 5.0
         c1_alpha: 0.5

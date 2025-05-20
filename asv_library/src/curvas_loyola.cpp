@@ -77,3 +77,12 @@ Target curva_2_d(const float w) {
     
     return result;
 }
+
+Target curva_flocking(const float w) {
+    Target result;
+
+    // Trayectoria 1: Línea recta 
+    recta(w, &result, 1.29, 2.66 , -3.6714281438405694, -1.5876446027418702);
+
+    return result;
+}
