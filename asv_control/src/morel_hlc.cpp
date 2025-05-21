@@ -245,13 +245,17 @@ public:
                 else if (miid == 3){
                     miid = 1;
                 }
+                else if (miid == 4){
+                    miid = 2;
+                }
             }
         Ts = this->get_parameter("Ts").as_double()/1000.0;
         worker_mode = this->get_parameter("worker_mode").as_int();
         if (worker_mode == -1)
         {
-            numParticles = 4; // 4 drones simulados
-            numParticles = 2; // 1 y 3
+            // numParticles = 4; // 4 drones simulados
+            // numParticles = 2; // 1 y 3
+            numParticles = 3; // 1, 3 y 4
         }
         else
         {
@@ -529,6 +533,9 @@ private:
                 }
                 else if (id == 3){
                     id = 1;
+                }
+                else if (id == 4){
+                    id = 2;
                 }
             }
             X_s[id] = msg->point.x; // X

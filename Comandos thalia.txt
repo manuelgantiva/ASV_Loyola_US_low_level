@@ -29,3 +29,8 @@ ros2 launch asv_bringup simulator_test.launch.py my_id:=3 worker_mode:=1 rec:=tr
 ros2 launch asv_bringup simulator_test.launch.py my_id:=4 worker_mode:=2 rec:=true
 
 ros2 bag record --all
+
+
+
+(ros2 launch asv_bringup simulator_test.launch.py my_id:=1 worker_mode:=-1 & ros2 launch asv_bringup simulator_test.launch.py my_id:=3 worker_mode:=-1 & wait)
+(ros2 launch asv_bringup simulator_test.launch.py my_id:=1 worker_mode:=-1 & ros2 launch asv_bringup simulator_test.launch.py my_id:=3 worker_mode:=-1 & ros2 launch asv_bringup simulator_test.launch.py my_id:=4 worker_mode:=-1 & wait)

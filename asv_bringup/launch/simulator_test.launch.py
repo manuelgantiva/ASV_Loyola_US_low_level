@@ -259,10 +259,11 @@ def generate_launch_description():
 
     transceiver_xbee_node = Node(
         package="asv_comunication",
-        executable="transceiver_xbee.py",
+        executable="xbee_transceiver_DSG.py",
         namespace= namespace_comunication,
         parameters = [
-            {'my_id': my_namespace},
+            {'my_id': my_namespace,
+            'worker_mode': worker_mode},
         ]
     )
 
@@ -454,8 +455,8 @@ def generate_launch_description():
     nodes.append(rc_handler_node)
     nodes.append(record)
     # nodes.append(transceiver_xbee_node)
-    # nodes.append(xbee_master_node)
-    nodes.append(transceiver_sim_node)
+    nodes.append(transceiver_xbee_node)
+    # nodes.append(transceiver_sim_node)
     nodes.append(asv_tf_broadcast_node)
 
     ###################################################################

@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 import rclpy
 from rclpy.node import Node
@@ -17,7 +16,13 @@ class XbeeTransceiverDSG(Node):
         self.my_string_id = self.get_parameter("my_id").get_parameter_value().string_value
         self.worker_mode = self.get_parameter("worker_mode").get_parameter_value().integer_value
         try:
-            self.xbee = XBeeDevice("/dev/xbee_usb", 115200)#<-----------------------------------------------------------------------------cambiar el puerto
+            if self.my_string_id[3] == "1":
+                usb_tty = 0
+            elif self.my_string_id[3] == "3":
+                usb_tty = 1
+            elif self.my_string_id[3] == "4":
+                usb_tty = 2
+            self.xbee = XBeeDevice(f"/dev/ttyUSB{usb_tty}", 115200)#<-----------------------------------------------------------------------------cambiar el puerto
             self.get_logger().info("\033[32mSerial Xbee port opened successfully...\033[0m")
         except Exception as e:
             self.get_logger().info("Serial Sim port opening failure !!!!!!!!!!!!!!!!")
