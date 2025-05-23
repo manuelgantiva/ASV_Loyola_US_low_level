@@ -22,7 +22,7 @@ class XbeeTransceiverDSG(Node):
                 usb_tty = 1
             elif self.my_string_id[3] == "4":
                 usb_tty = 2
-            self.xbee = XBeeDevice(f"/dev/ttyUSB{usb_tty}", 115200)#<-----------------------------------------------------------------------------cambiar el puerto
+            self.xbee = XBeeDevice(f"/dev/xbee_usb", 115200)#<-----------------------------------------------------------------------------cambiar el puerto
             self.get_logger().info("\033[32mSerial Xbee port opened successfully...\033[0m")
         except Exception as e:
             self.get_logger().info("Serial Sim port opening failure !!!!!!!!!!!!!!!!")
