@@ -309,6 +309,8 @@ public:
         auto options_sensors_ = rclcpp::SubscriptionOptions();
         options_sensors_.callback_group=cb_group_sensors_;
 
+        params_callback_handle_ = this->add_on_set_parameters_callback(std::bind(&MorelHlcNode::param_callback, this, _1));
+
         publisher_mlc_ = this-> create_publisher<asv_interfaces::msg::StateObserver>("/" + my_string_id + "/control/output_hlc",
                 rclcpp::SensorDataQoS());
 
@@ -569,6 +571,147 @@ private:
         return result;
     }
 
+    rcl_interfaces::msg::SetParametersResult param_callback(const std::vector<rclcpp::Parameter> &params){
+        rcl_interfaces::msg::SetParametersResult result;
+        for (const auto &param: params){
+            if (param.get_name() == "max_sim_k"){
+                if(param.as_int() >= 0 and param.as_int() < 1000){
+                    RCLCPP_INFO(this->get_logger(), "changed param value");
+                    max_sim_k = param.as_int();
+                }else{
+                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-1000");
+                    result.successful = false;
+                    result.reason = "Value out of range";
+                    return result;
+                }
+            }
+            if (param.get_name() == "d"){
+                if(param.as_double() >= 0.0 and param.as_double() < 50.0){
+                    RCLCPP_INFO(this->get_logger(), "changed param value");
+                    d = param.as_double();
+                }else{
+                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-50");
+                    result.successful = false;
+                    result.reason = "Value out of range";
+                    return result;
+                }
+            }
+            if (param.get_name() == "numParticles"){
+                if(param.as_int() >= 0 and param.as_int() < 5){
+                    RCLCPP_INFO(this->get_logger(), "changed param value");
+                    numParticles = param.as_int();
+                }else{
+                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 1-4");
+                    result.successful = false;
+                    result.reason = "Value out of range";
+                    return result;
+                }
+            }
+            if (param.get_name() == "worker_mode"){
+                if(param.as_int() >= -1 and param.as_int() < 5){
+                    RCLCPP_INFO(this->get_logger(), "changed param value");
+                    worker_mode = param.as_int();
+                }else{
+                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be between -1-4");
+                    result.successful = false;
+                    result.reason = "Value out of range";
+                    return result;
+                }
+            }
+            if (param.get_name() == "path_d"){
+                if(param.as_int() >= 0 and param.as_int() < 3){
+                    RCLCPP_INFO(this->get_logger(), "changed param value");
+                    path_d = param.as_int();
+                }else{
+                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-2");
+                    result.successful = false;
+                    result.reason = "Value out of range";
+                    return result;
+                }
+            }
+            if (param.get_name() == "c1_alpha"){
+                if(param.as_double() >= 0.0 and param.as_double() < 21.0){
+                    RCLCPP_INFO(this->get_logger(), "changed param value");
+                    c1_alpha = param.as_double();
+                }else{
+                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-20");
+                    result.successful = false;
+                    result.reason = "Value out of range";
+                    return result;
+                }
+            }
+            if (param.get_name() == "c2_alpha"){
+                if(param.as_double() >= 0.0 and param.as_double() < 21.0){
+                    RCLCPP_INFO(this->get_logger(), "changed param value");
+                    c2_alpha = param.as_double();
+                }else{
+                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-20");
+                    result.successful = false;
+                    result.reason = "Value out of range";
+                    return result;
+                }
+            }
+            if (param.get_name() == "epsilon"){
+                if(param.as_double() >= 0.0 and param.as_double() < 1.1){
+                    RCLCPP_INFO(this->get_logger(), "changed param value");
+                    epsilon = param.as_double();
+                }else{
+                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0.1-1.0");
+                    result.successful = false;
+                    result.reason = "Value out of range";
+                    return result;
+                }
+            }
+            if (param.get_name() == "h"){
+                if(param.as_double() >= 0.0 and param.as_double() < 1.1){
+                    RCLCPP_INFO(this->get_logger(), "changed param value");
+                    h = param.as_double();
+                }else{
+                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0.1-1.0");
+                    result.successful = false;
+                    result.reason = "Value out of range";
+                    return result;
+                }
+            }
+            if (param.get_name() == "a"){
+                if(param.as_double() >= 0.0 and param.as_double() < 100.1){
+                    RCLCPP_INFO(this->get_logger(), "changed param value");
+                    a = param.as_double();
+                }else{
+                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0.1-100.0");
+                    result.successful = false;
+                    result.reason = "Value out of range";
+                    return result;
+                }
+            }
+            if (param.get_name() == "b"){
+                if(param.as_double() >= 0.0 and param.as_double() < 100.1){
+                    RCLCPP_INFO(this->get_logger(), "changed param value");
+                    b = param.as_double();
+                }else{
+                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0.1-100.0");
+                    result.successful = false;
+                    result.reason = "Value out of range";
+                    return result;
+                }
+            }
+            if (param.get_name() == "leader_delta_w"){
+                if(param.as_double() >= 0.0 and param.as_double() < 20.1){
+                    RCLCPP_INFO(this->get_logger(), "changed param value");
+                    delta_w = param.as_double();
+                }else{
+                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0.0-20.0");
+                    result.successful = false;
+                    result.reason = "Value out of range";
+                    return result;
+                }
+            }
+        }
+        result.successful = true;
+        result.reason = "Success";
+        return result;
+    }
+
 
 
     std::vector<float> X_s;
@@ -597,14 +740,14 @@ private:
     float w = 0.0;
     float c1_alpha = 0.5;
     float c2_alpha = 0.5; 
-    float d = 20.0;
-    float r = 24.0;
+    float d = 2.0;
+    float r = 2.4;
     float epsilon = 0.1;
-    float r_alpha = 66.55;
+    float r_alpha = 6.6;
     float h = 0.2;
     float a = 5.0;
     float b = 5.0;
-    float d_alpha = 54.03;
+    float d_alpha = 5.4;
     float c1_gamma = 3.0;
     float c2_gamma = 1.0;
     int path_d; /*Variable para elegir path*/
@@ -614,6 +757,7 @@ private:
     rclcpp::CallbackGroup::SharedPtr cb_group_sensors_;
     rclcpp::CallbackGroup::SharedPtr cb_group_obs_;
     rclcpp::TimerBase::SharedPtr timer_;
+    OnSetParametersCallbackHandle::SharedPtr params_callback_handle_;
 };
 
 int main(int argc, char **argv)

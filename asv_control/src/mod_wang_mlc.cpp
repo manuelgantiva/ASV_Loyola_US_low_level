@@ -50,7 +50,7 @@ public:
         auto options_sensors_ = rclcpp::SubscriptionOptions();
         options_sensors_.callback_group=cb_group_sensors_;
 
-        // params_callback_handle_ = this->add_on_set_parameters_callback(std::bind(&ModWangMlcNode::param_callback, this, _1));
+        params_callback_handle_ = this->add_on_set_parameters_callback(std::bind(&ModWangMlcNode::param_callback, this, _1));
 
         subscriber_states_obs_ = this-> create_subscription<asv_interfaces::msg::StateObserver>(
             "/" + my_string_id + "/observer/state_observer",rclcpp::SensorDataQoS(), std::bind(&ModWangMlcNode::callbackStates,
@@ -223,64 +223,49 @@ private:
         return angle;
     }
 
-    // rcl_interfaces::msg::SetParametersResult param_callback(const std::vector<rclcpp::Parameter> &params){
-    //     rcl_interfaces::msg::SetParametersResult result;
-    //     for (const auto &param: params){
-    //         if (param.get_name() == "delta_SGLOS"){
-    //             if(param.as_double() >= 0.0 and param.as_double() < 100.0){
-    //                 RCLCPP_INFO(this->get_logger(), "changed param value");
-    //                 delta_SGLOS = param.as_double();
-    //             }else{
-    //                 RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-100");
-    //                 result.successful = false;
-    //                 result.reason = "Value out of range";
-    //                 return result;
-    //             }
-    //         }
-    //         if (param.get_name() == "k_u_tar"){
-    //             if(param.as_double() >= 0.0 and param.as_double() < 100.0){
-    //                 RCLCPP_INFO(this->get_logger(), "changed param value");
-    //                 k_u_tar = param.as_double();
-    //             }else{
-    //                 RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-100");
-    //                 result.successful = false;
-    //                 result.reason = "Value out of range";
-    //                 return result;
-    //             }
-    //         }
-    //         if (param.get_name() == "taud"){
-    //             if(param.as_double() >= 0.0 and param.as_double() < 500.0){
-    //                 RCLCPP_INFO(this->get_logger(), "changed param value");
-    //                 taud = param.as_double();
-    //                 a=(taud*Ts)/(taud*Ts+Ts);
-    //                 b=1/(taud*Ts+Ts);
-    //             }else{
-    //                 RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-100");
-    //                 result.successful = false;
-    //                 result.reason = "Value out of range";
-    //                 return result;
-    //             }
-    //         }
-    //         if (param.get_name() == "path_d"){
-    //             if(param.as_int() >= 0 and param.as_int() <= 12){
-    //                 RCLCPP_INFO(this->get_logger(), "changed param value");
-    //                 path_d = param.as_int();
-    //             }else{
-    //                 RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-12");
-    //                 result.successful = false;
-    //                 result.reason = "Value out of range";
-    //                 return result;
-    //             }
-    //         }
-    //         if (param.get_name() == "flag"){
-    //             RCLCPP_INFO(this->get_logger(), "changed param value");
-    //             flag = param.as_bool();
-    //         }
-    //     }
-    //     result.successful = true;
-    //     result.reason = "Success";
-    //     return result;
-    // }
+    rcl_interfaces::msg::SetParametersResult param_callback(const std::vector<rclcpp::Parameter> &params){
+        rcl_interfaces::msg::SetParametersResult result;
+        for (const auto &param: params){
+            if (param.get_name() == "k1"){
+                if(param.as_double() >= 0.0 and param.as_double() < 10.0){
+                    RCLCPP_INFO(this->get_logger(), "changed param value");
+                    k1 = param.as_double();
+                }else{
+                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-10");
+                    result.successful = false;
+                    result.reason = "Value out of range";
+                    return result;
+                }
+            }
+            if (param.get_name() == "k2"){
+                if(param.as_double() >= 0.0 and param.as_double() < 1000.0){
+                    RCLCPP_INFO(this->get_logger(), "changed param value");
+                    k2 = param.as_double();
+                }else{
+                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-1000");
+                    result.successful = false;
+                    result.reason = "Value out of range";
+                    return result;
+                }
+            }
+            if (param.get_name() == "taud"){
+                if(param.as_double() >= 0.0 and param.as_double() < 500.0){
+                    RCLCPP_INFO(this->get_logger(), "changed param value");
+                    taud = param.as_double();
+                    a=(taud*Ts)/(taud*Ts+Ts);
+                    b=1/(taud*Ts+Ts);
+                }else{
+                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-100");
+                    result.successful = false;
+                    result.reason = "Value out of range";
+                    return result;
+                }
+            }
+        }
+        result.successful = true;
+        result.reason = "Success";
+        return result;
+    }
 
     bool armed = false, armed_act=false;
     float u_hat = 0, psi_hat = 0, r_hat = 0, v_hat = 0, x_hat = 0, y_hat = 0, psi_ant=0;

@@ -43,10 +43,10 @@ ament_target_dependencies(asv_tf2_broadcaster rclcpp tf2 tf2_ros geometry_msgs a
 add_executable(ifac_llc src/ifac_llc.cpp)
 ament_target_dependencies(ifac_llc rclcpp geometry_msgs mavros_msgs asv_interfaces)
 
-add_executable(mpc_llc src/mpc_llc.cpp)
-ament_target_dependencies(mpc_llc rclcpp geometry_msgs mavros_msgs asv_interfaces std_msgs)
+# add_executable(mpc_llc src/mpc_llc.cpp)
+# ament_target_dependencies(mpc_llc rclcpp geometry_msgs mavros_msgs asv_interfaces std_msgs)
 ## Linkear el ejecutable con las librerías de Gurobi
-target_link_libraries(mpc_llc gurobi_c++ gurobi110)
+# target_link_libraries(mpc_llc gurobi_c++ gurobi110)
 
 add_executable(mpc_hlc src/mpc_hlc.cpp)
 ament_target_dependencies(mpc_hlc rclcpp geometry_msgs mavros_msgs std_msgs asv_library)
@@ -71,7 +71,7 @@ install(TARGETS
   asv_tf2_broadcaster
   ifac_llc
   wang_mlc
-  mpc_llc
+  # mpc_llc
   morel_hlc
   mod_wang_mlc
   mpc_hlc

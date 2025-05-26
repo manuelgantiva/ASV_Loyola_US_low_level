@@ -445,7 +445,41 @@ private:
     rcl_interfaces::msg::SetParametersResult param_callback(const std::vector<rclcpp::Parameter> &params){
         rcl_interfaces::msg::SetParametersResult result;
         for (const auto &param: params){
-            (void)param;            
+            if (param.get_name() == "max_diff_Xu"){
+                if(param.as_double_array().size() == 7){
+                    RCLCPP_INFO(this->get_logger(), "changed param value");
+                    std::vector<double> diff_Xu = param.as_double_array();
+                    max_diff_Xu = Eigen::Map<Eigen::Matrix<double, 7, 1>>(diff_Xu.data());
+                }else{
+                    RCLCPP_INFO(this->get_logger(), "could not change parameter value, array size must be 7");
+                    result.successful = false;
+                    result.reason = "Value out of range";
+                    return result;
+                }
+            }  
+            if (param.get_name() == "max_diff_Xv"){
+                if(param.as_double_array().size() == 13){
+                    RCLCPP_INFO(this->get_logger(), "changed param value");
+                    std::vector<double> diff_Xv = param.as_double_array();
+                    max_diff_Xv = Eigen::Map<Eigen::Matrix<double, 13, 1>>(diff_Xv.data());
+                }else{
+                    RCLCPP_INFO(this->get_logger(), "could not change parameter value, array size must be 13");
+                    result.successful = false;
+                    result.reason = "Value out of range";
+                    return result;
+                }
+            } if (param.get_name() == "max_diff_Xr"){
+                if(param.as_double_array().size() == 13){
+                    RCLCPP_INFO(this->get_logger(), "changed param value");
+                    std::vector<double> diff_Xr = param.as_double_array();
+                    max_diff_Xr = Eigen::Map<Eigen::Matrix<double, 13, 1>>(diff_Xr.data());
+                }else{
+                    RCLCPP_INFO(this->get_logger(), "could not change parameter value, array size must be 13");
+                    result.successful = false;
+                    result.reason = "Value out of range";
+                    return result;
+                }
+            }          
         }
         result.successful = true;
         result.reason = "Success";

@@ -450,7 +450,7 @@ def generate_launch_description():
     # nodes.append(observer_guille)
     # nodes.append(observer_liu)
     nodes.append(observer_zono)
-    # nodes.append(observer_param)
+    nodes.append(observer_param)
     nodes.append(observer_core)
 
     ###################################################################

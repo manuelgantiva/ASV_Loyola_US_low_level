@@ -15,6 +15,9 @@
 #include "asv_interfaces/msg/pwm_values.hpp"        //Interface pwm values override
 #include "geometry_msgs/msg/twist.hpp"              //Interface accel computed
 #include "nav_msgs/msg/odometry.hpp"                //Interface gps global local data
+#include "asv_interfaces/msg/state_neighbor.hpp"    //Interface state observer
+#include "std_msgs/msg/float32_multi_array.hpp"          // Interface coeficientes polinomio
+#include "std_msgs/msg/bool.hpp"                    //Interface armed data
 
 
 #include <rosbag2_cpp/writer.hpp>
@@ -38,6 +41,21 @@ public:
         int month = local_time->tm_mon + 1;  // Mes (0-11, agregamos 1 para obtener el mes real)
         prefix = "ASV" + my_id + "-" + std::to_string(day) + "-" + std::to_string(month) + "-bag" + "-";
         RCLCPP_INFO(this->get_logger(), "Current day: %s", prefix.c_str());
+
+        subscriber_state_hlc = this-> create_subscription<asv_interfaces::msg::StateObserver>("/" + name_id + "/control/output_hlc",rclcpp::SensorDataQoS(),
+                std::bind(&BagRecordNode::callbackStateHLC, this, std::placeholders::_1));
+        subscriber_neighbor_hlc = this-> create_subscription<asv_interfaces::msg::StateNeighbor>("/" + name_id + "/neighbors/output_hlc",rclcpp::SensorDataQoS(),
+                std::bind(&BagRecordNode::callbackNeighborHLC, this, std::placeholders::_1));
+        subscriber_neighbor_obs_hlc = this-> create_subscription<asv_interfaces::msg::StateNeighbor>("/" + name_id + "/neighbors/state_observer",rclcpp::SensorDataQoS(),
+                std::bind(&BagRecordNode::callbackNeighborObsHLC, this, std::placeholders::_1));
+        subscriber_param_obs = this-> create_subscription<std_msgs::msg::Float32MultiArray>("/" + name_id + "/observer/observer_param",rclcpp::SensorDataQoS(),
+                std::bind(&BagRecordNode::callbackParamObs, this, std::placeholders::_1));
+        subscriber_kalmangains= this-> create_subscription<std_msgs::msg::Float32MultiArray>("/" + name_id + "/observer/kalman_gains",rclcpp::SensorDataQoS(),
+                std::bind(&BagRecordNode::callbackKalmanGains, this, std::placeholders::_1));
+        subscriber_velocities_SG= this-> create_subscription<geometry_msgs::msg::TwistStamped>("/" + name_id + "/observer/velocities",rclcpp::SensorDataQoS(),
+                std::bind(&BagRecordNode::callbackVelocitiesSG, this, std::placeholders::_1));
+        subscriber_setparam= this-> create_subscription<std_msgs::msg::Bool>("/" + name_id + "/observer/set_param",rclcpp::SensorDataQoS(),
+                std::bind(&BagRecordNode::callbackSetParam, this, std::placeholders::_1));        
 
         subscriber_state = this-> create_subscription<mavros_msgs::msg::State>("/" + name_id + "/mavros/state",1,
                 std::bind(&BagRecordNode::callbackMavrosState, this, std::placeholders::_1));
@@ -120,14 +138,63 @@ public:
         subscriber_accel_ext = this-> create_subscription<geometry_msgs::msg::Twist>("/" + name_id + "/control/accel_imu_ext",1,
                 std::bind(&BagRecordNode::callbackAccelerationExt, this, std::placeholders::_1));
 
-        subscriber_hlc_ = this-> create_subscription<asv_interfaces::msg::StateObserver>("/" + name_id + "/control/output_hlc",
-            rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackHLCReference,this, std::placeholders::_1));
-        
-
     	RCLCPP_INFO(this->get_logger(), "Bag Record Node has been started.");
     }
 
 private:
+
+    void callbackStateHLC(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
+    {
+        if(armed==true){
+            rclcpp::Time time_stamp = this->now();
+            writer_->write(msg, "/" + name_id + "/control/output_hlc", "asv_interfaces/msg/StateObserver", time_stamp);
+        }
+    }
+    void callbackNeighborHLC(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
+    {
+        if(armed==true){
+            rclcpp::Time time_stamp = this->now();
+            writer_->write(msg, "/" + name_id + "/neighbors/output_hlc", "asv_interfaces/msg/StateNeighbor", time_stamp);
+        }
+    }
+    void callbackNeighborObsHLC(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
+    {
+        if(armed==true){
+            rclcpp::Time time_stamp = this->now();
+            writer_->write(msg, "/" + name_id + "/neighbors/output_hlc", "asv_interfaces/msg/StateNeighbor", time_stamp);
+        }
+    }
+    void callbackParamObs(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
+    {
+        if(armed==true){
+            rclcpp::Time time_stamp = this->now();
+            writer_->write(msg, "/" + name_id + "/observer/observer_param", "std_msgs/msg/Float32MultiArray", time_stamp);
+        }
+    }
+    void callbackKalmanGains(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
+    {
+        if(armed==true){
+            rclcpp::Time time_stamp = this->now();
+            writer_->write(msg, "/" + name_id + "/observer/kalman_gains", "std_msgs/msg/Float32MultiArray", time_stamp);
+        }
+    }
+    void callbackVelocitiesSG(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
+    {
+        if(armed==true){
+            rclcpp::Time time_stamp = this->now();
+            writer_->write(msg, "/" + name_id + "/observer/velocities", "geometry_msgs/msg/TwistStamped", time_stamp);
+        }
+    }
+    void callbackSetParam(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
+    {
+        if(armed==true){
+            rclcpp::Time time_stamp = this->now();
+            writer_->write(msg, "/" + name_id + "/observer/set_param", "std_msgs/msg/Bool", time_stamp);
+        }
+    }
+
+
+
     void callbackRefHlc(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
     {
         if(armed==true){
@@ -469,13 +536,7 @@ private:
         }
     }
     
-    void callbackHLCReference(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
-    {
-        if(armed==true){
-            rclcpp::Time time_stamp = this->now();
-            writer_->write(msg, "/" + name_id + "/control/output_hlc" , "asv_interfaces/msg/StateObserver", time_stamp);
-        }
-    }
+   
 
     std::string my_id, name_id;
     std::string name_bag;
@@ -483,6 +544,14 @@ private:
     std::string prefix;
     rclcpp::Subscription<mavros_msgs::msg::State>::SharedPtr subscriber_state;
     std::unique_ptr<rosbag2_cpp::Writer> writer_;
+
+    rclcpp::Subscription<asv_interfaces::msg::StateObserver>::SharedPtr subscriber_state_hlc;
+    rclcpp::Subscription<asv_interfaces::msg::StateNeighbor>::SharedPtr subscriber_neighbor_hlc;
+    rclcpp::Subscription<asv_interfaces::msg::StateNeighbor>::SharedPtr subscriber_neighbor_obs_hlc;
+    rclcpp::Subscription<std_msgs::msg::Float32MultiArray>::SharedPtr subscriber_param_obs;
+    rclcpp::Subscription<std_msgs::msg::Float32MultiArray>::SharedPtr subscriber_kalmangains;
+    rclcpp::Subscription<geometry_msgs::msg::TwistStamped>::SharedPtr subscriber_velocities_SG;
+    rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr subscriber_setparam;
 
     rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr subscriber_imu;
     rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr subscriber_imu_raw;
@@ -523,8 +592,6 @@ private:
     rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr subscriber_error_mlc;
     rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr subscriber_accel;
     rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr subscriber_accel_ext;
-    rclcpp::Subscription<asv_interfaces::msg::StateObserver>::SharedPtr subscriber_hlc_;
-    
 };
 
 int main(int argc, char **argv)
