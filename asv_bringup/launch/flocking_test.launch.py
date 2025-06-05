@@ -465,6 +465,6 @@ def generate_launch_description():
     # nodes.append(asv_tf_broadcast_node)
     # nodes.append(mpc_llc_node)
     return LaunchDescription(
-        [arg_my_id, arg_rec, param_id, arg_worker_mode, arg_obs_params
+        [arg_my_id, arg_rec, param_id, arg_worker_mode, arg_obs_params,
             *nodes]
     )
