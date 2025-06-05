@@ -439,8 +439,8 @@ def generate_launch_description():
     # nodes.append(ref_llc_node)
     nodes.append(rc_handler_node)
     nodes.append(record)
-    nodes.append(transceiver_xbee_node)
-    # nodes.append(transceiver_sim_node)
+    # nodes.append(transceiver_xbee_node)
+    nodes.append(transceiver_sim_node)
     nodes.append(asv_tf_broadcast_node)
 
     ###################################################################
