@@ -55,7 +55,7 @@ def generate_launch_description():
     arg_obs_params = DeclareLaunchArgument(
         'obs_param',
         default_value="false",
-        description='true: activate obs_params, false: deactivate obs_params'
+        description='activate obs_params,deactivate obs_params'
     )
     my_id = LaunchConfiguration('my_id')
     rec = LaunchConfiguration('rec')
@@ -103,19 +103,6 @@ def generate_launch_description():
         output="screen"
     )
 
-    # neighbor_description = ParameterValue(Command(['xacro ', urdf_path, ' id:=n', ' own:=false']),
-    #                                       value_type=str)
-    # neighbor_robot_state_publisher_node = Node(
-    #     package="robot_state_publisher",
-    #     executable="robot_state_publisher",
-    #     name="neighbor_robot_state_publisher",
-    #     namespace=my_namespace,
-    #     parameters=[{'robot_description': neighbor_description},
-    #                 {'publish_frequency': 10.0}],
-    #     remappings=[
-    #         ("/robot_description", "/neighbor_description")
-    #     ]
-    # )
 
     ###################################################################
     ## ------------------------Mavros Launch-------------------------##
@@ -166,7 +153,8 @@ def generate_launch_description():
         namespace= namespace_comunication,
         parameters = [
             {'my_id': my_namespace},
-            config_gen]
+            # config_gen
+            ]
     )
 
     ref_llc_node = Node(
@@ -314,7 +302,6 @@ def generate_launch_description():
         parameters = [{'my_id': my_namespace},
                 config],
     )
-
     mod_wang_mlc_node = Node(
         package="asv_control",
         executable="mod_wang_mlc",
