@@ -28,8 +28,8 @@ include_directories(SYSTEM ${EIGEN3_INCLUDE_DIRS})
 add_executable(mux_obs src/mux_obs.cpp)
 ament_target_dependencies(mux_obs rclcpp example_interfaces mavros_msgs asv_interfaces)
 
-add_executable(observer_guille src/observer_guille.cpp)
-ament_target_dependencies(observer_guille rclcpp std_msgs sensor_msgs mavros_msgs asv_interfaces tf2 tf2_ros geometry_msgs nav_msgs)
+add_executable(observer_bejarano src/observer_bejarano.cpp)
+ament_target_dependencies(observer_bejarano rclcpp std_msgs sensor_msgs mavros_msgs asv_interfaces tf2 tf2_ros geometry_msgs nav_msgs)
 
 add_executable(observer_liu src/observer_liu.cpp)
 ament_target_dependencies(observer_liu rclcpp std_msgs sensor_msgs mavros_msgs asv_interfaces tf2 tf2_ros geometry_msgs nav_msgs)
@@ -46,7 +46,7 @@ ament_target_dependencies(observer_core rclcpp std_msgs sensor_msgs mavros_msgs 
 # Install Targets
 install(TARGETS
   mux_obs
-  observer_guille
+  observer_bejarano
   observer_liu
   observer_zono
   observer_param

@@ -27,9 +27,6 @@ find_package(nav_msgs REQUIRED)        # interface to use navio2's sensors
 
 include_directories(SYSTEM ${EIGEN3_INCLUDE_DIRS})
 
-add_executable(testnode src/testnode.cpp)
-ament_target_dependencies(testnode rclcpp std_msgs)
-
 add_executable(bag_record src/bag_record.cpp)
 ament_target_dependencies(bag_record rclcpp rosbag2_cpp sensor_msgs mavros_msgs asv_interfaces nav_msgs)
 
@@ -42,9 +39,6 @@ ament_target_dependencies(ref_llc rclcpp std_msgs mavros_msgs geometry_msgs)
 add_executable(ref_mlc src/ref_mlc.cpp)
 ament_target_dependencies(ref_mlc rclcpp std_msgs mavros_msgs)
 
-add_executable(ref_hlc src/ref_hlc.cpp)
-ament_target_dependencies(ref_hlc rclcpp std_msgs mavros_msgs)
-
 add_executable(apm_llc src/apm_llc.cpp)
 ament_target_dependencies(apm_llc rclcpp geometry_msgs mavros_msgs asv_interfaces)
 
@@ -53,12 +47,10 @@ ament_target_dependencies(imu_fix rclcpp std_msgs geometry_msgs sensor_msgs mavr
 
 # Install Targets
 install(TARGETS
-  testnode
   bag_record
   rc_handler
   ref_llc
   ref_mlc
-  ref_hlc
   apm_llc
   imu_fix
 DESTINATION lib/${PROJECT_NAME})
@@ -68,8 +60,6 @@ ament_python_install_package(scripts)
 
 install(PROGRAMS
   scripts/transceiver_xbee.py
-  scripts/xbee_master.py
-  scripts/xbee_slave.py
   scripts/imu_driver.py 
   scripts/transceiver_simulator.py 
   scripts/xbee_transceiver_DSG.py 

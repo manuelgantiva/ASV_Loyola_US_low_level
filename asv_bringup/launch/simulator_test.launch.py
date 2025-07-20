@@ -61,8 +61,7 @@ def generate_launch_description():
         ["'ASV' + str(", my_id, ") + '/control'"])
     namespace_comunication = PythonExpression(
         ["'ASV' + str(", my_id, ") + '/comunication'"])
-    # namespace_mavros = PythonExpression(
-    #     ["'ASV' + str(", my_id, ") + '/mavros'"])
+
     namespace_observer = PythonExpression(
         ["'ASV' + str(", my_id, ") + '/observer'"])
     namespace_simulator = PythonExpression(
@@ -100,20 +99,6 @@ def generate_launch_description():
         output="screen"
     )
 
-
-    ###################################################################
-    ## ------------------------Mavros Launch-------------------------##
-    ###################################################################
-    
-    # Mavros_launch = IncludeLaunchDescription(
-    #     XMLLaunchDescriptionSource(os.path.join(get_package_share_directory('asv_bringup'),
-    #                                             'launch/apm.launch.xml')),
-    #     launch_arguments={
-    #         'namespace': namespace_mavros
-    #     }.items()
-    # )
-    # node.append(Mavros_launch)
-
     ###################################################################
     ##--------------------Get Config id File ------------------------##
     ################################################################### 
@@ -143,6 +128,20 @@ def generate_launch_description():
                     config],
     )
 
+    rvz = Node(
+            package='rviz2',
+            namespace='',
+            executable='rviz2',
+            name='rviz2',
+            arguments=['-d' + os.path.join(get_package_share_directory('asv_bringup'), 'rviz2', 'mlc_config.rviz')],
+        )
+    
+    
+    rqt_node = ExecuteProcess(
+        cmd=["rqt", "--perspective-file", os.path.join(get_package_share_directory('asv_bringup'), 'rqt', 'mlc_test.perspective')],
+        output="screen"
+    )
+
     ###################################################################
     ##--------------------Comunication Nodes-------------------------##
     ################################################################### 
@@ -155,14 +154,6 @@ def generate_launch_description():
             {'my_id': my_id}
         ],
         condition=IfCondition(rec)
-    )
-
-    rvz = Node(
-        package='rviz2',
-        namespace='',
-        executable='rviz2',
-        name='rviz2',
-        arguments=['-d' + os.path.join(get_package_share_directory('asv_bringup'), 'config', 'test_obs.rviz')],
     )
 
     rc_handler_node = Node(
@@ -192,48 +183,6 @@ def generate_launch_description():
             config_gen]
     )
 
-    apm_llc_node = Node(
-        package="asv_comunication",
-        executable="apm_llc",
-        namespace= namespace_comunication,
-        parameters = [
-            {'my_id': my_namespace}
-        ]
-    )
-
-    imu_fix_node = Node(
-        package="asv_comunication",
-        executable="imu_fix",
-        namespace= namespace_comunication,
-        parameters = [
-            {'my_id': my_namespace}
-        ]
-    )
-
-    # imu_fix_ext_node = Node (
-    #     package= "asv_comunication",
-    #     executable= "imu_fix",
-    #     name= "imu_fix_ext",
-    #     namespace= namespace_comunication,
-    #     remappings=[("mavros/imu/data", "comunication/imu_ext/data"),
-    #                 ("control/accel_imu", "control/accel_imu_ext")],
-    #     parameters = [
-    #         {'my_id': my_namespace}
-    #     ],
-    #     condition=IfCondition(
-    #         PythonExpression(
-    #             [my_id, ' == 4']
-    #         )
-    #     )
-    # )
-    # imu_ext_node = Node (
-    #     package= "asv_comunication",
-    #     executable= "imu_driver.py",
-    #     namespace= namespace_comunication,
-    #     parameters = [
-    #         {'my_id': my_namespace}
-    #     ]
-    # )
 
     
     transceiver_sim_node = Node(
@@ -243,26 +192,6 @@ def generate_launch_description():
         parameters = [
             {'my_id': my_namespace,
             'worker_mode': worker_mode},
-        ]
-    )
-
-
-    transceiver_xbee_node = Node(
-        package="asv_comunication",
-        executable="xbee_transceiver_DSG.py",
-        namespace= namespace_comunication,
-        parameters = [
-            {'my_id': my_namespace,
-            'worker_mode': worker_mode},
-        ]
-    )
-
-    xbee_master_node = Node(
-        package="asv_comunication",
-        executable="xbee_master.py",
-        namespace= namespace_comunication,
-        parameters = [
-            {'my_id': my_namespace},
         ]
     )
 
@@ -305,14 +234,6 @@ def generate_launch_description():
             config],
     )
 
-    # mpc_llc_node = Node(
-    #     package="asv_control",
-    #     executable="mpc_llc",
-    #     namespace= namespace_control,
-    #     parameters = [{'my_id': my_namespace},
-    #         config],
-    # )
-
     wang_mlc_node = Node(
         package="asv_control",
         executable="wang_mlc",
@@ -320,39 +241,7 @@ def generate_launch_description():
         parameters = [{'my_id': my_namespace},
                 config],
     )
-    mod_wang_mlc_node = Node(
-        package="asv_control",
-        executable="mod_wang_mlc",
-        namespace= namespace_control,
-        parameters = [{'my_id': my_namespace},
-                config],
-    )
-
-
-
-    morel_hlc_node = Node(
-        package="asv_control",
-        executable="morel_hlc",
-        namespace= namespace_control,
-        parameters = [{'my_id': my_namespace,
-                    'worker_mode': worker_mode},
-                config],
-                # OR condition
-                condition = IfCondition(
-                    PythonExpression(
-                        [worker_mode, ' == -1 or ', worker_mode, ' == 0']
-                    ),
-                )
-                    
-    )
-
-    mpc_hlc_node = Node(
-        package="asv_control",
-        executable="mpc_hlc",
-        namespace= namespace_control,
-        parameters = [{'my_id': my_namespace},
-            config],
-    )
+    
 
     ###################################################################
     ## -----------------------Observer Nodes--------------------------##
@@ -367,10 +256,10 @@ def generate_launch_description():
         ]
     )
 
-    observer_guille = Node(
+    observer_bejarano = Node(
         package="asv_observer",
-        executable="observer_guille",
-        name="observer_guille",
+        executable="observer_bejarano",
+        name="observer_bejarano",
         namespace=namespace_observer,
         parameters=[
             {'my_id': my_namespace},
@@ -428,29 +317,27 @@ def generate_launch_description():
     nodes.append(asv_simulator_node)
     nodes.append(own_robot_state_publisher_node)
     nodes.append(tf_map_node)
+    nodes.append(rqt_node)
+    nodes.append(rvz)
 
     ###################################################################
     ##--------------------Comunication Nodes-------------------------##
     ################################################################### 
-    # nodes.append(imu_fix_node)
-    # nodes.append(apm_llc_node)
     # nodes.append(ref_mlc_node)
-    # nodes.append(ref_hlc_node)
     # nodes.append(ref_llc_node)
     nodes.append(rc_handler_node)
     nodes.append(record)
-    # nodes.append(transceiver_xbee_node)
-    nodes.append(transceiver_sim_node)
-    nodes.append(asv_tf_broadcast_node)
+    # nodes.append(transceiver_sim_node)
+
 
     ###################################################################
     ##-----------------------Observer Nodes--------------------------##
     ################################################################### 
     nodes.append(mux_obs_node)
-    # nodes.append(observer_guille)
-    # nodes.append(observer_liu)
+    nodes.append(observer_bejarano)
+    nodes.append(observer_liu)
     nodes.append(observer_zono)
-    nodes.append(observer_param)
+    # nodes.append(observer_param)
     nodes.append(observer_core)
 
     ###################################################################
@@ -459,13 +346,10 @@ def generate_launch_description():
     nodes.append(ifac_llc_node)
     nodes.append(mux_llc_node)
     nodes.append(pwm_mapper_node)
-    nodes.append(mod_wang_mlc_node)
-    nodes.append(morel_hlc_node)
-    # nodes.append(wang_mlc_node)
-    # nodes.append(mpc_hlc_node)
-    # nodes.append(filter_hlc_node)
-    # nodes.append(asv_tf_broadcast_node)
-    # nodes.append(mpc_llc_node)
+    nodes.append(wang_mlc_node)
+
+    nodes.append(asv_tf_broadcast_node)
+
     return LaunchDescription(
         [arg_my_id, arg_rec, param_id, arg_worker_mode,
             *nodes]

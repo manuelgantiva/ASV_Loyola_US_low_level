@@ -25,12 +25,6 @@ find_package(nav_msgs REQUIRED)        # interface to use navio2's sensors
 
 include_directories(SYSTEM ${EIGEN3_INCLUDE_DIRS})
 
-# Incluir los directorios de encabezados de gurubi_c++
-
-set(GUROBI_ROOT /opt/gurobi/linux)
-include_directories(${GUROBI_ROOT}/include)
-link_directories(${GUROBI_ROOT}/lib)
-
 add_executable(pwm_mapper src/pwm_mapper.cpp)
 ament_target_dependencies(pwm_mapper rclcpp example_interfaces mavros_msgs asv_interfaces)
 
@@ -43,26 +37,8 @@ ament_target_dependencies(asv_tf2_broadcaster rclcpp tf2 tf2_ros geometry_msgs a
 add_executable(ifac_llc src/ifac_llc.cpp)
 ament_target_dependencies(ifac_llc rclcpp geometry_msgs mavros_msgs asv_interfaces)
 
-# add_executable(mpc_llc src/mpc_llc.cpp)
-# ament_target_dependencies(mpc_llc rclcpp geometry_msgs mavros_msgs asv_interfaces std_msgs)
-## Linkear el ejecutable con las librerías de Gurobi
-# target_link_libraries(mpc_llc gurobi_c++ gurobi110)
-
-add_executable(mpc_hlc src/mpc_hlc.cpp)
-ament_target_dependencies(mpc_hlc rclcpp geometry_msgs mavros_msgs std_msgs asv_library)
-# Linkear el ejecutable con las librerías de Gurobi
-target_link_libraries(mpc_hlc gurobi_c++ gurobi110)
-
 add_executable(wang_mlc src/wang_mlc.cpp)
 ament_target_dependencies(wang_mlc rclcpp geometry_msgs mavros_msgs asv_interfaces std_msgs asv_library)
-
-add_executable(morel_hlc src/morel_hlc.cpp)
-ament_target_dependencies(morel_hlc rclcpp geometry_msgs mavros_msgs asv_interfaces std_msgs asv_library)
-
-add_executable(mod_wang_mlc src/mod_wang_mlc.cpp)
-ament_target_dependencies(mod_wang_mlc rclcpp geometry_msgs mavros_msgs asv_interfaces std_msgs asv_library)
-add_executable(filter_hlc src/filter_hlc.cpp)
-ament_target_dependencies(filter_hlc rclcpp std_msgs mavros_msgs geometry_msgs)
 
 # Install Targets
 install(TARGETS
@@ -71,11 +47,6 @@ install(TARGETS
   asv_tf2_broadcaster
   ifac_llc
   wang_mlc
-  # mpc_llc
-  morel_hlc
-  mod_wang_mlc
-  mpc_hlc
-  filter_hlc
 DESTINATION lib/${PROJECT_NAME})
 
 # Install Scripts python

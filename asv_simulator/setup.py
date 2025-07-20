@@ -21,7 +21,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'simulator = scripts.SimulatorWrapper:main',
+            'simulator = asv_simulator.SimulatorWrapper:main',
         ],
     },
 )

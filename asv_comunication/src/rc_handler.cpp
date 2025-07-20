@@ -336,7 +336,7 @@ private:
                                             asv_interfaces::srv::SetObs::Request::ESO_LIU)));
                     }else{
                         threads_.push_back(std::thread(std::bind(&RcHandlerNode::callSetStateObserver, this, 
-                                            asv_interfaces::srv::SetObs::Request::ESO_GUILLE)));
+                                            asv_interfaces::srv::SetObs::Request::ESO_BEJARANO)));
                     }
                     break;
                 default:

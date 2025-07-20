@@ -18,4 +18,14 @@ install(DIRECTORY
   DESTINATION share/${PROJECT_NAME}
 )
 
+install(DIRECTORY
+  rviz2
+  DESTINATION share/${PROJECT_NAME}
+)
+
+install(DIRECTORY
+  rqt
+  DESTINATION share/${PROJECT_NAME}
+)
+
 ament_package()

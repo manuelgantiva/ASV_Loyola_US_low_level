@@ -132,7 +132,6 @@ public:
               0, 0, 0, 0, 0, Wp_di[5];
 
         R2T.setZero();
-        Yp.setZero();
     
         cb_group_sensors_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
         auto options_sensors_ = rclcpp::SubscriptionOptions();
@@ -544,10 +543,7 @@ private:
         return result;
     }
 
-    float psi_act = 0.0, psi_ant = 0.0, psi_0 = 0.0, psi = 0.0;
-    int status_gps, laps=0;
     bool armed = false, armed_act = false;
-    float r = 0.0;
 
  //------Params-------//
     std::string my_id;
@@ -559,14 +555,11 @@ private:
 
     float Max_w_r, Max_w_p, Max_n_p, Max_n_r, Max_n_psi;
 
-    float delta_diff;
-    float delta_mean;
-    int beta, count=0, q, met;  
+    int count=0, q, met;  
 
     Matrix <double, 3,1> IGr; 
     Matrix <double, 6,1> IGp;
     Matrix <double, 2,2> R2T;
-    Vector <double, 2> Yp;
     Vector <double, 3> Sigmas;  
     Matrix <double, 3,3> Ar;
     Matrix <double, 2,3> Cr;

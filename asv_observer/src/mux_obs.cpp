@@ -87,8 +87,8 @@ private:
                             const asv_interfaces::srv::SetObs::Response::SharedPtr response)
     {
         switch (request->eso_mode) {
-        case asv_interfaces::srv::SetObs::Request::ESO_GUILLE:
-            RCLCPP_INFO(this-> get_logger(), "Guille ESO enable");
+        case asv_interfaces::srv::SetObs::Request::ESO_BEJARANO:
+            RCLCPP_INFO(this-> get_logger(), "Bejarano ESO enable");
             guille_enable = true;
             liu_enable = false;
             zono_enable = false;

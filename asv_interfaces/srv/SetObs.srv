@@ -3,7 +3,7 @@
 # If you want to embed it in another message.
 
 # basic ESO_MODE
-uint8 ESO_GUILLE	= 1
+uint8 ESO_BEJARANO	= 1
 uint8 ESO_LIU	    = 2
 uint8 ESO_ZONO		= 3
 

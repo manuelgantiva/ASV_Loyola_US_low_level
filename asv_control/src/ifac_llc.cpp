@@ -31,7 +31,6 @@ public:
         //---------Parámetros del LLC-------------------//
         this-> declare_parameter("Ts", 100.0);
         this-> declare_parameter("ku", 2.0);
-        this-> declare_parameter("ki", 2.0);
         this-> declare_parameter("kpsi", 1.0);
         this-> declare_parameter("kr", 4.0);
         this-> declare_parameter("taud", 350); // Taud = #*Ts Est es #
@@ -40,30 +39,10 @@ public:
         this-> declare_parameter("Sat", 0.3); // Coeficiente de saturacion
         this-> declare_parameter("delta_pwm", 250); // Taud = #*Ts Est es #
         
-        this-> declare_parameter("mf0", 0.0013545);
-        this-> declare_parameter("mf1", 6.0977);
-        this-> declare_parameter("mf2", 0.0);
-        this-> declare_parameter("mf3", -2.769);
-        this-> declare_parameter("mf4", 0.0);
-        this-> declare_parameter("mf5", -1.0978);
-        this-> declare_parameter("mr0", -0.0059858);
-        this-> declare_parameter("mr1", 6.1789);
-        this-> declare_parameter("mr2", 0.20095);
-        this-> declare_parameter("mr3", -5.1266);
-        this-> declare_parameter("mr4", 1.048);
-        this-> declare_parameter("mr5", -2.5286);
-        this-> declare_parameter("df0", 0.0);
-        this-> declare_parameter("df1", 0.0);
-        this-> declare_parameter("df2", 6.3681);
-        this-> declare_parameter("df3", 0.0);
-        this-> declare_parameter("df4", 8.2298);
-        this-> declare_parameter("df5", 0.0);
-        this-> declare_parameter("dr0", 0.030548);
-        this-> declare_parameter("dr1", -2.8142);
-        this-> declare_parameter("dr2", 5.3685);
-        this-> declare_parameter("dr3", 27.237);
-        this-> declare_parameter("dr4", 4.2689);
-        this-> declare_parameter("dr5", 13.881);
+        this-> declare_parameter("mf", std::vector<double>{1.0, 1.0, 1.0, 1.0, 1.0, 1.0});
+        this-> declare_parameter("mr", std::vector<double>{1.0, 1.0, 1.0, 1.0, 1.0, 1.0});
+        this-> declare_parameter("df", std::vector<double>{1.0, 1.0, 1.0, 1.0, 1.0, 1.0});
+        this-> declare_parameter("dr", std::vector<double>{1.0, 1.0, 1.0, 1.0, 1.0, 1.0});
 
         this-> declare_parameter("IGumax_ff", 0.17794);
         this-> declare_parameter("IGumax_rf", 0.08897),
@@ -78,7 +57,6 @@ public:
         
         Ts = this->get_parameter("Ts").as_double()/1000.0;
         sm_gain_ku = this->get_parameter("ku").as_double();
-        sm_gain_ki = this->get_parameter("ki").as_double();
         sm_gain_kpsi = this->get_parameter("kpsi").as_double();
         sm_gain_kr = this->get_parameter("kr").as_double();
         taud = this->get_parameter("taud").as_int();
@@ -87,30 +65,10 @@ public:
         Sat = this->get_parameter("Sat").as_double();
         delta_pwm = this->get_parameter("delta_pwm").as_int();
 
-        mf0 = this->get_parameter("mf0").as_double();
-        mf1 = this->get_parameter("mf1").as_double();
-        mf2 = this->get_parameter("mf2").as_double();
-        mf3 = this->get_parameter("mf3").as_double();
-        mf4 = this->get_parameter("mf4").as_double();
-        mf5 = this->get_parameter("mf5").as_double();
-        mr0 = this->get_parameter("mr0").as_double();
-        mr1 = this->get_parameter("mr1").as_double();
-        mr2 = this->get_parameter("mr2").as_double();
-        mr3 = this->get_parameter("mr3").as_double();
-        mr4 = this->get_parameter("mr4").as_double();
-        mr5 = this->get_parameter("mr5").as_double();
-        df0 = this->get_parameter("df0").as_double();
-        df1 = this->get_parameter("df1").as_double();
-        df2 = this->get_parameter("df2").as_double();
-        df3 = this->get_parameter("df3").as_double();
-        df4 = this->get_parameter("df4").as_double();
-        df5 = this->get_parameter("df5").as_double();
-        dr0 = this->get_parameter("dr0").as_double();
-        dr1 = this->get_parameter("dr1").as_double();
-        dr2 = this->get_parameter("dr2").as_double();
-        dr3 = this->get_parameter("dr3").as_double();
-        dr4 = this->get_parameter("dr4").as_double();
-        dr5 = this->get_parameter("dr5").as_double();
+        mf = this->get_parameter("mf").as_double_array();
+        mr = this->get_parameter("mr").as_double_array();
+        df = this->get_parameter("df").as_double_array();
+        dr = this->get_parameter("dr").as_double_array();
 
         IGumax_ff = this->get_parameter("IGumax_ff").as_double();
         IGumax_rf = this->get_parameter("IGumax_rf").as_double();
@@ -164,7 +122,6 @@ private:
             memory_u.assign(4, 0.0);
             memory_r.assign(4, 0.0);
             count=0;
-            integral_error=0;
             IGu_prev = 0.0;
             IGr_prev = 0.0;
             PWM_left_ant = 1500;
@@ -211,10 +168,8 @@ private:
                 }
 
                 float error = (u_hat_i-u_ref_i);
-                integral_error += error;
                 msg_Igu.x = u_dot_ref_i;
                 msg_Igu.y = sm_gain_ku*error;
-                msg_Igu.z = sm_gain_ki*integral_error;
 
                 float c_ref=r_ref_i-sm_gain_kpsi*(psi_hat_i-psi_ref_i);
                 msg_Igr.x = sm_gain_kr*(r_hat_i-c_ref);
@@ -264,34 +219,34 @@ private:
                 
                 if(IG_u>IGumax_rf){
                     // Zona Roja
-                    m = mf0+mf1*IG_u+mf2*IG_r+mf3*IG_u*IG_u+mf4*IG_u*IG_r+mf5*IG_r*IG_r;
-                    d = df0+df1*IG_u+df2*IG_r+df3*IG_u*IG_u+df4*IG_u*IG_r+df5*IG_r*IG_r;
+                    m = mf[0]+mf[1]*IG_u+mf[2]*IG_r+mf[3]*IG_u*IG_u+mf[4]*IG_u*IG_r+mf[5]*IG_r*IG_r;
+                    d = df[0]+df[1]*IG_u+df[2]*IG_r+df[3]*IG_u*IG_u+df[4]*IG_u*IG_r+df[5]*IG_r*IG_r;
                     zone = 0;
                 }else if(IG_r>IGrmax_ff){
                     // Zona Azul
-                    m = mr0+mr1*IG_u+mr2*IG_r+mr3*IG_u*IG_u+mr4*IG_u*IG_r+mr5*IG_r*IG_r;
-                    d = dr0+dr1*IG_u+dr2*IG_r+dr3*IG_u*IG_u+dr4*IG_u*IG_r+dr5*IG_r*IG_r;
+                    m = mr[0]+mr[1]*IG_u+mr[2]*IG_r+mr[3]*IG_u*IG_u+mr[4]*IG_u*IG_r+mr[5]*IG_r*IG_r;
+                    d = dr[0]+dr[1]*IG_u+dr[2]*IG_r+dr[3]*IG_u*IG_u+dr[4]*IG_u*IG_r+dr[5]*IG_r*IG_r;
                     zone = 1;
                 }else if(IG_r<-IGrmax_ff){
                     // Zona Verde
-                    m = mr0+mr1*IG_u-mr2*IG_r+mr3*IG_u*IG_u-mr4*IG_u*IG_r+mr5*IG_r*IG_r;
-                    d = -dr0-dr1*IG_u+dr2*IG_r-dr3*IG_u*IG_u+dr4*IG_u*IG_r-dr5*IG_r*IG_r;
+                    m = mr[0]+mr[1]*IG_u-mr[2]*IG_r+mr[3]*IG_u*IG_u-mr[4]*IG_u*IG_r+mr[5]*IG_r*IG_r;
+                    d = -dr[0]-dr[1]*IG_u+dr[2]*IG_r-dr[3]*IG_u*IG_u+dr[4]*IG_u*IG_r-dr[5]*IG_r*IG_r;
                     zone = -1;
                 }else{
                     // Zona Roja
-                    m = mf0+mf1*IG_u+mf2*IG_r+mf3*IG_u*IG_u+mf4*IG_u*IG_r+mf5*IG_r*IG_r;
-                    d = df0+df1*IG_u+df2*IG_r+df3*IG_u*IG_u+df4*IG_u*IG_r+df5*IG_r*IG_r;
+                    m = mf[0]+mf[1]*IG_u+mf[2]*IG_r+mf[3]*IG_u*IG_u+mf[4]*IG_u*IG_r+mf[5]*IG_r*IG_r;
+                    d = df[0]+df[1]*IG_u+df[2]*IG_r+df[3]*IG_u*IG_u+df[4]*IG_u*IG_r+df[5]*IG_r*IG_r;
                     zone = 0;
                     if((m<=0.5*d) || (m<=-0.5*d)){
                         if(IG_r>=0){
                             //Zona Azul
-                            m = mr0+mr1*IG_u+mr2*IG_r+mr3*IG_u*IG_u+mr4*IG_u*IG_r+mr5*IG_r*IG_r;
-                            d = dr0+dr1*IG_u+dr2*IG_r+dr3*IG_u*IG_u+dr4*IG_u*IG_r+dr5*IG_r*IG_r;
+                            m = mr[0]+mr[1]*IG_u+mr[2]*IG_r+mr[3]*IG_u*IG_u+mr[4]*IG_u*IG_r+mr[5]*IG_r*IG_r;
+                            d = dr[0]+dr[1]*IG_u+dr[2]*IG_r+dr[3]*IG_u*IG_u+dr[4]*IG_u*IG_r+dr[5]*IG_r*IG_r;
                             zone = 1;
                         }else{
                             //Zona Verde
-                            m = mr0+mr1*IG_u-mr2*IG_r+mr3*IG_u*IG_u-mr4*IG_u*IG_r+mr5*IG_r*IG_r;
-                            d = -dr0-dr1*IG_u+dr2*IG_r-dr3*IG_u*IG_u+dr4*IG_u*IG_r-dr5*IG_r*IG_r;
+                            m = mr[0]+mr[1]*IG_u-mr[2]*IG_r+mr[3]*IG_u*IG_u-mr[4]*IG_u*IG_r+mr[5]*IG_r*IG_r;
+                            d = -dr[0]-dr[1]*IG_u+dr[2]*IG_r-dr[3]*IG_u*IG_u+dr[4]*IG_u*IG_r-dr[5]*IG_r*IG_r;
                             zone = -1;
                         }
                     }
@@ -449,17 +404,6 @@ private:
                     return result;
                 }
             }
-            if (param.get_name() == "ki"){
-                if(param.as_double() >= 0.0 and param.as_double() < 100.0){
-                    RCLCPP_INFO(this->get_logger(), "changed param value");
-                    sm_gain_ki = param.as_double();
-                }else{
-                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-100");
-                    result.successful = false;
-                    result.reason = "Value out of range";
-                    return result;
-                }
-            }
             if (param.get_name() == "kpsi"){
                 if(param.as_double() >= 0.0 and param.as_double() < 100.0){
                     RCLCPP_INFO(this->get_logger(), "changed param value");
@@ -551,13 +495,11 @@ private:
     float u_hat = 0, psi_hat = 0, r_hat = 0, sig_u = 0, sig_r = 0, u_ref = 0.2, psi_ref = 0, r_ref = 0, u_dot_ref = 0, r_dot_ref = 0;
     float c_ref;
     int count=0;
-    float integral_error=0;
     float IGu_prev = 0.0, IGr_prev = 0.0;
     //------Params-------//
     float Ts;  
     /*Parámetros del controlador Sliding Modes*/
     float sm_gain_ku; /*Ganancia del  controlador Sliding Modes (surge)*/
-    float sm_gain_ki; /*Ganancia del  controlador Sliding Modes (surge constant integrative)*/
     float sm_gain_kpsi; /*Ganancia 1 del controlador Sliding Modes (yaw)*/
     float sm_gain_kr; /*Ganancia 2 del controlador Sliding Modes (yaw)*/
     
@@ -566,10 +508,9 @@ private:
     float Su_en, Sr_en; /*Enable IGr y Sigmas surge y yaw*/
     float Sat; /*Coeficientes de saturacion*/
 
-    float mf0, mf1, mf2, mf3, mf4, mf5;
-    float mr0, mr1, mr2, mr3, mr4, mr5;
-    float df0, df1, df2, df3, df4, df5;
-    float dr0, dr1, dr2, dr3, dr4, dr5;
+    std::vector<double> mf, mr, df, dr;
+
+
     float IGumax_ff, IGumax_rf, IGumin_rf;
     float IGrmax_ff, IGrmax_rf;
     float Dz_1, Dz_2, p , q;
