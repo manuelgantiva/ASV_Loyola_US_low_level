@@ -104,7 +104,7 @@ private:
                     y_hat_i = y_hat;
                     v_hat_i=v_hat;
                     psi_hat_i=psi_hat;
-                    u_d_i=0.8;
+                    u_d_i=0.6;
                 }
                 Target p_i = currentTarget(w);
                 xp_i=p_i.xp;

@@ -37,9 +37,6 @@ ament_target_dependencies(observer_liu rclcpp std_msgs sensor_msgs mavros_msgs a
 add_executable(observer_zono src/observer_zono.cpp)
 ament_target_dependencies(observer_zono rclcpp std_msgs sensor_msgs mavros_msgs asv_interfaces asv_library tf2 tf2_ros geometry_msgs nav_msgs)
 
-add_executable(observer_param src/observer_param.cpp)
-ament_target_dependencies(observer_param rclcpp std_msgs sensor_msgs mavros_msgs asv_interfaces geometry_msgs nav_msgs)
-
 add_executable(observer_core src/observer_core.cpp)
 ament_target_dependencies(observer_core rclcpp std_msgs sensor_msgs mavros_msgs asv_interfaces geometry_msgs nav_msgs)
 
@@ -49,7 +46,6 @@ install(TARGETS
   observer_bejarano
   observer_liu
   observer_zono
-  observer_param
   observer_core
 DESTINATION lib/${PROJECT_NAME})
 

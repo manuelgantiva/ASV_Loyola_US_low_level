@@ -289,17 +289,6 @@ def generate_launch_description():
         ]
     )
 
-    observer_param = Node(
-        package="asv_observer",
-        executable="observer_param",
-        name="observer_param",
-        namespace=namespace_observer,
-        parameters=[
-            {'my_id': my_namespace},
-            config
-        ]
-    )
-
     observer_core = Node(
         package="asv_observer",
         executable="observer_core",
@@ -337,7 +326,6 @@ def generate_launch_description():
     nodes.append(observer_bejarano)
     nodes.append(observer_liu)
     nodes.append(observer_zono)
-    # nodes.append(observer_param)
     nodes.append(observer_core)
 
     ###################################################################
