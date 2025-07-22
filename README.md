@@ -1,51 +1,60 @@
-### Description
-
-- This code is being developed in ROS2 Humble
-- It is part of the projects developed by the research group Optimization and Control of Distributed Systems
-- Working with Navio2, Raspberry pi 4 and Ardupilot
-
 # ASV_Loyola_US_low_level
 
 ![](https://www.uloyola.es/templates/v6/images/isologo_loyola_principal.svg)
 
-## Tabla de Contenidos
+### Description
 
-1. [Requisitos](#requisitos)
-2. [Instalación de dependecias](#instalación-de-dependecias)
-3. [Clona el proyecto](#clona-el-repositorio)
-4. [Compilacion](#compilación)
+- Developed using ROS2 Humble  
+- Part of the research projects by the Optimization and Control of Distributed Systems group  
+- Compatible with Navio2, Navigator, and other Ardupilot-based systems that support MAVLink  
+- Includes a lightweight node-based simulator for computationally efficient validation using a path-following strategy
 
-## Requisitos
 
-Antes de comenzar, asegúrate de tener los siguientes requisitos instalados en tu máquina:
+## Table of Contents
 
-- [ROS2 Humble](https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debs.html)
+1. [Requirements](#requirements)  
+   - [MAVROS](#mavros)  
+   - [Experimental Requirements](#experimental-requirements)  
+2. [Clone the Repository](#clone-the-repository)  
+3. [Compilation](#compilation)  
+4. [Launching Your Simulation](#launching-your-simulation)
+
+
+## Requirements
+
+Before getting started, make sure the following are installed on your system:
+
+- [ROS2 Humble](https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debs.html)  
 - [Python 3](https://www.python.org/downloads/)
-- [Guribi Academic](https://support.gurobi.com/hc/en-us/articles/4534161999889-How-do-I-install-Gurobi-Optimizer/)
 
-## Instalación de dependecias
+As with any ROS2 project, this one depends on several additional packages. The following ROS2 dependencies are required:
 
-A continuación, se describen algunos de los pasos para la instalación de las principales dependencias del este proyecto, y la configuración de alguno periféricos como los son la (IMU) y (modulo Xbee).
+- `rclcpp`  
+- `rclpy`  
+- `example_interfaces`  
+- `mavros_msgs`  
+- `rcl_interfaces`  
+- `geometry_msgs`  
+- `tf2`  
+- `tf2_ros`  
+- `sensor_msgs`  
+- `nav_msgs`
+- `xacro`
 
-### Configuración de periféricos
+ 
+### MAVROS
 
-Con estos comandos se definirá una regla para identificar los módulos XBee e IMU al conectarlos, lo cual facilitará su conexión con su equipo. En caso de que no piense utilizarlos (desarrollo exclusivo en ordenador o solo lectura de rosbags), podrá omitir este paso. Primero descargue los siguientes archivos `bind_device.sh`, `imu_usb.rules` y `xbee_usb.rules` de este [repositorio](https://github.com/manuelgantiva/asv_UL_Docker/tree/main/docker) y almacenelos en una carpeta llamada `rules`:
+One of the key dependencies of this project is the `mavros` package. It serves as a communication bridge between ROS2 and any autopilot that supports the MAVLink protocol, such as Ardupilot. Through MAVROS, this project can send commands to the vehicle (throttle, steering, mode changes, etc.) and receive telemetry data (position, orientation, speed, etc.).
 
-```bash
-cd /rules
-sudo chmod 777 bind_device.sh
-sudo sh bind_device.sh
-cd ..
-```
+You can find the official repository and documentation here: [MAVROS GitHub (ros2 branch)](https://github.com/mavlink/mavros/tree/ros2)
 
-### Mavros package
-
-Dado que la lectura de los sensores y escritura de actuadores se realiza por medio de software [Ardupilot](https://ardupilot.org/rover/docs/boat-configuration.html), este proyecto requiere de la instalación del paquete `Mavros`, para su correcta compilación y funcionamiento, a continuación, se describen los pasos para su instalación:
+To install it:
 
 ```bash
 sudo apt install ros-humble-mavros
 ```
-Luego instale los conjuntos de datos de GeographicLib ejecutando el script `install_geographiclib_datasets.sh`:
+
+Then install the GeographicLib datasets required by MAVROS:
 
 ```bash
 ros2 run mavros install_geographiclib_datasets.sh
@@ -54,44 +63,75 @@ ros2 run mavros install_geographiclib_datasets.sh
 wget https://raw.githubusercontent.com/mavlink/mavros/ros2/mavros/scripts/install_geographiclib_datasets.sh
 ./install_geographiclib_datasets.sh
 ```
+### Experimental Requirements
 
-### XBee Python library
+This section is only relevant for experimental validation, as it requires additional hardware-specific configurations. In particular, setting up the XBee communication modules and the IMU is necessary to ensure correct integration with the onboard system.
 
-Esta libreria se utiliza para facilitar la conexión con los módulos Xbee, aunque estos no se utilizen, se recomienda su instalacion para no afectar las dependencias:
+#### Peripheral Configuration
+
+These commands will create udev rules to identify the XBee and IMU modules when connected, making it easier to link them to your system. If you don't plan to use these peripherals (e.g., desktop-only development or reading from rosbag files), you can skip this step. First, download the files `bind_device.sh`, `imu_usb.rules`, and `xbee_usb.rules` from this [repository](https://github.com/manuelgantiva/asv_UL_Docker/tree/main/docker) and place them in a folder named `rules`:
+
+```bash
+cd /rules
+sudo chmod 777 bind_device.sh
+sudo sh bind_device.sh
+cd ..
+```
+
+
+#### XBee Python Library
+
+This library is used to simplify the connection with XBee modules. Even if you don't plan to use them, it is recommended to install it to avoid dependency issues:
 
 ```bash
 pip install digi-xbee
 ```
+## Clone the Repository
 
-
-## Clona el repositorio
-
-Clona este repositorio en tu espacio de trabajo de ROS 2
+Start by creating your ROS 2 workspace (if you don't already have one), and clone this repository into the `src` folder:
 
 ```bash
-mkdir ASV/src
+mkdir -p ASV/src
 cd ASV/src
-git clone -b hito2 https://github.com/manuelgantiva/ASV_Loyola_US_low_level.git .
+git clone -b beckermn https://github.com/manuelgantiva/ASV_Loyola_US_low_level.git .
 ```
+This will download the project into your workspace and place the contents directly under `src`.
 
-### Compilación
+### Compilation
 
-Una vez clonado, navega al espacio de trabajo y compila con `colcon`
-
+Once the repository is cloned, go to the root of the workspace and build the project using colcon:
 
 ```bash
 cd ..
 colcon build ----executor sequential
 ```
-En caso que quieras compilar un solo paquete podras utilizar el comando
+
+If you only want to compile a specific package, you can use the following command instead:
 
 ```bash
 cd ..
-colcon build --packages-select [nombre_paquete]
+colcon build --packages-select [package_name]
 ```
 
+Replace `[package_name]` with the actual name of the package you want to build.
 
-[//]: # (These are reference links used in the body of this note and get stripped out when the markdown processor does its job. There is no need to format nicely because it shouldn't be seen. Thanks SO - http://stackoverflow.com/questions/4823468/store-comments-in-markdown-syntax)
-    
-   [WLS License]: <https://www.gurobi.com/features/academic-wls-license/>
-   
+
+## Launching Your Simulation
+
+This section provides an example of how to launch the simulator along with the control strategy. It also includes visualization tools like `rviz2` and `rqt`, which help evaluate the performance of the controller in real time.
+
+To launch the simulation, use the following command:
+
+```bash
+ros2 launch asv_bringup simulator_test.launch.py my_id:=1
+```
+
+The `my_id` argument specifies the vehicle to simulate and can take one of the following values: `0`, `1`, `3`, or `4`. These correspond to the pre-configured vehicle setups in the project.
+
+If you want to enable recording during the simulation (to generate `rosbag` files for later processing), use this alternative command:
+
+```bash
+ros2 launch asv_bringup simulator_test.launch.py my_id:=1 rec:=true
+```
+
+The recorded rosbag files can be processed and analyzed using the tools available in the following [repository](https://github.com/manuelgantiva/ASV_ROS2_to_Matlab).

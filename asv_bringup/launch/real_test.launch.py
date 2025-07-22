@@ -228,6 +228,17 @@ def generate_launch_description():
     ## -----------------------Observer Nodes--------------------------##
     ###################################################################
 
+    observer_core = Node(
+        package="asv_observer",
+        executable="observer_core",
+        name="observer_core",
+        namespace=namespace_observer,
+        parameters=[
+            {'my_id': my_namespace},
+            config
+        ]
+    )
+
     mux_obs_node = Node(
         package="asv_observer",
         executable="mux_obs",
@@ -286,12 +297,13 @@ def generate_launch_description():
     nodes.append(imu_ext_node)
     nodes.append(record)
 
-    nodes.append(transceiver_xbee_node)
+    # nodes.append(transceiver_xbee_node)
 
     ###################################################################
     ##-----------------------Observer Nodes--------------------------##
     ################################################################### 
     nodes.append(mux_obs_node)
+    nodes.append(observer_core)
     nodes.append(observer_bejarano)
     nodes.append(observer_liu)
     nodes.append(observer_zono)
