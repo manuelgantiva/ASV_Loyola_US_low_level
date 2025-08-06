@@ -18,6 +18,7 @@
 #include "asv_interfaces/msg/state_neighbor.hpp"    //Interface state observer
 #include "std_msgs/msg/float32_multi_array.hpp"          // Interface coeficientes polinomio
 #include "std_msgs/msg/bool.hpp"                    //Interface armed data
+#include "std_msgs/msg/float32_multi_array.hpp"     //Interface data core
 
 
 #include <rosbag2_cpp/writer.hpp>
@@ -77,8 +78,14 @@ public:
                 ,1, std::bind(&BagRecordNode::callbackCmdVel, this, std::placeholders::_1));
         subscriber_ifac_pwm = this-> create_subscription<asv_interfaces::msg::PwmValues>("/" + name_id + "/control/pwm_value_ifac",1,
                 std::bind(&BagRecordNode::callbackIfacPwm, this, std::placeholders::_1));
+        subscriber_mpc_pwm = this-> create_subscription<asv_interfaces::msg::PwmValues>("/" + name_id + "/control/pwm_value_mpc",1,
+                std::bind(&BagRecordNode::callbackMpcPwm, this, std::placeholders::_1));
         subscriber_pwm = this-> create_subscription<asv_interfaces::msg::PwmValues>("/" + name_id + "/control/pwm_values",1,
                 std::bind(&BagRecordNode::callbackPwms, this, std::placeholders::_1));
+        subscriber_mpc_state= this-> create_subscription<geometry_msgs::msg::Vector3>("/" + name_id + "/control/mpc_state",1,
+                std::bind(&BagRecordNode::callbackMpcState, this, std::placeholders::_1));
+        subscriber_data_core= this-> create_subscription<std_msgs::msg::Float32MultiArray>("/" + name_id + "/observer/data_sensors",
+                rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackDataCore, this, std::placeholders::_1));       
         subscriber_state_bejarano= this-> create_subscription<asv_interfaces::msg::StateObserver>("/" + name_id + "/observer/state_observer_bejarano",
                 rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackStateGuilleData, this, std::placeholders::_1));
         subscriber_state_liu= this-> create_subscription<asv_interfaces::msg::StateObserver>("/" + name_id + "/observer/state_observer_liu",
@@ -228,6 +235,14 @@ private:
         }
     }
 
+    void callbackDataCore(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
+    {
+        if(armed==true){
+            rclcpp::Time time_stamp = this->now();
+            writer_->write(msg, "/" + name_id + "/observer/data_sensors", "std_msgs/msg/Float32MultiArray", time_stamp);
+        }
+    }
+
     void callbackStateGuilleData(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
     {
         if(armed==true){
@@ -356,11 +371,27 @@ private:
         }
     }
 
+    void callbackMpcPwm(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
+    {
+        if(armed==true){
+            rclcpp::Time time_stamp = this->now();
+            writer_->write(msg, "/" + name_id + "/control/pwm_value_mpc", "asv_interfaces/msg/PwmValues", time_stamp);
+        }
+    }
+
     void callbackPwms(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
     {
         if(armed==true){
             rclcpp::Time time_stamp = this->now();
             writer_->write(msg, "/" + name_id + "/control/pwm_values", "asv_interfaces/msg/PwmValues", time_stamp);
+        }
+    }
+
+    void callbackMpcState(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
+    {
+        if(armed==true){
+            rclcpp::Time time_stamp = this->now();
+            writer_->write(msg, "/" + name_id + "/control/mpc_state", "geometry_msgs/msg/Vector3", time_stamp);
         }
     }
 
@@ -483,7 +514,9 @@ private:
     rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr subscriber_reference;
     rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr subscriber_cmd_vel;
     rclcpp::Subscription<asv_interfaces::msg::PwmValues>::SharedPtr subscriber_ifac_pwm;
+    rclcpp::Subscription<asv_interfaces::msg::PwmValues>::SharedPtr subscriber_mpc_pwm;
     rclcpp::Subscription<asv_interfaces::msg::PwmValues>::SharedPtr subscriber_pwm;
+    rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr subscriber_mpc_state;
     rclcpp::Subscription<asv_interfaces::msg::StateObserver>::SharedPtr subscriber_states;
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr subscriber_pose_liu;
     rclcpp::Subscription<asv_interfaces::msg::StateObserver>::SharedPtr subscriber_state_liu;
@@ -493,6 +526,7 @@ private:
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr subscriber_pose_zono;
     rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr subscriber_sigmas_zono;
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr subscriber_pose_bejarano;
+    rclcpp::Subscription<std_msgs::msg::Float32MultiArray>::SharedPtr subscriber_data_core; 
     rclcpp::Subscription<asv_interfaces::msg::StateObserver>::SharedPtr subscriber_state_bejarano;
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr subscriber_pose;
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr subscriber_pose_neighbor;

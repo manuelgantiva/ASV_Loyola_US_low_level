@@ -22,6 +22,7 @@ find_package(sensor_msgs REQUIRED)        # interface to use navio2's sensors
 find_package(tf2 REQUIRED)        # interface to use navio2's sensors
 find_package(tf2_ros REQUIRED)        # interface to use navio2's sensors
 find_package(nav_msgs REQUIRED)        # interface to use navio2's sensors
+find_package(casadi CONFIG REQUIRED)
 
 include_directories(SYSTEM ${EIGEN3_INCLUDE_DIRS})
 
@@ -37,6 +38,10 @@ ament_target_dependencies(asv_tf2_broadcaster rclcpp tf2 tf2_ros geometry_msgs a
 add_executable(ifac_llc src/ifac_llc.cpp)
 ament_target_dependencies(ifac_llc rclcpp geometry_msgs mavros_msgs asv_interfaces)
 
+add_executable(mpc_llc src/mpc_llc.cpp)
+ament_target_dependencies(mpc_llc rclcpp geometry_msgs mavros_msgs asv_interfaces)
+target_link_libraries(mpc_llc casadi::casadi)
+
 add_executable(wang_mlc src/wang_mlc.cpp)
 ament_target_dependencies(wang_mlc rclcpp geometry_msgs mavros_msgs asv_interfaces std_msgs asv_library)
 
@@ -46,6 +51,7 @@ install(TARGETS
   mux_llc
   asv_tf2_broadcaster
   ifac_llc
+  mpc_llc
   wang_mlc
 DESTINATION lib/${PROJECT_NAME})
 

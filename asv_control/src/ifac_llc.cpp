@@ -8,9 +8,7 @@
 #include <cmath>
 #include <thread>
 #include <vector>
-#include <complex>
 #include <Eigen/Dense>
-#include <unsupported/Eigen/Polynomials>
 
 using namespace std;
 using namespace Eigen;
@@ -34,8 +32,6 @@ public:
         this-> declare_parameter("kpsi", 1.0);
         this-> declare_parameter("kr", 4.0);
         this-> declare_parameter("taud", 350); // Taud = #*Ts Est es #
-        this-> declare_parameter("Su_en", 1.0);
-        this-> declare_parameter("Sr_en", 1.0);
         this-> declare_parameter("Sat", 0.3); // Coeficiente de saturacion
         this-> declare_parameter("delta_pwm", 250); // Taud = #*Ts Est es #
         
@@ -60,8 +56,6 @@ public:
         sm_gain_kpsi = this->get_parameter("kpsi").as_double();
         sm_gain_kr = this->get_parameter("kr").as_double();
         taud = this->get_parameter("taud").as_int();
-        Su_en = this->get_parameter("Su_en").as_double();
-        Sr_en = this->get_parameter("Sr_en").as_double();
         Sat = this->get_parameter("Sat").as_double();
         delta_pwm = this->get_parameter("delta_pwm").as_int();
 
@@ -106,7 +100,7 @@ public:
         subscriber_state = this-> create_subscription<mavros_msgs::msg::State>("/" + my_id + "/mavros/state",1,
                 std::bind(&IfacLlcNode::callbackStateData, this, std::placeholders::_1), options_sensors_);
         publisher_pwm = this-> create_publisher<asv_interfaces::msg::PwmValues>("/" + my_id + "/control/pwm_value_ifac",
-                10);
+                1);
 
         publisher_IG = this-> create_publisher<geometry_msgs::msg::Vector3>("/" + my_id + "/control/IG_ifac",1);
 
@@ -178,8 +172,8 @@ private:
                 float IG_u;
                 float IG_r;
 
-                IG_u = msg_Igu.x - msg_Igu.y - msg_Igu.z - (Su_en*sig_u_i);
-                IG_r = msg_Igr.z - msg_Igr.x - msg_Igr.y - (Sr_en*sig_r_i);
+                IG_u = msg_Igu.x - msg_Igu.y - msg_Igu.z - (sig_u_i);
+                IG_r = msg_Igr.z - msg_Igr.x - msg_Igr.y - (sig_r_i);
                 
 
                 // New Code
@@ -317,32 +311,6 @@ private:
         return static_cast<uint16_t>(resultado);
     }
     
-    vector<double> filterRoots(const VectorXcd& roots) {
-        vector<double> realRoots;
-        for (int i = 0; i < roots.size(); ++i) {
-            if (roots[i].imag() == 0) {
-                double realPart = roots[i].real();
-                realRoots.push_back(realPart);
-            }
-        }
-        return realRoots;
-    }
-
-    vector<double> solveY(double t0, double t1, double t2, double t3, double t4) {
-        VectorXcd coefficients(5);
-        coefficients << t4, t3, t2, t1, t0;
-
-        Eigen::PolynomialSolver<complex<double>, Eigen::Dynamic> solver;
-        solver.compute(coefficients);
-
-        return filterRoots(solver.roots());
-    }
-
-    double solveX(double y, double b, double c11, double c13) {
-        double n = b / ((c11 * y) + (c13 / 2));
-        return n;
-    }
-
     void callbackStates(const asv_interfaces::msg::StateObserver::SharedPtr msg)
     {
         {
@@ -439,28 +407,6 @@ private:
                     return result;
                 }
             }
-            if (param.get_name() == "Sr_en"){
-                if(param.as_double() >= 0.0 or param.as_double() <= 1.0){
-                    RCLCPP_INFO(this->get_logger(), "changed param value");
-                    Sr_en = param.as_double();
-                }else{
-                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-1");
-                    result.successful = false;
-                    result.reason = "Value out of range";
-                    return result;
-                }
-            }
-            if (param.get_name() == "Su_en"){
-                if(param.as_double() >= 0.0 or param.as_double() <= 2.0){
-                    RCLCPP_INFO(this->get_logger(), "changed param value");
-                    Su_en = param.as_double();
-                }else{
-                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-2");
-                    result.successful = false;
-                    result.reason = "Value out of range";
-                    return result;
-                }
-            }
             if (param.get_name() == "Sat"){
                 if(param.as_double() >= 0.0 or param.as_double() <= 1.0){
                     RCLCPP_INFO(this->get_logger(), "changed param value");
@@ -505,7 +451,6 @@ private:
     
     float taud; /*Constante tau del filtro derivativo*/
     float a ,b; /*Constantes del filtro derivativo*/
-    float Su_en, Sr_en; /*Enable IGr y Sigmas surge y yaw*/
     float Sat; /*Coeficientes de saturacion*/
 
     std::vector<double> mf, mr, df, dr;

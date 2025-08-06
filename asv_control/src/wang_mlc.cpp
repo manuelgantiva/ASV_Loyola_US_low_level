@@ -6,8 +6,8 @@
 
 #include <cmath>
 #include <thread>
-// #include "asv_library/curvas_sim.h"
-#include "asv_library/curvas_alamillo.h"
+#include "asv_library/curvas_sim.h"
+// #include "asv_library/curvas_alamillo.h"
 
 using namespace std;
 
@@ -104,7 +104,7 @@ private:
                     y_hat_i = y_hat;
                     v_hat_i=v_hat;
                     psi_hat_i=psi_hat;
-                    u_d_i=0.8;
+                    u_d_i=u_d;
                 }
                 Target p_i = currentTarget(w);
                 xp_i=p_i.xp;
@@ -156,7 +156,7 @@ private:
                         
                 float r_ref = derivationFilter(psi_ref, memory_psi, a, b);
 
-                float r_ref_max = 0.8;
+                float r_ref_max = 0.6;
                 if(r_ref > r_ref_max){
                     r_ref = r_ref_max;
                 }else if(r_ref < -r_ref_max){
@@ -236,79 +236,79 @@ private:
                 result.dyp = 0;
                 break;
             case 1:
-                // result = curva_sim_2_6(w);
-                result = curva_ala_1_2(w);
+                result = curva_sim_2_6(w);
+                // result = curva_ala_1_2(w);
                 break;
             case 2:
-                // result = curva_sim_2_8(w);
-                result = curva_ala_1_4(w);
+                result = curva_sim_2_8(w);
+                // result = curva_ala_1_4(w);
                 break;
             case 3:
-                // result = curva_sim_2_10(w);
-                result = curva_ala_1_6(w);
+                result = curva_sim_2_10(w);
+                // result = curva_ala_1_6(w);
                 break;
             case 4:
-                // result = curva_sim_3_6(w);
-                result = curva_ala_2_2(w);
+                result = curva_sim_3_6(w);
+                // result = curva_ala_2_2(w);
                 break;
             case 5:
-                // result = curva_sim_3_8(w);
-                result = curva_ala_2_4(w);
+                result = curva_sim_3_8(w);
+                // result = curva_ala_2_4(w);
                 break;
             case 6:
-                // result = curva_sim_3_10(w);
-                result = curva_ala_2_6(w);
+                result = curva_sim_3_10(w);
+                // result = curva_ala_2_6(w);
                 break;
             case 7:
-                result = curva_ala_3_1(w);
+                // result = curva_ala_3_1(w);
                 break;
             case 8:
-                result = curva_ala_3_2(w);
+                // result = curva_ala_3_2(w);
                 break;
             case 9:
-                result = curva_ala_3_3(w);
+                // result = curva_ala_3_3(w);
                 break;
             case 10:
-                result = curva_ala_4_2(w);
+                // result = curva_ala_4_2(w);
                 break;
             case 11:
-                result = curva_ala_4_3(w);
+                // result = curva_ala_4_3(w);
                 break;
             case 12:
-                result = curva_ala_4_4(w);
+                // result = curva_ala_4_4(w);
                 break;
             case 13:
-                result = curva_ala_5_4(w);
+                // result = curva_ala_5_4(w);
                 break;
             case 14:
-                result = curva_ala_5_5(w);
+                // result = curva_ala_5_5(w);
                 break;
             case 15:
-                result = curva_ala_5_6(w);
+                // result = curva_ala_5_6(w);
                 break;
             case 16:
-                result = curva_ala_6_2(w);
+                // result = curva_ala_6_2(w);
                 break;
             case 17:
-                result = curva_ala_6_3(w);
+                // result = curva_ala_6_3(w);
                 break;
             case 18:
-                result = curva_ala_6_4(w);
+                // result = curva_ala_6_4(w);
                 break;
             case 19:
-                result = curva_ala_7_4(w);
+                // result = curva_ala_7_4(w);
                 break;
             case 20:
-                result = curva_ala_7_5(w);
+                // result = curva_ala_7_5(w);
                 break;
             case 21:
-                result = curva_ala_7_6(w);
+                // result = curva_ala_7_6(w);
                 break;
             case 22:
-                result = curva_lissajous_1(w);
+                // result = curva_lissajous_1(w);
                 break;
             case 23:
-                result = curva_lissajous_2(w);
+                // result = curva_lissajous_2(w);
                 break;
             default:
                 result.xp =1.0;
@@ -390,6 +390,25 @@ private:
                     u_max = param.as_double();
                 }else{
                     RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0.0-2.0");
+                    result.successful = false;
+                    result.reason = "Value out of range";
+                    return result;
+                }
+            }
+            if (param.get_name() == "Ts") {
+                if (param.as_double() > 0.0 and param.as_double() < 1000.0) {
+                    RCLCPP_INFO(this->get_logger(), "changed param value");
+                    //Inicializo el timer con el nuevo Ts
+                    Ts = param.as_double()/1000.0;
+                    if (timer_) {
+                        timer_->cancel();
+                    }
+    
+                    timer_ = this -> create_wall_timer(std::chrono::milliseconds(int(Ts*1000.0)),
+                                std::bind(&WangMlcNode::calculateMidLevelController, this), cb_group_obs_);
+                }
+                else {
+                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0.1-10.00");
                     result.successful = false;
                     result.reason = "Value out of range";
                     return result;

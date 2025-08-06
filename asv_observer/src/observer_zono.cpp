@@ -44,6 +44,7 @@ public:
 
         this-> declare_parameter("IMU_on", false);
         this-> declare_parameter("Sig_on", false);
+        this-> declare_parameter("Pub_sig", false);
 
         my_id = (this->get_parameter("my_id").as_string());
         Ts = this->get_parameter("Ts").as_double();
@@ -64,6 +65,7 @@ public:
 
         IMU_on = this->get_parameter("IMU_on").as_bool();
         Sig_on = this->get_parameter("Sig_on").as_bool();
+        pub_sig = static_cast<float>(this->get_parameter("Pub_sig").as_bool());
 
         std::vector<double> Wr_di = this->get_parameter("Wr_di").as_double_array();
         std::vector<double> Wp_di = this->get_parameter("Wp_di").as_double_array();
@@ -201,7 +203,7 @@ private:
                 }
                                 
                 // inicializar variables
-                if(count==7){
+                if(Flag == false){
                     Eigen::VectorXd cr0(3);
                     cr0 << Yr_i(0), 0.0, 0.0;  
                     Eigen::VectorXd cp0(6);
@@ -210,7 +212,7 @@ private:
                     Zp_prior = Zonotopo(cp0, Eigen::MatrixXd::Identity(6, 6));  // Amplia Zonotopo si no estoy seguro
                     Zr_next = Zonotopo(cr0, Eigen::MatrixXd::Identity(3, 3));  // Iniciar para sigmas
                     Zp_next = Zonotopo(cp0, Eigen::MatrixXd::Identity(6, 6));  // Iniciar para sigmas
-                    count=count+1;
+                    Flag = true;
                 }
 
                 IGp(2,0) = (Xu[4]*sum_1)+(Xu[5]*delta_mean_i);
@@ -284,9 +286,9 @@ private:
                 msg.velocity.x=Zp_next.c(2);
                 msg.velocity.y=Zp_next.c(3);
                 msg.velocity.z=Zr_next.c(1);
-                msg.disturbances.x=Zp_next.c(4) + Sigmas(0);
-                msg.disturbances.y=Zp_next.c(5) + Sigmas(1);
-                msg.disturbances.z=Zr_next.c(2) + Sigmas(2);
+                msg.disturbances.x=Zp_next.c(4) + pub_sig*Sigmas(0);
+                msg.disturbances.y=Zp_next.c(5) + pub_sig*Sigmas(1);
+                msg.disturbances.z=Zr_next.c(2) + pub_sig*Sigmas(2);
                 publisher_state->publish(msg);
 
                 msg.point.x=min_p[0];
@@ -328,9 +330,9 @@ private:
 
                 if(Sig_on){
                     auto msg_s = geometry_msgs::msg::Vector3();
-                    msg_s.x = Zp_next.c(4); 
-                    msg_s.y = Zp_next.c(5); 
-                    msg_s.z = Zr_next.c(2); 
+                    msg_s.x = Zp_next.c(4) + (1-pub_sig)*Sigmas(0);
+                    msg_s.y = Zp_next.c(5) + (1-pub_sig)*Sigmas(1); 
+                    msg_s.z = Zr_next.c(2) + (1-pub_sig)*Sigmas(2); 
                     publisher_sigmas->publish(msg_s);
                 }
 
@@ -339,7 +341,12 @@ private:
                 //double miliseconds = elapsed.count()*1000;
                 //RCLCPP_INFO(this->get_logger(), "Exec time: %f", miliseconds);
             }else{
+                R2T.setZero();
+                Zr_prior= Zonotopo(VectorXd::Zero(3), MatrixXd::Identity(3,3));
+                Zp_prior = Zonotopo(VectorXd::Zero(6), MatrixXd::Identity(6,6));
+                Sigmas.setZero();
                 count=count+1;
+                Flag = false;
             }
         }
     }
@@ -375,6 +382,9 @@ private:
     void callbackStateData(const mavros_msgs::msg::State::SharedPtr msg)
     {
         armed= msg->armed;
+        if(armed==false){ 
+            count=0;
+        }
     }
 
     rcl_interfaces::msg::SetParametersResult param_callback(const std::vector<rclcpp::Parameter> &params){
@@ -537,6 +547,10 @@ private:
                 RCLCPP_INFO(this->get_logger(), "changed param value");
                 Sig_on = this->get_parameter("Sig_on").as_bool();
             }
+            if (param.get_name() == "Pub_sig"){
+                RCLCPP_INFO(this->get_logger(), "changed param value");
+                pub_sig = static_cast<float>(this->get_parameter("Pub_sig").as_bool());
+            }
         }
         result.successful = true;
         result.reason = "Success";
@@ -547,11 +561,11 @@ private:
 
  //------Params-------//
     std::string my_id;
-    float Ts, t_s; 
+    float Ts, t_s, pub_sig; 
 
     std::vector<double> Xu, Xv, Xr;
 
-    bool IMU_on, Sig_on;
+    bool IMU_on, Sig_on, Flag = false;
 
     float Max_w_r, Max_w_p, Max_n_p, Max_n_r, Max_n_psi;
 

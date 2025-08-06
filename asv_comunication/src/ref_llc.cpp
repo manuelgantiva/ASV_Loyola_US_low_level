@@ -83,8 +83,8 @@ private:
             ref_vel = -1.0;
         }
         // Cuantizar 6 pasos
-        ref_vel = round(ref_vel / 0.2) * 0.2;
-        //ref_vel = ref_vel * 1.5;
+        ref_vel = round(ref_vel / 0.1) * 0.1;
+        ref_vel = ref_vel * 1.5;
         return ref_vel;
     }
 

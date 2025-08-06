@@ -21,7 +21,7 @@ public:
         subscriber_state_mavros_ = this-> create_subscription<mavros_msgs::msg::State>("/" + my_id + "/mavros/state",1,
                 std::bind(&MuxObsNode::callbackMavrosState, this, std::placeholders::_1));   
         subscriber_state_guille_ = this-> create_subscription<asv_interfaces::msg::StateObserver>(
-            "/" + my_id + "/observer/state_observer_guille", rclcpp::SensorDataQoS(), 
+            "/" + my_id + "/observer/state_observer_bejarano", rclcpp::SensorDataQoS(), 
             std::bind(&MuxObsNode::callbackStatesGuille, this, std::placeholders::_1));
         subscriber_state_liu_ = this-> create_subscription<asv_interfaces::msg::StateObserver>(
             "/" + my_id + "/observer/state_observer_liu", rclcpp::SensorDataQoS(), 
