@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import time
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Float32MultiArray, Float32, Bool
@@ -59,6 +60,23 @@ class ASVPPONode(Node):
             self._pending_state = None
 
         self.get_logger().info(f'ASV PPO Node started with {self.num_agents} agents')
+
+        # New - create session timestamp at startup for consistent file naming
+        self.session_start_time = self.get_clock().now()
+        self.formatted_timestamp = self.session_start_time.to_msg()
+        self.session_id = time.strftime(
+            "%Y-%m-%d_%H-%M-%S", 
+            time.localtime(self.formatted_timestamp.sec)
+        )
+        
+        # Single file for the entire session
+        self.rollout_filename = os.path.join(
+            self.rollout_dir, 
+            f"asv_formation_{self.session_id}.json"
+        )
+        
+        # Initialize the file with metadata
+        self._initialize_rollout_file()
 
     def state_callback(self, msg):
         try:
@@ -130,13 +148,21 @@ class ASVPPONode(Node):
             return  # Need at least previous state and action to form a transition
 
         reward = float(self.last_reward) if self.last_reward is not None else 0.0
+        
+        # Format the state and next_state arrays into structured dictionaries
+        structured_state = self._format_state_for_logging(self.last_state)
+        structured_next_state = self._format_state_for_logging(next_state)
+        
+        # Format actions into a structured dictionary
+        structured_action = self._format_action_for_logging(self.last_action)
+        
         transition = {
             "episode": int(self.episode_id),
             "step": int(self.step_idx),
-            "state": self.last_state.astype(float).tolist(),
-            "action": self.last_action.astype(float).tolist(),
+            "state": structured_state,
+            "action": structured_action,
             "reward": reward,
-            "next_state": np.array(next_state, dtype=float).tolist(),
+            "next_state": structured_next_state,
         }
         self.rollout_data.append(transition)
         self.step_idx += 1
@@ -144,21 +170,122 @@ class ASVPPONode(Node):
         # Optional periodic save
         if self.rollout_save_every and (self.step_idx % self.rollout_save_every == 0):
             self._save_rollout(final=False)
+    
+    def _format_state_for_logging(self, state_array):
+        """Convert flat state array to structured dictionary."""
+        try:
+            # Calculate indices for different parts of the state
+            agent_state_size = 6  # [x, y, yaw, vx, vy, vyaw]
+            agent_desired_pos_size = 2  # [desired_x, desired_y]
+            
+            # Start and end indices
+            agents_end = self.num_agents * agent_state_size
+            desired_pos_end = agents_end + (self.num_agents * agent_desired_pos_size)
+            
+            # Format agent states
+            agents = []
+            for i in range(self.num_agents):
+                start_idx = i * agent_state_size
+                agent_data = {
+                    "id": i,
+                    "position": {
+                        "x": float(state_array[start_idx]),
+                        "y": float(state_array[start_idx + 1]),
+                        "yaw": float(state_array[start_idx + 2])
+                    },
+                    "velocity": {
+                        "vx": float(state_array[start_idx + 3]),
+                        "vy": float(state_array[start_idx + 4]),
+                        "vyaw": float(state_array[start_idx + 5])
+                    }
+                }
+                
+                # Add desired position
+                desired_start = agents_end + (i * agent_desired_pos_size)
+                agent_data["desired_position"] = {
+                    "x": float(state_array[desired_start]),
+                    "y": float(state_array[desired_start + 1])
+                }
+                agents.append(agent_data)
+            
+            # Format formation data
+            formation_data = {
+                "centroid": {
+                    "x": float(state_array[desired_pos_end]),
+                    "y": float(state_array[desired_pos_end + 1])
+                },
+                "error": float(state_array[desired_pos_end + 2]),
+                "cross_track_error": float(state_array[desired_pos_end + 3]),
+                "virtual_leader": {
+                    "x": float(state_array[desired_pos_end + 4]),
+                    "y": float(state_array[desired_pos_end + 5])
+                }
+            }
+            
+            return {
+                "agents": agents,
+                "formation": formation_data,
+                "raw": state_array.tolist()  # Keep raw data for backward compatibility
+            }
+        except Exception as e:
+            self.get_logger().error(f"Error formatting state for logging: {e}")
+            # Return raw array if formatting fails
+            return state_array.tolist()
+    
+    def _format_action_for_logging(self, action_array):
+        """Convert flat action array to structured dictionary."""
+        try:
+            actions = []
+            for i in range(self.num_agents):
+                start_idx = i * 2
+                actions.append({
+                    "agent_id": i,
+                    "vyaw_rate": float(action_array[start_idx]),
+                    "forward_acceleration": float(action_array[start_idx + 1])
+                })
+            return {
+                "actions": actions,
+                "raw": action_array.tolist()  # Keep raw data for backward compatibility
+            }
+        except Exception as e:
+            self.get_logger().error(f"Error formatting action for logging: {e}")
+            # Return raw array if formatting fails
+            return action_array.tolist()
 
     def _save_rollout(self, final: bool):
-        """Save the current rollout buffer to a JSON file in rollout_dir."""
+        """Update the rollout file with current episode data."""
         if not self.rollout_data:
             return
-        ts = self.get_clock().now().to_msg()
-        stamp = f"{ts.sec}-{ts.nanosec}"
-        suffix = "final" if final else "partial"
-        filename = os.path.join(self.rollout_dir, f"rollout_ep{self.episode_id}_{suffix}_{stamp}.json")
+            
         try:
-            with open(filename, 'w') as f:
-                json.dump(self.rollout_data, f, indent=2)
-            self.get_logger().info(f"Saved rollout ({suffix}) to {filename}")
+            # Load existing file content
+            with open(self.rollout_filename, 'r') as f:
+                data = json.load(f)
+                
+            # Find or create episode entry
+            if len(data["episodes"]) <= self.episode_id:
+                # Add new episode
+                episode_data = {
+                    "episode_id": self.episode_id,
+                    "start_time": time.time(),
+                    "start_time_formatted": time.strftime("%H:%M:%S"),
+                    "is_complete": final,
+                    "transitions": self.rollout_data
+                }
+                data["episodes"].append(episode_data)
+            else:
+                # Update existing episode
+                data["episodes"][self.episode_id]["transitions"] = self.rollout_data
+                data["episodes"][self.episode_id]["is_complete"] = final
+                
+            # Write back to file
+            with open(self.rollout_filename, 'w') as f:
+                json.dump(data, f, indent=2)
+                
+            status = "complete" if final else f"in progress ({len(self.rollout_data)} steps)"
+            self.get_logger().info(f"Updated rollout file with episode {self.episode_id} - {status}")
         except Exception as e:
-            self.get_logger().error(f"Failed to save rollout to {filename}: {e}")
+            self.get_logger().error(f"Failed to update rollout file: {e}")
 
     def _finalize_episode(self):
         """Save and reset buffers for the next episode."""
@@ -200,6 +327,28 @@ class ASVPPONode(Node):
                 f'Episode finished. Saving rollout data with {len(self.rollout_data)} transitions.'
             )
             self._finalize_episode()
+    
+    def _initialize_rollout_file(self):
+        """Create the rollout file with metadata section."""
+        metadata = {
+            "session_id": self.session_id,
+            "start_time": self.session_start_time.to_msg().sec,
+            "start_time_formatted": time.strftime(
+                "%Y-%m-%d %H:%M:%S", 
+                time.localtime(self.session_start_time.to_msg().sec)
+            ),
+            "num_agents": self.num_agents,
+            "model_path": self.model_path if self.model_path else "new_model",
+            "episodes": []
+        }
+        
+        try:
+            with open(self.rollout_filename, 'w') as f:
+                json.dump(metadata, f, indent=2)
+            self.get_logger().info(f"Initialized rollout file: {self.rollout_filename}")
+        except Exception as e:
+            self.get_logger().error(f"Failed to initialize rollout file: {e}")
+
 
 def main(args=None):
     rclpy.init(args=args)
