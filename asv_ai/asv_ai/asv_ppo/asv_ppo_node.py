@@ -61,22 +61,30 @@ class ASVPPONode(Node):
         self.get_logger().info(f'ASV PPO Node started with {self.num_agents} agents')
 
     def state_callback(self, msg):
-        # The observation from the topic is a flat array
-        flat_state = np.array(msg.data)
+        try:
+            # The observation from the topic is a flat array
+            flat_state = np.array(msg.data)
+            self.get_logger().info(f'PPO received state with shape {flat_state.shape} and values {flat_state[:12]}...', throttle_duration_sec=1)
 
-        if not self.model_ready:
-            # Buffer the latest state until model is ready
-            self._pending_state = flat_state
-            self.get_logger().info('Model not ready yet; buffering environment state.', throttle_duration_sec=1)
-            return
+            if not self.model_ready:
+                # Buffer the latest state until model is ready
+                self._pending_state = flat_state
+                self.get_logger().info('Model not ready yet; buffering environment state.', throttle_duration_sec=1)
+                return
 
-        self._predict_and_publish(flat_state)
+            self._predict_and_publish(flat_state)
+        except Exception as e:
+            self.get_logger().error(f'Error in state_callback: {str(e)}')
 
     def _predict_and_publish(self, flat_state: np.ndarray):
         """Internal helper to compute an action from flat state and publish it."""
-        # Defensive reshape of observation
+        # Extract just the agent states from the extended state
         try:
-            reshaped_state = flat_state.reshape((self.num_agents, 6)).astype(np.float32)
+            # The original state has 6 values per agent at the beginning of the array
+            agent_states = flat_state[:self.num_agents * 6]
+            reshaped_state = agent_states.reshape((self.num_agents, 6)).astype(np.float32)
+            
+            self.get_logger().info(f"Received state with shape: {flat_state.shape}, using first {self.num_agents * 6} elements for agent states")
         except ValueError as e:
             self.get_logger().error(f"Could not reshape observation: {e}. Received shape: {flat_state.shape}")
             return
@@ -91,7 +99,7 @@ class ASVPPONode(Node):
         except Exception as e:
             self.get_logger().error(f"Model predict failed: {e}")
             return
-
+    
         # Ensure action shape is (num_agents, 2)
         action = np.array(action)
         if action.ndim == 1:
