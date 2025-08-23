@@ -276,8 +276,8 @@ class ASVEnvNode(Node):
         # Publish reward
         self.reward_pub.publish(Float32(data=float(reward)))
         
-        # Check if done and publish
-        done = self.check_done()
+        # Check if done and publish - use explicit bool conversion
+        done = bool(self.check_done())
         self.done_pub.publish(Bool(data=done))
 
     def check_done(self):
