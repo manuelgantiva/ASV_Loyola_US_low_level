@@ -59,3 +59,20 @@ class DataConverter:
         elif action_type == "acceleration":
             return action_physical / 0.1
         return action_physical
+    
+    @staticmethod
+    def flatten_observations(observations):
+        """Flatten observations for training buffer."""
+        if isinstance(observations, np.ndarray):
+            return observations.reshape(observations.shape[0], -1)
+        return observations
+
+    @staticmethod
+    def prepare_sb3_training_data(state_array, action_array, reward_value, done_value):
+        """Format data in the way SB3 expects for training."""
+        obs = DataConverter.numpy_to_tensor(state_array)
+        actions = DataConverter.numpy_to_tensor(action_array)
+        rewards = np.array([float(reward_value)])
+        dones = np.array([bool(done_value)])
+        
+        return obs, actions, rewards, dones
