@@ -4,6 +4,7 @@ from rclpy.node import Node
 from std_msgs.msg import Float32MultiArray, Float32, Bool
 import numpy as np
 from ..asv_path.asv_path import ParametrizedPath
+from ..utils.data_conversion import DataConverter
 
 class ASVEnvNode(Node):
     def __init__(self):
@@ -102,8 +103,8 @@ class ASVEnvNode(Node):
         self.initial_timer.cancel()  # Only run once
         
     def action_callback(self, msg):
-        # Forward actions to each agent
-        actions = np.array(msg.data)
+        # Convert ROS message to NumPy array
+        actions = DataConverter.ros_to_numpy(msg)
         
         if actions.size != 2 * self.num_agents:
             self.get_logger().error(f'Action message has wrong size: {actions.size}, expected {2 * self.num_agents}')
@@ -112,12 +113,10 @@ class ASVEnvNode(Node):
         self.loop_started = True
         
         for i in range(self.num_agents):
-            action_msg = Float32MultiArray()
-            action_msg.data = actions[i*2:(i+1)*2].tolist()
-            
-            # Use the pre-initialized publishers instead of creating new ones
+            action_slice = actions[i*2:(i+1)*2]
+            action_msg = DataConverter.numpy_to_ros(action_slice)
             self.agent_action_pubs[i].publish(action_msg)
-            self.get_logger().info(f'Published action to agent {i}: {action_msg.data}')
+            self.get_logger().info(f'Published action to agent {i}: {action_slice.tolist()}')
 
     def publish_environment_state(self):
         try:

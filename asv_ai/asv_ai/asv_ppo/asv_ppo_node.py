@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 import time
+
+import torch
+from ..utils.data_conversion import DataConverter
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Float32MultiArray, Float32, Bool
@@ -80,9 +83,9 @@ class ASVPPONode(Node):
 
     def state_callback(self, msg):
         try:
-            # The observation from the topic is a flat array
-            flat_state = np.array(msg.data)
-            self.get_logger().info(f'PPO received state with shape {flat_state.shape} and values {flat_state[:12]}...', throttle_duration_sec=1)
+            # Convert ROS message to NumPy array
+            flat_state = DataConverter.ros_to_numpy(msg)
+            self.get_logger().info(f'PPO received state with shape {flat_state.shape}', throttle_duration_sec=1)
 
             if not self.model_ready:
                 # Buffer the latest state until model is ready
@@ -95,51 +98,32 @@ class ASVPPONode(Node):
             self.get_logger().error(f'Error in state_callback: {str(e)}')
 
     def _predict_and_publish(self, flat_state: np.ndarray):
-        """Internal helper to compute an action from flat state and publish it."""
-        # Extract just the agent states from the extended state
         try:
-            # The original state has 6 values per agent at the beginning of the array
-            agent_states = flat_state[:self.num_agents * 6]
-            reshaped_state = agent_states.reshape((self.num_agents, 6)).astype(np.float32)
+            # Extract agent states and format for PPO
+            agent_states = DataConverter.state_to_ppo_input(flat_state, self.num_agents)
             
-            self.get_logger().info(f"Received state with shape: {flat_state.shape}, using first {self.num_agents * 6} elements for agent states")
-        except ValueError as e:
-            self.get_logger().error(f"Could not reshape observation: {e}. Received shape: {flat_state.shape}")
-            return
+            # Store previous transition
+            self._append_transition(next_state=flat_state)
 
-        # Store previous transition (s,a,r,s') using the latest observation as next_state
-        self._append_transition(next_state=flat_state)
-
-        # Compute and publish action
-        try:
-            # IMPORTANT: pass (num_agents, 6), not flattened
-            action, _ = self.model.predict(reshaped_state, deterministic=True)
+            # Convert to tensor for model prediction
+            state_tensor = DataConverter.numpy_to_tensor(agent_states)
+            
+            # Get model prediction
+            with torch.no_grad():
+                action, _ = self.model.predict(agent_states, deterministic=True)
+                
+            # Format actions for transmission
+            action_np = DataConverter.ppo_output_to_actions(action, self.num_agents)
+            
+            # Convert to ROS message and publish
+            action_msg = DataConverter.numpy_to_ros(action_np)
+            self.action_pub.publish(action_msg)
+            
+            # Cache for next transition
+            self.last_state = flat_state
+            self.last_action = action_np
         except Exception as e:
-            self.get_logger().error(f"Model predict failed: {e}")
-            return
-    
-        # Ensure action shape is (num_agents, 2)
-        action = np.array(action)
-        if action.ndim == 1:
-            if action.size % self.num_agents != 0:
-                self.get_logger().error(f"Action size {action.size} not divisible by num_agents {self.num_agents}.")
-                return
-            action = action.reshape((self.num_agents, -1))
-        elif action.ndim == 2:
-            if action.shape[0] != self.num_agents:
-                self.get_logger().error(f"Action first dim {action.shape[0]} != num_agents {self.num_agents}.")
-                return
-        else:
-            self.get_logger().error(f"Unexpected action shape {action.shape}")
-            return
-
-        self.action_pub.publish(Float32MultiArray(data=action.flatten().astype(np.float32).tolist()))
-        self.get_logger().info(f'Published PPO action: {action.tolist()}', throttle_duration_sec=1)
-
-        # Cache for next transition
-        self.last_state = flat_state
-        self.last_action = action.flatten()
-        # Note: reward will be filled by reward_callback before next step; defaulted if missing
+            self.get_logger().error(f"Error in _predict_and_publish: {e}")
 
     def _append_transition(self, next_state: np.ndarray):
         """Append a (state, action, reward, next_state) transition to the rollout buffer.

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from ..utils.data_conversion import DataConverter
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Float32MultiArray
@@ -40,14 +41,15 @@ class ASVAgentNode(Node):
 
     def action_callback(self, msg):
         """Applies an action, updates physics, and publishes the new state."""
-        action = np.array(msg.data, dtype=np.float32)
+        # Convert ROS message to NumPy array
+        action = DataConverter.ros_to_numpy(msg)
         self.get_logger().info(f'Agent {self.agent_id} received action: {action.tolist()}', throttle_duration_sec=1)
         
-        # Apply actions
-        self.state[5] = action[0] * 0.5  # vyaw (turning rate)
-        self.state[3] += action[1] * 0.1 # vx (forward speed)
-        self.state[3] = np.clip(self.state[3], 0.0, 5.0) # Clamp speed
-
+        # Apply scaled actions
+        self.state[5] = DataConverter.scale_action_to_physical(action[0], "vyaw")  # vyaw
+        self.state[3] += DataConverter.scale_action_to_physical(action[1], "acceleration")  # vx
+        self.state[3] = np.clip(self.state[3], 0.0, 5.0)  # Clamp speed
+    
         # Update physics
         x, y, yaw, vx, vy, vyaw = self.state
         
@@ -64,7 +66,9 @@ class ASVAgentNode(Node):
     def publish_state_and_tf(self):
         """Publishes the current state and broadcasts the TF."""
         # Publish state
-        self.state_pub.publish(Float32MultiArray(data=self.state.astype(np.float32).tolist()))
+        # Convert NumPy array to ROS message
+        state_msg = DataConverter.numpy_to_ros(self.state)
+        self.state_pub.publish(state_msg)        
         self.get_logger().info(f'Agent {self.agent_id} published state: {self.state.tolist()}', throttle_duration_sec=1)
         
         # Publish TF for RViz
