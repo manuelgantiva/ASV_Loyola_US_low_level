@@ -6,6 +6,10 @@ from geometry_msgs.msg import Vector3, Quaternion
 class DataConverter:
     """Utilities for converting between ROS messages, NumPy arrays, and PyTorch tensors."""
     
+    # Coordinate system bounds
+    MIN_X, MAX_X = -10.0, 30.0
+    MIN_Y, MAX_Y = -10.0, 30.0
+    
     @staticmethod
     def ros_to_numpy(msg):
         """Convert a ROS Float32MultiArray to a NumPy array."""
@@ -76,3 +80,11 @@ class DataConverter:
         dones = np.array([bool(done_value)])
         
         return obs, actions, rewards, dones
+
+    @staticmethod
+    def validate_position(position):
+        """Ensure position is within reasonable bounds"""
+        x, y = position[:2]
+        x_clipped = np.clip(x, DataConverter.MIN_X, DataConverter.MAX_X)
+        y_clipped = np.clip(y, DataConverter.MIN_Y, DataConverter.MAX_Y)
+        return np.array([x_clipped, y_clipped])

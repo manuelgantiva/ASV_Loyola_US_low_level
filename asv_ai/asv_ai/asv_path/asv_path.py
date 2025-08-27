@@ -12,25 +12,32 @@ class ParametrizedPath():
         self.theta = theta # Actua como índice o parametro para calcular las coordenadas de la trayectoria
         self.path_no = path_no
 
+    def _scale_coordinates(self, theta):
+        """Scale theta parameter to reasonable coordinate range"""
+        scale_factor = 0.3  # Maps larger theta to reasonable coordinates
+        offset = -2.0       # Center around origin
+        return theta * scale_factor + offset
+
     # Esto en ros ya esta hecho con trayectorias mejores
     # Devuelve las coordenadas de la trayectoria en función de theta
     def path(self, theta, deriv=False):
+        scaled_theta = self._scale_coordinates(theta)
         match self.path_no:
             case 0: # Trayectoria lineal diagonal
                 if deriv: # Si es true devuelve la derivada de la trayectoria, en caso contrario solo las coordenadas
-                    return np.array([[theta], [theta]]), np.array([1])
+                    return np.array([[scaled_theta], [scaled_theta]]), np.array([0.3])  # scaled derivative
                 else:
-                    return np.array([[theta], [theta]])
+                    return np.array([[scaled_theta], [scaled_theta]])
             case 1: # Trayectoria lineal con pendiente 0.5
                 if deriv:
-                    return np.array([[theta], [0.5*theta]]), np.array([0.5])
+                    return np.array([[scaled_theta], [0.5*scaled_theta]]), np.array([0.15])  # scaled derivative
                 else:
-                    return np.array([[theta], [0.5*theta]])
+                    return np.array([[scaled_theta], [0.5*scaled_theta]])
             case _: # Trayectoria lineal diagonal igual que el caso 0
                 if deriv:
-                    return np.array([[theta], [theta]]), np.array([1])
+                    return np.array([[scaled_theta], [scaled_theta]]), np.array([0.3])  # scaled derivative
                 else:
-                    return np.array([[theta], [theta]])
+                    return np.array([[scaled_theta], [scaled_theta]])
     
     # find the projection x_p of point x_c along the path at theta
     def projection(self, x_c):

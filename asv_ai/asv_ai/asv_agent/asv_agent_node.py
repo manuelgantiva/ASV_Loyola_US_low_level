@@ -15,7 +15,7 @@ class ASVAgentNode(Node):
         self.agent_id = self.get_parameter('agent_id').value
         
         # State: [x, y, yaw, vx, vy, vyaw]
-        self.state = np.zeros(6)
+        self.state = np.array([2.0, 2.0, 0.0, 0.0, 0.0, 0.0])  # Start near origin with small offset
         self.dt = 0.1  # Simulation time step
 
         self.tf_broadcaster = tf2_ros.TransformBroadcaster(self)

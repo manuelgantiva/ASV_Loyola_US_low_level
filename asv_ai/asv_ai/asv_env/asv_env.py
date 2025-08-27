@@ -21,7 +21,7 @@ class Environment(gym.Env):
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
         for i in range(self.num_agents):
-            start_x = i * 20.0 - (self.num_agents - 1) * 10.0
+            start_x = i * 4.0 - (self.num_agents - 1) * 2.0  # Smaller spacing
             self.state[i] = [start_x, 0.0, np.pi / 2, 1.0, 0.0, 0.0]
         return self._get_obs(), self._get_info()
 
@@ -230,7 +230,7 @@ class EnvOriginal(gym.Env):
         # self.current_step = 0 #cuando reiniciamos la simulación, decimos que no ocurrió ningún paso del step (reinicio contador)
         
         # Reinicia el parametro que controla la posicion del lider virtual y la trayectoria
-        self.param_p.theta = np.random.uniform(40, 70)  # 30, 50
+        self.param_p.theta = np.random.uniform(5, 15)  # Near origin
 
         # Reinicia la posicion de los ASVs
         for i, agent in enumerate(self.agents):
@@ -244,8 +244,8 @@ class EnvOriginal(gym.Env):
             if np.random.rand() > factor:
                 pos_v, deriv = self.param_p.path(self.param_p.theta, True)
 
-                agent.x[0] =  agent.expected_position(pos_v, deriv)[0] - 50 # Desplegar la formación en un rango de 50
-                agent.x[1] =  agent.expected_position(pos_v, deriv)[1] - 50
+                agent.x[0] =  agent.expected_position(pos_v, deriv)[0] - 5 # Small offset toward origin
+                agent.x[1] =  agent.expected_position(pos_v, deriv)[1] - 5
                 
                 x_p1 = agent.expected_position(pos_v, deriv) - agent.x[:2]
                 angle = np.arctan2(x_p1[1], x_p1[0]) # Angulo entre la posicion esperada y la posicion actual

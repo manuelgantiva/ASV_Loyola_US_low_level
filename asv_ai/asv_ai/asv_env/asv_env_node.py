@@ -37,11 +37,11 @@ class ASVEnvNode(Node):
         
         # Create a parametrized path for formation calculations
         self.param_path = ParametrizedPath()
-        self.param_path.theta = 50.0  # Initial parameter value
+        self.param_path.theta = 10.0  # Initial parameter value near origin
         
         # Assign formation angles to each agent (distributed around the circle)
         self.agent_betas = [2 * np.pi * i / self.num_agents for i in range(self.num_agents)]
-        self.formation_distance = 5.0  # Distance from formation center (lm in the original code)
+        self.formation_distance = 3.0  # Smaller formation distance
 
         # Initialize empty publisher lists first
         self.agent_action_pubs = []
@@ -91,8 +91,8 @@ class ASVEnvNode(Node):
         # Visualization publishers
         self.viz_pub = self.create_publisher(MarkerArray, '/asv_env/visualization', viz_qos)
 
-        # Visualization timer (update every 0.5 seconds)
-        self.viz_timer = self.create_timer(0.5, self.publish_visualization)
+        # Visualization timer (update every 0.2 seconds for smoother visualization)
+        # self.viz_timer = self.create_timer(0.2, self.publish_visualization)  # Already created above
     
         self.poses_pub = self.create_publisher(PoseArray, '/asv_env/asv_poses', 10)
 
@@ -234,7 +234,7 @@ class ASVEnvNode(Node):
     def trigger_reset(self):
         # Reset the path parameter - this sets where the virtual leader will be
         # Change to be well within valid bounds (50-90)
-        self.param_path.theta = np.random.uniform(60, 80)
+        self.param_path.theta = np.random.uniform(5, 15)
         
         # Get position and derivative at this parameter
         pos_v, deriv = self.param_path.path(self.param_path.theta, True)
@@ -254,9 +254,9 @@ class ASVEnvNode(Node):
             x_pos = expected_pos[0] + offset[0]
             y_pos = expected_pos[1] + offset[1]
             
-            # Ensure position is within bounds (50-90)
-            x_pos = np.clip(x_pos, 55.0, 85.0)  # Add extra margin from edge
-            y_pos = np.clip(y_pos, 55.0, 85.0)  # Add extra margin from edge
+            # Ensure position is within bounds (origin-centered)
+            x_pos = np.clip(x_pos, -5.0, 25.0)  # Origin-centered bounds
+            y_pos = np.clip(y_pos, -5.0, 25.0)  # Origin-centered bounds
             
             reset_state = np.array([
                 x_pos,   # x - clipped to bounds
@@ -337,8 +337,8 @@ class ASVEnvNode(Node):
         centroid = np.mean(np.array([state[:2] for state in self.agent_states]), axis=0)
         along_track_error = self.param_path.along_track_error(centroid)
         
-        # Success if along track error is small
-        return along_track_error < 5.0
+        # Success if along track error is small (adjusted for scaled coordinates)
+        return along_track_error < 2.0  # Smaller threshold for scaled system
 
     def check_collision(self):
         if self.num_agents < 2:
@@ -351,8 +351,8 @@ class ASVEnvNode(Node):
                 pos_j = self.agent_states[j][:2]
                 distance = np.linalg.norm(pos_i - pos_j)
                 
-                # Collision threshold
-                if distance < 2.0:
+                # Collision threshold - increased for formation flying
+                if distance < 1.0:  # Smaller threshold since agents are in formation
                     return True
                     
         return False
@@ -383,21 +383,9 @@ class ASVEnvNode(Node):
             return response
     
     def reset_all_agents(self):
-        """Reset all agents to initial positions."""
-        # Instead of random positions or hard-coded positions at the edge,
-        # use positions closer to the center of the map:
-        for i in range(self.num_agents):
-            if i == 0:
-                # First boat - place at bottom left of center
-                pos = [65.0, 65.0, 0.0, 0.0, 0.0, 0.0]
-            else:
-                # Second boat - place at top right of center
-                pos = [75.0, 75.0, 0.0, 0.0, 0.0, 0.0]
-            
-            # Publish reset message to agent
-            self.reset_agent(i, pos)
-        
-        self.get_logger().info("Reset all agents to initial positions")
+        """Reset all agents to initial positions using path-based positioning."""
+        # Use the same logic as trigger_reset but for service calls
+        self.trigger_reset()
 
     def reset_agent(self, agent_id, position):
         """

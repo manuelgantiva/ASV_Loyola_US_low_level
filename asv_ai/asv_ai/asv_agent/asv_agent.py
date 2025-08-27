@@ -45,7 +45,7 @@ class ASVAgent():
 
     # TODO en ros tendremos que hacer una funcion auxiliar de inicizalizacion de posicion porque no vamos a poder elegirla
     def __init__(self, id, x_ini=None, dt = 0.05, lm=5):
-        self.x = x_ini if x_ini is not None else np.array([[10], [5], [np.pi/4], [0], [0], [0]], dtype=np.float32)
+        self.x = x_ini if x_ini is not None else np.array([[2], [2], [np.pi/4], [0], [0], [0]], dtype=np.float32)
         self.dt = dt
         self.id = id # Identificador del ASV (no se puede definir, es el que es)
         self.lm = lm # En el paper es l, longitud de la formación con respecto al cenrtoide de la formaicon

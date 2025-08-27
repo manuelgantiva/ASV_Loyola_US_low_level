@@ -134,7 +134,7 @@ class ASVPPONode(Node):
             # Create training timer (every 30 seconds)
             self.training_timer = self.create_timer(30.0, self.train_model)
             
-            self.reset_timer = self.create_timer(5.0, self.check_and_reset)
+            self.reset_timer = self.create_timer(20.0, self.check_and_reset)  # Reduced frequency
 
             self.get_logger().info("PPO training mode enabled")
 
@@ -677,9 +677,9 @@ class ASVPPONode(Node):
     
     def _agents_out_of_bounds(self, flat_state: np.ndarray) -> bool:
         """Check if any agent is out of bounds."""
-        # Define boundaries - adjust these based on your simulation area
-        MIN_X, MAX_X = 50.0, 90.0
-        MIN_Y, MAX_Y = 50.0, 90.0
+        # Define boundaries - updated to match our new coordinate system
+        MIN_X, MAX_X = -15.0, 35.0  # Wider than our clipping bounds
+        MIN_Y, MAX_Y = -15.0, 35.0  # Wider than our clipping bounds
         
         for i in range(self.num_agents):
             # Extract agent position (x, y)
