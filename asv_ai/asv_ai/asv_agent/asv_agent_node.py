@@ -6,6 +6,7 @@ from std_msgs.msg import Float32MultiArray
 import numpy as np
 import tf2_ros
 from geometry_msgs.msg import TransformStamped
+import time
 
 class ASVAgentNode(Node):
     def __init__(self):
@@ -17,6 +18,14 @@ class ASVAgentNode(Node):
         # State: [x, y, yaw, vx, vy, vyaw]
         self.state = np.array([2.0, 2.0, 0.0, 0.0, 0.0, 0.0])  # Start near origin with small offset
         self.dt = 0.1  # Simulation time step
+
+        # TF publishing rate limiting for performance 
+        self.last_tf_publish_time = 0.0
+        self.tf_publish_interval = 0.05  # 20Hz max TF rate (instead of unlimited)
+
+        # State publishing optimization (but allow frequent updates for responsiveness)
+        self._last_state_publish = 0.0
+        self._state_publish_interval = 0.02  # 50Hz state updates for responsiveness
 
         self.tf_broadcaster = tf2_ros.TransformBroadcaster(self)
 
@@ -40,38 +49,49 @@ class ASVAgentNode(Node):
             self.publish_state_and_tf()
 
     def action_callback(self, msg):
-        """Applies an action, updates physics, and publishes the new state."""
+        """Applies an action, updates physics immediately, and publishes the new state."""
         # Convert ROS message to NumPy array
         action = DataConverter.ros_to_numpy(msg)
-        self.get_logger().info(f'Agent {self.agent_id} received action: {action.tolist()}', throttle_duration_sec=1)
         
-        # Apply scaled actions
+        # Throttled logging for performance
+        self.get_logger().info(f'Agent {self.agent_id} received action: {action.tolist()}', throttle_duration_sec=5.0)
+        
+        # Apply scaled actions immediately (no batching delay)
         self.state[5] = DataConverter.scale_action_to_physical(action[0], "vyaw")  # vyaw
         self.state[3] += DataConverter.scale_action_to_physical(action[1], "acceleration")  # vx
         self.state[3] = np.clip(self.state[3], 0.0, 5.0)  # Clamp speed
     
-        # Update physics
+        # Update physics immediately (optimized with pre-computed values)
         x, y, yaw, vx, vy, vyaw = self.state
         
-        # Correctly update yaw and position
+        # Efficiently update yaw and position using new yaw
         new_yaw = yaw + vyaw * self.dt
-        new_x = x + (vx * np.cos(new_yaw) - vy * np.sin(new_yaw)) * self.dt
-        new_y = y + (vx * np.sin(new_yaw) + vy * np.cos(new_yaw)) * self.dt
+        cos_yaw, sin_yaw = np.cos(new_yaw), np.sin(new_yaw)
+        new_x = x + (vx * cos_yaw - vy * sin_yaw) * self.dt
+        new_y = y + (vx * sin_yaw + vy * cos_yaw) * self.dt
         
-        # The state update was incorrect. It should use the new values.
-        self.state = np.array([new_x, new_y, new_yaw, self.state[3], self.state[4], self.state[5]])
+        # Update state array efficiently
+        self.state[:3] = [new_x, new_y, new_yaw]
         
+        # Publish immediately for responsive visualization
         self.publish_state_and_tf()
 
     def publish_state_and_tf(self):
-        """Publishes the current state and broadcasts the TF."""
-        # Publish state
-        # Convert NumPy array to ROS message
+        """Publishes the current state and broadcasts the TF with optimized timing."""
+        current_time = self.get_clock().now().nanoseconds / 1e9
+        
+        # Always publish state immediately for responsive visualization
         state_msg = DataConverter.numpy_to_ros(self.state)
         self.state_pub.publish(state_msg)        
-        self.get_logger().info(f'Agent {self.agent_id} published state: {self.state.tolist()}', throttle_duration_sec=1)
+        self.get_logger().info(f'Agent {self.agent_id} published state: {self.state.tolist()}', throttle_duration_sec=5.0)
         
-        # Publish TF for RViz
+        # Rate-limited TF publishing for performance (but still responsive)
+        if current_time - self.last_tf_publish_time >= self.tf_publish_interval:
+            self.last_tf_publish_time = current_time
+            self._publish_tf()
+    
+    def _publish_tf(self):
+        """Publishes TF transform at controlled rate"""
         t = TransformStamped()
         t.header.stamp = self.get_clock().now().to_msg()
         t.header.frame_id = 'map'

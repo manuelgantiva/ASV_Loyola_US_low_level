@@ -115,20 +115,20 @@ class EnvOriginal(gym.Env):
         
         # posicion (dos primeros) orientacion (tercera), velocidad (cuarta y quinta) y velocidad angular (sexta) de los ASVs. Posicion deseada (dos ultimos)
         obs_space_l = np.array(
-        [0, 0, -np.pi, -3.6, -3.6, -np.pi/3, 0, 0]*self.n, dtype=np.float32)
+        [-15, -15, -np.pi, -3.6, -3.6, -np.pi/3, -15, -15]*self.n, dtype=np.float32)
 
         # Extiende obs_space_l para incluir los límites inferiores de las observaciones relacionadas con el líder virtual:
         obs_space_l = np.hstack(
             [obs_space_l, np.array(
-                [0, 0, 0, 0], dtype=np.float32)])#lider virtual pos (dos primeros) y error froma (tercero) y cross track error (cuarto) (minimos valores)
+                [-15, -15, 0, 0], dtype=np.float32)])#lider virtual pos (dos primeros) y error froma (tercero) y cross track error (cuarto) (minimos valores)
         
         # Límites superiores de las observaciones (posición y velocidad de los ASVs, posición y derivada de la trayectoria, error de formación y error de seguimiento)
         obs_space_h = np.array(
-        [75, 75, np.pi, 3.6, 3.6, np.pi/3, 75, 75]*self.n, dtype=np.float32)
+        [35, 35, np.pi, 3.6, 3.6, np.pi/3, 35, 35]*self.n, dtype=np.float32)
         
         obs_space_h = np.hstack(
             [obs_space_h, np.array(
-                [75, 75, 100, 100], dtype=np.float32)]
+                [35, 35, 100, 100], dtype=np.float32)]
         )
     
         # Example for using image as input (channel-first; channel-last also works):

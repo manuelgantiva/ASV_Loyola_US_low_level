@@ -3,8 +3,8 @@ import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Float32MultiArray, Float32, Bool, ColorRGBA
 from std_srvs.srv import Trigger
-from visualization_msgs.msg import MarkerArray, Marker
-from geometry_msgs.msg import Point, PoseArray, Pose
+from visualization_msgs.msg import Marker
+from geometry_msgs.msg import Point
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
 import numpy as np
 from ..asv_path.asv_path import ParametrizedPath
@@ -31,17 +31,36 @@ class ASVEnvNode(Node):
         qos_profile = QoSProfile(reliability=QoSReliabilityPolicy.RELIABLE, history=QoSHistoryPolicy.KEEP_LAST, depth=1)
         self.path_marker_pub = self.create_publisher(Marker, '/asv_env/path_marker', qos_profile)
         self.centroid_marker_pub = self.create_publisher(Marker, '/asv_env/centroid_marker', qos_profile)
+        
+        # Boundary visualization publishers
+        self.core_boundary_pub = self.create_publisher(Marker, '/asv_env/core_boundary', qos_profile)
+        self.safety_boundary_pub = self.create_publisher(Marker, '/asv_env/safety_boundary', qos_profile)
+        self.warning_boundary_pub = self.create_publisher(Marker, '/asv_env/warning_boundary', qos_profile)
 
         # Timer to periodically publish visualizations
-        self.viz_timer = self.create_timer(0.2, self.publish_visualization) # 5 Hz
+        self.viz_timer = self.create_timer(0.1, self.publish_visualization) # 10 Hz for smoother animation
         
         # Create a parametrized path for formation calculations
         self.param_path = ParametrizedPath()
+
+        # Pre-generate the parametrized path points (performance optimization)
+        self._cached_path_points = self._generate_path_points()
+        self._path_cache_valid = True
+
+        # Pre-generate boundary markers (performance optimization) 
+        self._cached_boundary_markers = self._generate_boundary_markers()
+        self._boundary_cache_valid = True
         self.param_path.theta = 10.0  # Initial parameter value near origin
         
         # Assign formation angles to each agent (distributed around the circle)
         self.agent_betas = [2 * np.pi * i / self.num_agents for i in range(self.num_agents)]
         self.formation_distance = 3.0  # Smaller formation distance
+        
+        # Cache for expensive calculations (performance optimization)
+        self._cached_virtual_leader_pos = None
+        self._cached_virtual_leader_deriv = None
+        self._cached_expected_positions = None
+        self._cache_timestamp = 0.0
 
         # Initialize empty publisher lists first
         self.agent_action_pubs = []
@@ -76,8 +95,8 @@ class ASVEnvNode(Node):
         # Initial state timer
         self.initial_timer = self.create_timer(1.0, self.initial_state_publish_callback)
         
-        # Keepalive timer (ensures environment state is published regularly)
-        self.keepalive_timer = self.create_timer(0.5, self._keepalive_publish)
+        # Keepalive timer (reduced frequency to avoid redundant publications)
+        self.keepalive_timer = self.create_timer(1.0, self._keepalive_publish)  # Reduced from 0.5s to 1.0s
         
         self.get_logger().info(f'ASV Environment Node started with {self.num_agents} agents')
         
@@ -88,13 +107,8 @@ class ASVEnvNode(Node):
             depth=10
         )
 
-        # Visualization publishers
-        self.viz_pub = self.create_publisher(MarkerArray, '/asv_env/visualization', viz_qos)
-
         # Visualization timer (update every 0.2 seconds for smoother visualization)
         # self.viz_timer = self.create_timer(0.2, self.publish_visualization)  # Already created above
-    
-        self.poses_pub = self.create_publisher(PoseArray, '/asv_env/asv_poses', 10)
 
     def create_state_callback(self, agent_id):
         def callback(msg):
@@ -107,10 +121,10 @@ class ASVEnvNode(Node):
                 self.agent_states[agent_id] = state
                 self.received_updates_this_step[agent_id] = True
                 
-                self.get_logger().info(f'Received state from agent {agent_id}: {state.tolist()}', throttle_duration_sec=1.0)
+                self.get_logger().info(f'Received state from agent {agent_id}: {state.tolist()}', throttle_duration_sec=5.0)
                 
                 # Debug current state of agent updates
-                self.get_logger().info(f'Agent updates: {self.received_updates_this_step}, loop_started: {self.loop_started}', throttle_duration_sec=1.0)
+                self.get_logger().info(f'Agent updates: {self.received_updates_this_step}, loop_started: {self.loop_started}', throttle_duration_sec=5.0)
                 
                 # If all agents have reported, update the environment state
                 if all(self.received_updates_this_step) and self.loop_started:
@@ -118,7 +132,7 @@ class ASVEnvNode(Node):
                     self.calculate_reward()
                     self.received_updates_this_step = [False] * self.num_agents
                 else:
-                    self.get_logger().info(f'Not publishing yet: all_reported={all(self.received_updates_this_step)}, loop_started={self.loop_started}', throttle_duration_sec=1.0)
+                    self.get_logger().info(f'Not publishing yet: all_reported={all(self.received_updates_this_step)}, loop_started={self.loop_started}', throttle_duration_sec=5.0)
             except Exception as e:
                 self.get_logger().error(f'Error in state callback for agent {agent_id}: {str(e)}')
                 
@@ -221,19 +235,22 @@ class ASVEnvNode(Node):
             
             self.get_logger().info(
                 f'Published extended environment state with {len(global_state)} elements',
-                throttle_duration_sec=1.0
+                throttle_duration_sec=5.0
             )
         except Exception as e:
             self.get_logger().error(f'Error in publish_environment_state: {str(e)}')
 
     def _keepalive_publish(self):
-        # Ensure environment state is published regularly
+        # Ensure environment state is published regularly, but avoid duplicate publications
         if all(s is not None for s in self.agent_states) and self.loop_started:
-            self.publish_environment_state()
+            # Only publish if no recent publication from agent callbacks
+            if not any(self.received_updates_this_step):
+                self.publish_environment_state()
+                self.calculate_reward()
 
     def trigger_reset(self):
         # Reset the path parameter - this sets where the virtual leader will be
-        # Change to be well within valid bounds (50-90)
+        # Change to be within origin-centered bounds (-15 to 35)
         self.param_path.theta = np.random.uniform(5, 15)
         
         # Get position and derivative at this parameter
@@ -279,43 +296,71 @@ class ASVEnvNode(Node):
         if any(s is None for s in self.agent_states):
             return
             
-        # Calculate virtual leader position and path derivative
-        pos_v, deriv = self.param_path.path(self.param_path.theta, True)
+        current_time = self.get_clock().now().nanoseconds / 1e9
         
-        # Average velocity reward components (Rv) and distance reward components (Rd)
-        total_rv = 0.0
-        total_rd = 0.0
+        # Use cache if available and fresh (within 50ms for training efficiency)
+        if (hasattr(self, '_last_reward_time') and 
+            current_time - self._last_reward_time < 0.05 and
+            hasattr(self, '_cached_reward')):
+            self.reward_pub.publish(Float32(data=float(self._cached_reward)))
+            done = bool(self.check_done())
+            self.done_pub.publish(Bool(data=done))
+            return
+            
+        # Calculate virtual leader position and path derivative (cache when possible)
+        cache_valid = (hasattr(self, '_cache_timestamp') and 
+                      abs(current_time - self._cache_timestamp) < 0.1)  # 100ms cache window
         
-        for i, state in enumerate(self.agent_states):
-            # Calculate expected position
-            expected_pos = pos_v.flatten() + self.formation_distance * np.array([
-                np.cos(deriv.item() + self.agent_betas[i]), 
-                np.sin(deriv.item() + self.agent_betas[i])
-            ])
+        if cache_valid and self._cached_virtual_leader_pos is not None:
+            pos_v = self._cached_virtual_leader_pos
+            deriv = self._cached_virtual_leader_deriv
+            expected_positions = self._cached_expected_positions
+        else:
+            pos_v, deriv = self.param_path.path(self.param_path.theta, True)
             
-            # Calculate angle to desired position
-            x_p1 = expected_pos - state[:2]
-            angle = np.arctan2(x_p1[1], x_p1[0]) - state[2]
+            # Pre-calculate all expected positions (vectorized operation)
+            cos_angles = np.cos(deriv.item() + np.array(self.agent_betas))
+            sin_angles = np.sin(deriv.item() + np.array(self.agent_betas))
             
-            # Velocity reward (similar to ASVAgent.Rv)
-            k_v = 2.75
-            rv = k_v * (state[3] * np.cos(angle) - (np.abs(state[4]) + np.abs(state[5])) * np.abs(np.sin(angle)))
+            expected_positions = pos_v.flatten()[np.newaxis, :] + self.formation_distance * np.column_stack([cos_angles, sin_angles])
             
-            # Distance reward (similar to ASVAgent.Rd)
-            k_d = 2.0
-            err_max = 10.0
-            error = np.linalg.norm(expected_pos - state[:2])
-            rd = k_d * (-error / err_max)
-            
-            total_rv += rv
-            total_rd += rd
+            # Cache the calculations
+            self._cached_virtual_leader_pos = pos_v
+            self._cached_virtual_leader_deriv = deriv
+            self._cached_expected_positions = expected_positions
+            self._cache_timestamp = current_time
+        
+        # Vectorized reward calculation for better performance
+        agent_positions = np.array([state[:2] for state in self.agent_states])
+        agent_orientations = np.array([state[2] for state in self.agent_states])
+        agent_velocities = np.array([[state[3], state[4], state[5]] for state in self.agent_states])
+        
+        # Calculate position errors
+        position_errors = expected_positions - agent_positions
+        angles_to_target = np.arctan2(position_errors[:, 1], position_errors[:, 0]) - agent_orientations
+        
+        # Velocity rewards (vectorized)
+        k_v = 2.75
+        rv_components = k_v * (agent_velocities[:, 0] * np.cos(angles_to_target) - 
+                              (np.abs(agent_velocities[:, 1]) + np.abs(agent_velocities[:, 2])) * 
+                              np.abs(np.sin(angles_to_target)))
+        
+        # Distance rewards (vectorized)
+        k_d = 2.0
+        err_max = 10.0
+        errors = np.linalg.norm(position_errors, axis=1)
+        rd_components = k_d * (-errors / err_max)
         
         # Average rewards
-        total_rv /= self.num_agents
-        total_rd /= self.num_agents
+        total_rv = np.mean(rv_components)
+        total_rd = np.mean(rd_components)
         
         # Final reward
         reward = total_rv + total_rd
+        
+        # Cache the reward
+        self._cached_reward = reward
+        self._last_reward_time = current_time
         
         # Publish reward
         self.reward_pub.publish(Float32(data=float(reward)))
@@ -412,22 +457,20 @@ class ASVEnvNode(Node):
 
     # In order to see the parametrized path
     def publish_visualization(self):
-        # 1. Publish the parametrized path
+        # Single timestamp for all markers (performance optimization)
+        current_time = self.get_clock().now().to_msg()
+        
+        # 1. Publish the parametrized path (using cached points)
         path_marker = Marker()
         path_marker.header.frame_id = "map"
-        path_marker.header.stamp = self.get_clock().now().to_msg()
+        path_marker.header.stamp = current_time
         path_marker.ns = "parametrized_path"
         path_marker.id = 0
         path_marker.type = Marker.LINE_STRIP
         path_marker.action = Marker.ADD
         path_marker.scale.x = 0.1  # Line width
         path_marker.color = ColorRGBA(r=0.0, g=1.0, b=0.0, a=1.0) # Green
-
-        # Generate points for the path
-        for theta in np.linspace(0, 150, 500): # Adjust range as needed
-            p = self.param_path.path(theta)
-            # Cast NumPy floats to native Python floats
-            path_marker.points.append(Point(x=float(p[0]), y=float(p[1]), z=0.0))
+        path_marker.points = self._cached_path_points  # Use cached points
         
         self.path_marker_pub.publish(path_marker)
 
@@ -437,7 +480,7 @@ class ASVEnvNode(Node):
 
         centroid_marker = Marker()
         centroid_marker.header.frame_id = "map"
-        centroid_marker.header.stamp = self.get_clock().now().to_msg()
+        centroid_marker.header.stamp = current_time
         centroid_marker.ns = "formation_centroid"
         centroid_marker.id = 1
         centroid_marker.type = Marker.SPHERE
@@ -454,6 +497,95 @@ class ASVEnvNode(Node):
         centroid_marker.pose.position = Point(x=float(centroid[0]), y=float(centroid[1]), z=0.0)
 
         self.centroid_marker_pub.publish(centroid_marker)
+
+        # 3. Publish boundary visualizations (using cached markers)
+        self._publish_boundaries_optimized(current_time)
+
+    def _publish_boundaries_optimized(self, current_time):
+        """Optimized boundary publishing using cached markers"""
+        # Update timestamps on cached markers and publish
+        for key, marker in self._cached_boundary_markers.items():
+            marker.header.stamp = current_time
+            
+            if key == 'core':
+                self.core_boundary_pub.publish(marker)
+            elif key == 'safety':
+                self.safety_boundary_pub.publish(marker)
+            elif key == 'warning':
+                self.warning_boundary_pub.publish(marker)
+
+    def _create_boundary_marker(self, marker_id, namespace, bounds, color, line_width, timestamp):
+        """Create a rectangular boundary marker"""
+        marker = Marker()
+        marker.header.frame_id = "map"
+        marker.header.stamp = timestamp if timestamp is not None else self.get_clock().now().to_msg()
+        marker.ns = namespace
+        marker.id = marker_id
+        marker.type = Marker.LINE_STRIP
+        marker.action = Marker.ADD
+        marker.scale.x = line_width
+        marker.color = color
+        marker.pose.orientation.w = 1.0  # No rotation
+        
+        # Extract bounds
+        x_min, x_max, y_min, y_max = bounds
+        
+        # Create rectangle points (closed loop)
+        points = [
+            Point(x=float(x_min), y=float(y_min), z=0.0),  # Bottom-left
+            Point(x=float(x_max), y=float(y_min), z=0.0),  # Bottom-right  
+            Point(x=float(x_max), y=float(y_max), z=0.0),  # Top-right
+            Point(x=float(x_min), y=float(y_max), z=0.0),  # Top-left
+            Point(x=float(x_min), y=float(y_min), z=0.0),  # Back to start (close rectangle)
+        ]
+        
+        marker.points = points
+        return marker
+
+    def _generate_path_points(self):
+        """Pre-generate path points for performance (called once)"""
+        points = []
+        for theta in np.linspace(0, 150, 500):  # Adjust range as needed
+            p = self.param_path.path(theta)
+            # Cast NumPy floats to native Python floats
+            points.append(Point(x=float(p[0]), y=float(p[1]), z=0.0))
+        return points
+
+    def _generate_boundary_markers(self):
+        """Pre-generate boundary marker templates (called once)"""
+        markers = {}
+        
+        # Core Operating Area (-5, 25) - Red dashed rectangle
+        markers['core'] = self._create_boundary_marker(
+            marker_id=10,
+            namespace="core_boundary", 
+            bounds=(-5.0, 25.0, -5.0, 25.0),
+            color=ColorRGBA(r=1.0, g=0.0, b=0.0, a=0.8),  # Red
+            line_width=0.15,
+            timestamp=None  # Will be updated per publish
+        )
+        
+        # Safety Buffer (-10, 30) - Yellow dashed rectangle  
+        markers['safety'] = self._create_boundary_marker(
+            marker_id=11,
+            namespace="safety_boundary",
+            bounds=(-10.0, 30.0, -10.0, 30.0),
+            color=ColorRGBA(r=1.0, g=1.0, b=0.0, a=0.6),  # Yellow
+            line_width=0.12,
+            timestamp=None  # Will be updated per publish
+        )
+        
+        # Warning Zone (-15, 35) - Orange dashed rectangle
+        markers['warning'] = self._create_boundary_marker(
+            marker_id=12,
+            namespace="warning_boundary",
+            bounds=(-15.0, 35.0, -15.0, 35.0),
+            color=ColorRGBA(r=1.0, g=0.5, b=0.0, a=0.4),  # Orange
+            line_width=0.10,
+            timestamp=None  # Will be updated per publish
+        )
+        
+        return markers
 
 
 def main(args=None):

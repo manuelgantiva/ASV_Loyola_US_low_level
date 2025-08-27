@@ -27,7 +27,7 @@ class TransceiverXbeeNode(Node):
         self.publisher_ = self.create_publisher(XbeeObserver, "/" + my_id +"/comunication/xbee_observer", 1)
         self.subscriber_ = self.create_subscription(StateObserver, "/" + my_id +"/observer/state_observer",
                         self.callback_state_observer,qos_profile_sensor_data)
-        self.timer_ = self.create_timer(0.1, self.publish_states)
+        self.timer_ = self.create_timer(0.2, self.publish_states)  # Reduced from 10Hz to 5Hz for performance
         self.get_logger().info("Transceiver Xbee Node in " + my_id + " has been started")
 
     def publish_states(self):

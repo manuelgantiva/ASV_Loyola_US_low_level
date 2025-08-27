@@ -48,6 +48,14 @@ class ASVPPONode(Node):
         self._pending_state = None  # buffer a state if it arrives before model is ready
         self.episode_id = 0
         self.step_idx = 0
+        
+        # Training statistics
+        self.training_stats = {
+            'total_training_sessions': 0,
+            'total_transitions_trained': 0,
+            'average_buffer_size_at_training': 0,
+            'memory_resets': 0
+        }
         self.episode_rewards = []
         self.current_episode_reward = 0.0
 
@@ -113,9 +121,13 @@ class ASVPPONode(Node):
                 dtype=np.float32
             )
             
-            # Create training buffer
+            # Create training buffer with optimized configuration
+            self.buffer_size = 200  # 2x larger for better experience diversity
+            self.min_training_size = 50  # Train when 50 transitions available
+            self.memory_limit = 500  # Reset buffer when it hits memory limit
+            
             self.training_buffer = RolloutBuffer(
-                buffer_size=100,  # Smaller buffer size so it fills faster during testing
+                buffer_size=self.buffer_size,
                 observation_space=self.observation_space,
                 action_space=self.action_space,
                 device=self.model.device,
@@ -131,8 +143,8 @@ class ASVPPONode(Node):
             self.dones = np.zeros(1, dtype=bool)  # Episode termination flags
             self.episode_start = np.zeros(1, dtype=bool)  # Episode start flags
 
-            # Create training timer (every 30 seconds)
-            self.training_timer = self.create_timer(30.0, self.train_model)
+            # Create optimized training timer (every 10 seconds instead of 30)
+            self.training_timer = self.create_timer(10.0, self.train_model)
             
             self.reset_timer = self.create_timer(20.0, self.check_and_reset)  # Reduced frequency
 
@@ -218,10 +230,18 @@ class ASVPPONode(Node):
                     noise = np.random.normal(0, exploration_factor * 0.3, actions_np.shape)
                     actions_np = np.clip(actions_np + noise, -1, 1)
                     
-            # If training is enabled, add to buffer
+            # If training is enabled, add to buffer with smart memory management
             if self.training_enabled and self.last_obs is not None and self.last_action is not None:
                 try:
                     buffer_size = len(self.training_buffer.observations)
+                    
+                    # Check if we need to reset buffer due to memory limit
+                    if buffer_size >= self.memory_limit:
+                        self.training_stats['memory_resets'] += 1
+                        self.get_logger().info(f"Buffer reached memory limit ({buffer_size}/{self.memory_limit}), resetting for memory management - Reset #{self.training_stats['memory_resets']}")
+                        self.training_buffer.reset()
+                        buffer_size = 0
+                    
                     # Only add to buffer if there's space
                     if buffer_size < self.training_buffer.buffer_size:
                         with th.no_grad():
@@ -514,23 +534,23 @@ class ASVPPONode(Node):
             self.get_logger().error(f"Failed to initialize rollout file: {e}")
 
     def train_model(self):
-        """Train the PPO model on collected transitions."""
+        """Train the PPO model on collected transitions with progressive approach."""
         if not self.training_enabled:
             return
             
         # Check how many valid transitions we have
         buffer_size = len(self.training_buffer.observations)
-        buffer_capacity = self.training_buffer.buffer_size
         
-        # Log buffer status
-        self.get_logger().info(f"Buffer status: {buffer_size}/{buffer_capacity} transitions")
+        # Log buffer status with memory information
+        memory_usage_kb = (buffer_size * 76) / 1024  # Approximate memory usage
+        self.get_logger().info(f"Buffer status: {buffer_size}/{self.buffer_size} transitions ({memory_usage_kb:.1f} KB)")
         
-        # Only train if we have enough data
-        if not self.training_buffer.full:
-            self.get_logger().info(f"Not enough data for training: buffer is not full yet ({buffer_size}/{buffer_capacity})")
+        # Progressive training: train when we have minimum viable batch (not when full)
+        if buffer_size < self.min_training_size:
+            self.get_logger().info(f"Not enough data for training: {buffer_size}/{self.min_training_size} minimum required")
             return
             
-        self.get_logger().info(f"Training PPO model on {buffer_size} transitions")
+        self.get_logger().info(f"Training PPO model on {buffer_size} transitions (progressive training)")
         
         try:
             # Compute returns and advantages
@@ -621,13 +641,34 @@ class ASVPPONode(Node):
                     self.get_logger().info(f"Early stopping at epoch {epoch+1} due to reaching max KL: {mean_kl:.6f}")
                     break
             
+            # Update training statistics
+            self.training_stats['total_training_sessions'] += 1
+            self.training_stats['total_transitions_trained'] += buffer_size
+            self.training_stats['average_buffer_size_at_training'] = (
+                self.training_stats['total_transitions_trained'] / 
+                self.training_stats['total_training_sessions']
+            )
+            
+            # Log training statistics
+            self.get_logger().info(
+                f"Training complete. Sessions: {self.training_stats['total_training_sessions']}, "
+                f"Total transitions: {self.training_stats['total_transitions_trained']}, "
+                f"Avg buffer size: {self.training_stats['average_buffer_size_at_training']:.1f}"
+            )
+            
             # Save model after training
             model_path = os.path.join(self.rollout_dir, f"ppo_model_ep{self.episode_id}.zip")
             self.model.save(model_path)
             self.get_logger().info(f"Saved trained model to {model_path}")
             
-            # Reset buffer
-            self.training_buffer.reset()
+            # Smart buffer management: reset strategically
+            current_buffer_size = len(self.training_buffer.observations)
+            if current_buffer_size >= self.memory_limit * 0.8:  # Reset when 80% of memory limit
+                self.training_stats['memory_resets'] += 1
+                self.get_logger().info(f"Resetting buffer for memory management ({current_buffer_size}/{self.memory_limit}) - Reset #{self.training_stats['memory_resets']}")
+                self.training_buffer.reset()
+            else:
+                self.get_logger().info(f"Keeping buffer for continuous learning ({current_buffer_size}/{self.memory_limit})")
         except Exception as e:
             self.get_logger().error(f"Error during training: {e}")
 
@@ -705,6 +746,25 @@ class ASVPPONode(Node):
         
         if self.latest_obs is not None:
             self.last_position = self.latest_obs[:12].copy()
+
+    def get_training_insights(self):
+        """Get current training performance insights."""
+        if not self.training_enabled:
+            return "Training disabled"
+            
+        buffer_size = len(self.training_buffer.observations) if hasattr(self, 'training_buffer') else 0
+        memory_usage_kb = (buffer_size * 76) / 1024
+        
+        insights = {
+            'buffer_status': f"{buffer_size}/{self.buffer_size if hasattr(self, 'buffer_size') else 100}",
+            'memory_usage_kb': f"{memory_usage_kb:.1f} KB",
+            'training_sessions': self.training_stats['total_training_sessions'],
+            'total_transitions': self.training_stats['total_transitions_trained'],
+            'memory_resets': self.training_stats['memory_resets'],
+            'ready_for_training': buffer_size >= (self.min_training_size if hasattr(self, 'min_training_size') else 50)
+        }
+        
+        return insights
 
 def main(args=None):
     rclpy.init(args=args)

@@ -44,6 +44,7 @@ def launch_setup(context, *args, **kwargs):
             namespace=f'agent_{i}',
             parameters=[{
                 'robot_description': robot_description,
+                'publish_frequency': 15.0,  # Reduced from default 30Hz to 15Hz for performance
                 # The frame_prefix is not needed because the xacro file handles it
                 # 'frame_prefix': f'agent_{i}/' 
             }],
