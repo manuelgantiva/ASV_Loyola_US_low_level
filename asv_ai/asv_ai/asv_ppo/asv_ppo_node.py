@@ -89,12 +89,13 @@ class ASVPPONode(Node):
         # Create a dummy environment to get space information
         dummy_env = SimEnv(num_agents=self.num_agents)
 
-        if self.model_path and os.path.exists(self.model_path):
-            self.model = PPO.load(self.model_path, env=dummy_env)
-            self.get_logger().info(f'Loaded model from {self.model_path}')
+        # Smart model loading: try multiple sources in order of preference
+        loaded_model_path = self._find_and_load_best_model(dummy_env)
+        if loaded_model_path:
+            self.get_logger().info(f'Successfully loaded model from {loaded_model_path}')
         else:
             self.model = PPO("MlpPolicy", dummy_env, verbose=0)
-            self.get_logger().info('No model found, using new PPO model.')
+            self.get_logger().info('No existing model found, starting with new PPO model.')
 
         self.model_ready = True
         # If we received a state while loading, process it now
@@ -661,6 +662,11 @@ class ASVPPONode(Node):
             self.model.save(model_path)
             self.get_logger().info(f"Saved trained model to {model_path}")
             
+            # Also save as latest_model.zip for easy discovery
+            latest_model_path = os.path.join(self.rollout_dir, "latest_model.zip")
+            self.model.save(latest_model_path)
+            self.get_logger().info(f"Saved latest model to {latest_model_path}")
+            
             # Smart buffer management: reset strategically
             current_buffer_size = len(self.training_buffer.observations)
             if current_buffer_size >= self.memory_limit * 0.8:  # Reset when 80% of memory limit
@@ -746,6 +752,81 @@ class ASVPPONode(Node):
         
         if self.latest_obs is not None:
             self.last_position = self.latest_obs[:12].copy()
+
+    def _find_and_load_best_model(self, dummy_env):
+        """Smart model loading: try multiple sources in order of preference.
+        
+        Returns the path of the loaded model, or None if no model was loaded.
+        """
+        model_candidates = []
+        
+        # 1. First priority: explicit model_path parameter
+        if self.model_path and os.path.exists(self.model_path):
+            model_candidates.append((self.model_path, "explicit parameter"))
+        
+        # 2. Second priority: latest_model.zip in rollout directory  
+        latest_model_path = os.path.join(self.rollout_dir, "latest_model.zip")
+        if os.path.exists(latest_model_path):
+            model_candidates.append((latest_model_path, "latest model"))
+        
+        # 3. Third priority: latest episode model in rollout directory
+        if os.path.exists(self.rollout_dir):
+            # Look for episode-specific models (ppo_model_ep*.zip)
+            episode_models = []
+            for filename in os.listdir(self.rollout_dir):
+                if filename.startswith('ppo_model_ep') and filename.endswith('.zip'):
+                    try:
+                        # Extract episode number from filename
+                        episode_num = int(filename.split('ep')[1].split('.')[0])
+                        full_path = os.path.join(self.rollout_dir, filename)
+                        episode_models.append((episode_num, full_path))
+                    except (ValueError, IndexError):
+                        continue
+            
+            # Sort by episode number (latest first)
+            if episode_models:
+                episode_models.sort(key=lambda x: x[0], reverse=True)
+                latest_episode_model = episode_models[0][1]
+                model_candidates.append((latest_episode_model, f"latest episode model (ep {episode_models[0][0]})"))
+            
+            # 4. Fourth priority: final model
+            final_model_path = os.path.join(self.rollout_dir, "ppo_model_final.zip")
+            if os.path.exists(final_model_path):
+                model_candidates.append((final_model_path, "final model"))
+        
+        # 5. Fifth priority: look in common locations
+        common_paths = [
+            os.path.expanduser("~/Desktop/ASV_Rollouts/latest_model.zip"),
+            os.path.expanduser("~/Desktop/ASV_Rollouts/ppo_model_final.zip"),
+            "./latest_model.zip",
+            "./ppo_model.zip",
+            "./models/latest_model.zip",
+            "./models/ppo_model.zip"
+        ]
+        
+        for path in common_paths:
+            if os.path.exists(path):
+                model_candidates.append((path, f"common location: {path}"))
+        
+        # Try to load the first available model
+        for model_path, description in model_candidates:
+            try:
+                self.get_logger().info(f"Attempting to load model from {description}: {model_path}")
+                self.model = PPO.load(model_path, env=dummy_env)
+                
+                # Verify the model loaded correctly
+                if hasattr(self.model, 'policy') and self.model.policy is not None:
+                    self.get_logger().info(f"✓ Successfully loaded and verified model from {description}")
+                    return model_path
+                else:
+                    self.get_logger().warn(f"✗ Model loaded but appears invalid from {description}")
+                    
+            except Exception as e:
+                self.get_logger().warn(f"✗ Failed to load model from {description}: {str(e)}")
+                continue
+        
+        # No model could be loaded
+        return None
 
     def get_training_insights(self):
         """Get current training performance insights."""
