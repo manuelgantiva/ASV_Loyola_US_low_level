@@ -131,7 +131,14 @@ The `my_id` argument specifies the vehicle to simulate and can take one of the f
 If you want to enable recording during the simulation (to generate `rosbag` files for later processing), use this alternative command:
 
 ```bash
+
 ros2 launch asv_bringup simulator_test.launch.py my_id:=1 rec:=true
 ```
 
 The recorded rosbag files can be processed and analyzed using the tools available in the following [repository](https://github.com/manuelgantiva/ASV_ROS2_to_Matlab).
+
+## Citation
+
+If you use content from this repository or refer to the linked chapter, please cite it as:
+
+> Manuel Gantiva, Thalia Morel, Guillermo Bejarano, Pablo Millan, and Federico Peralta. 2025. *From Concept to Control: Development of an Advanced ASV Platform for Testing*. In Press Springer Nature, *Smart Water Quality Monitoring* (pp. xx–xx). Springer Nature.
