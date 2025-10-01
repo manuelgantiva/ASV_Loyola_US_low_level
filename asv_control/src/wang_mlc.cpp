@@ -3,6 +3,7 @@
 #include "geometry_msgs/msg/vector3.hpp"            //Interface reference_llc x->u y->r z->psi
 #include "std_msgs/msg/float64.hpp"                 //Interface ref vel mid level controller
 #include "asv_interfaces/msg/state_observer.hpp"    //Interface state observer
+#include "asv_interfaces/msg/reference_llc.hpp"
 
 #include <cmath>
 #include <thread>
@@ -65,7 +66,7 @@ public:
             this, std::placeholders::_1), options_sensors_);
         subscriber_state = this-> create_subscription<mavros_msgs::msg::State>("/" + my_id + "/mavros/state",1,
                 std::bind(&WangMlcNode::callbackStateData, this, std::placeholders::_1), options_sensors_);
-        publisher_llc = this-> create_publisher<geometry_msgs::msg::Vector3>("/" + my_id + "/control/reference_llc",1);
+        publisher_llc = this-> create_publisher<asv_interfaces::msg::ReferenceLlc>("/" + my_id + "/control/reference_llc",1);
         publisher_error = this-> create_publisher<geometry_msgs::msg::Vector3>("/" + my_id + "/control/error_mlc",1);
 
         timer_ = this -> create_wall_timer(std::chrono::milliseconds(int(Ts*1000.0)),
@@ -84,9 +85,9 @@ private:
             w=0.0;
             laps=0;
         }else{
-            if(count > 7){
+            if(count > 2){
                 //auto start = std::chrono::high_resolution_clock::now();
-                auto msg = geometry_msgs::msg::Vector3();
+                auto msg = asv_interfaces::msg::ReferenceLlc();
                 auto msg_e = geometry_msgs::msg::Vector3();
 
                 float x_hat_i;
@@ -166,10 +167,18 @@ private:
                 if(u_ref > u_max){
                     u_ref = u_max;
                 }
-                
-                msg.x = u_ref;
-                msg.y = r_ref;
-                msg.z = psi_ref;
+
+                std::vector<geometry_msgs::msg::Vector3> refs_;
+                refs_.reserve(static_cast<size_t>(1));
+
+                auto msg_i = geometry_msgs::msg::Vector3();
+                msg_i.x = u_ref;
+                msg_i.y = r_ref;
+                msg_i.z = psi_ref;
+                refs_.push_back(msg_i);
+
+                msg.references = refs_;
+                msg.u_tar.data = u_tar;
 
                 publisher_llc->publish(msg);
                 publisher_error->publish(msg_e);
@@ -180,10 +189,16 @@ private:
                 // Imprime el tiempo con dos decimales fijos
                 // RCLCPP_INFO(this->get_logger(), "Exec time: %.2f milliseconds", miliseconds);
             }else{
-                auto msg = geometry_msgs::msg::Vector3();
-                msg.x = 0.0;
-                msg.y = 0.0;
-                msg.z = 0.0; 
+                auto msg = asv_interfaces::msg::ReferenceLlc();
+                std::vector<geometry_msgs::msg::Vector3> refs_;
+                refs_.reserve(static_cast<size_t>(1));
+                auto msg_i = geometry_msgs::msg::Vector3();
+                msg_i.x = 0.5;
+                msg_i.y = 0.0;
+                msg_i.z = 0.0;
+                refs_.push_back(msg_i);
+                msg.references = refs_;
+                msg.u_tar.data = 0.0;
                 count=count+1;
                 publisher_llc->publish(msg);
             }
@@ -230,33 +245,37 @@ private:
         Target result;
         switch(path_d) {
             case 0:
-                result.xp = -w;
-                result.yp = 0;
-                result.dxp = -1;
+                result.xp = w+10;
+                result.yp = 10;
+                result.dxp = 1;
                 result.dyp = 0;
                 break;
             case 1:
-                result = curva_sim_2_6(w);
+                result.xp = 30-30*cos(w);
+                result.yp = 30*sin(w);
+                result.dxp = 30*sin(w);
+                result.dyp = 30*cos(w);
+                // result = curva_sim_2_6(w);
                 // result = curva_ala_1_2(w);
                 break;
             case 2:
-                result = curva_sim_2_8(w);
+                // result = curva_sim_2_8(w);
                 // result = curva_ala_1_4(w);
                 break;
             case 3:
-                result = curva_sim_2_10(w);
+                // result = curva_sim_2_10(w);
                 // result = curva_ala_1_6(w);
                 break;
             case 4:
-                result = curva_sim_3_6(w);
+                // result = curva_sim_3_6(w);
                 // result = curva_ala_2_2(w);
                 break;
             case 5:
-                result = curva_sim_3_8(w);
+                // result = curva_sim_3_8(w);
                 // result = curva_ala_2_4(w);
                 break;
             case 6:
-                result = curva_sim_3_10(w);
+                // result = curva_sim_3_10(w);
                 // result = curva_ala_2_6(w);
                 break;
             case 7:
@@ -447,7 +466,7 @@ private:
     rclcpp::Subscription<asv_interfaces::msg::StateObserver>::SharedPtr subscriber_states_obs_;
     rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr subscriber_references_;
     rclcpp::Subscription<mavros_msgs::msg::State>::SharedPtr subscriber_state;
-    rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr publisher_llc;
+    rclcpp::Publisher<asv_interfaces::msg::ReferenceLlc>::SharedPtr publisher_llc;
     rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr publisher_error;
     rclcpp::TimerBase::SharedPtr timer_;
 

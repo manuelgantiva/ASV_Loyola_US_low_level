@@ -190,6 +190,15 @@ def generate_launch_description():
         ]
     )
 
+    mlc_target_node = Node(
+        package="asv_comunication",
+        executable="mlc_target",
+        namespace= namespace_comunication,
+        parameters = [
+            {'my_id': my_namespace}
+        ]
+    )
+
     transceiver_xbee_node = Node(
         package="asv_comunication",
         executable="transceiver_xbee.py",
@@ -238,9 +247,10 @@ def generate_launch_description():
             config],
     )
 
-    mpc_llc_node = Node(
-        package="asv_control",
-        executable="mpc_llc",
+    mpc_llc_rt_node = Node(
+        package="asv_acados",
+        executable="mpc_llc_rt",
+        name="mpc_llc",
         namespace= namespace_control,
         parameters = [{'my_id': my_namespace},
             config],
@@ -252,6 +262,15 @@ def generate_launch_description():
         namespace= namespace_control,
         parameters = [{'my_id': my_namespace},
                 config],
+    )
+
+    mpc_mlc_pf_rt_node = Node(
+        package="asv_acados",
+        executable="mpc_mlc_pf_rt",
+        name="mpc_mlc_pf",
+        namespace= namespace_control,
+        parameters = [{'my_id': my_namespace},
+            config],
     )
 
 
@@ -331,6 +350,7 @@ def generate_launch_description():
     nodes.append(record)
 
     # nodes.append(transceiver_xbee_node)
+    # nodes.append(mlc_target_node)
 
     ###################################################################
     ##-----------------------Observer Nodes--------------------------##
@@ -344,12 +364,15 @@ def generate_launch_description():
     ###################################################################
     ##-----------------------Control Nodes---------------------------##
     ################################################################### 
-    # nodes.append(asv_tf_broadcast_node)
+    nodes.append(asv_tf_broadcast_node)
     nodes.append(pwm_mapper_node)
-    nodes.append(ifac_llc_node)
-    nodes.append(mpc_llc_node)
+    # nodes.append(ifac_llc_node)
+    nodes.append(mpc_llc_rt_node)
     nodes.append(mux_llc_node)
-    nodes.append(wang_mlc_node)
+    # nodes.append(wang_mlc_node)
+    nodes.append(mpc_mlc_pf_rt_node)
+    
+    
     
     return LaunchDescription(
         [arg_my_id, arg_rec, param_id,

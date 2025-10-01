@@ -238,9 +238,10 @@ def generate_launch_description():
             config],
     )
 
-    mpc_llc_node = Node(
-        package="asv_control",
-        executable="mpc_llc",
+    mpc_llc_rt_node = Node(
+        package="asv_acados",
+        executable="mpc_llc_rt",
+        name="mpc_llc",
         namespace= namespace_control,
         parameters = [{'my_id': my_namespace},
             config],
@@ -343,10 +344,10 @@ def generate_launch_description():
     ###################################################################
     ##-----------------------Control Nodes---------------------------##
     ################################################################### 
-    # nodes.append(asv_tf_broadcast_node)
+    nodes.append(asv_tf_broadcast_node)
     nodes.append(pwm_mapper_node)
-    nodes.append(mpc_llc_node)
-    nodes.append(ifac_llc_node)
+    nodes.append(mpc_llc_rt_node)
+    # nodes.append(ifac_llc_node)
     nodes.append(mux_llc_node)
     #nodes.append(wang_mlc_node)
     

@@ -34,7 +34,7 @@ add_executable(rc_handler src/rc_handler.cpp)
 ament_target_dependencies(rc_handler rclcpp example_interfaces mavros_msgs asv_interfaces)
 
 add_executable(ref_llc src/ref_llc.cpp)
-ament_target_dependencies(ref_llc rclcpp std_msgs mavros_msgs geometry_msgs)
+ament_target_dependencies(ref_llc rclcpp std_msgs mavros_msgs geometry_msgs asv_interfaces)
 
 add_executable(ref_mlc src/ref_mlc.cpp)
 ament_target_dependencies(ref_mlc rclcpp std_msgs mavros_msgs)
@@ -45,6 +45,9 @@ ament_target_dependencies(apm_llc rclcpp geometry_msgs mavros_msgs asv_interface
 add_executable(imu_fix src/imu_fix.cpp)
 ament_target_dependencies(imu_fix rclcpp std_msgs geometry_msgs sensor_msgs mavros_msgs)
 
+add_executable(mlc_target src/mlc_target.cpp)
+ament_target_dependencies(mlc_target rclcpp tf2 tf2_ros geometry_msgs mavros_msgs asv_interfaces)
+
 # Install Targets
 install(TARGETS
   bag_record
@@ -53,6 +56,7 @@ install(TARGETS
   ref_mlc
   apm_llc
   imu_fix
+  mlc_target
 DESTINATION lib/${PROJECT_NAME})
 
 # Install Scripts python

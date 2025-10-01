@@ -3,6 +3,7 @@
 #include "geometry_msgs/msg/vector3.hpp"            //Interface reference_llc x->u y->r z->psi
 #include "asv_interfaces/msg/pwm_values.hpp"        //Interface pwm values override
 #include "asv_interfaces/msg/state_observer.hpp"    //Interface state observer
+#include "asv_interfaces/msg/reference_llc.hpp"
 
 
 #include <cmath>
@@ -94,7 +95,7 @@ public:
         subscriber_states_obs_ = this-> create_subscription<asv_interfaces::msg::StateObserver>(
             "/" + my_id + "/observer/state_observer",rclcpp::SensorDataQoS(), std::bind(&IfacLlcNode::callbackStates,
             this, std::placeholders::_1), options_sensors_);
-        subscriber_references_ = this-> create_subscription<geometry_msgs::msg::Vector3>(
+        subscriber_references_ = this-> create_subscription<asv_interfaces::msg::ReferenceLlc>(
             "/" + my_id + "/control/reference_llc", 1, std::bind(&IfacLlcNode::callbackVelReference,
             this, std::placeholders::_1), options_sensors_);
         subscriber_state = this-> create_subscription<mavros_msgs::msg::State>("/" + my_id + "/mavros/state",1,
@@ -124,8 +125,9 @@ private:
                 std::lock_guard<std::mutex> lock(mutex_);
                 u_hat = 0.0;
                 r_hat= 0.0;
-                u_ref = 0.2;
+                u_ref = 0.5;
                 r_ref = 0.0;
+                flag_ref = false;
             }
         }else{
             //auto start = std::chrono::high_resolution_clock::now();
@@ -158,7 +160,11 @@ private:
                     r_ref_i=r_ref;
                     u_dot_ref_i=u_dot_ref;
                     r_dot_ref_i=r_dot_ref;
-                    psi_ref_i=psi_ref;
+                    if(flag_ref){
+                        psi_ref_i= psi_ref;
+                    }else{
+                        psi_ref_i= psi_hat;
+                    }    
                 }
 
                 float error = (u_hat_i-u_ref_i);
@@ -323,18 +329,20 @@ private:
         }
     }
 
-    void callbackVelReference(const geometry_msgs::msg::Vector3::SharedPtr msg)
+    void callbackVelReference(const asv_interfaces::msg::ReferenceLlc::SharedPtr msg)
     {
-   
-        float u_dot = derivationFilter(msg->x, memory_u, a, b);
-        float r_dot = derivationFilter(msg->y, memory_r, a, b);
+        const auto &refs = msg->references;
+        const auto &vec = refs[0];
+        float u_dot = derivationFilter(vec.x, memory_u, a, b);
+        float r_dot = derivationFilter(vec.y, memory_r, a, b);
         {
             std::lock_guard<std::mutex> lock(mutex_);
-            u_ref = msg->x;
-            r_ref = msg->y;
+            u_ref = vec.x;
+            r_ref = vec.y;
             u_dot_ref = u_dot;
             r_dot_ref = r_dot;
-            psi_ref = msg->z;
+            psi_ref = vec.z;
+            flag_ref = true;
         }
     }
 
@@ -437,8 +445,8 @@ private:
 
     uint16_t PWM_left_ant = 1500, PWM_right_ant = 1500;
     int delta_pwm;
-    bool armed = false;
-    float u_hat = 0, psi_hat = 0, r_hat = 0, sig_u = 0, sig_r = 0, u_ref = 0.2, psi_ref = 0, r_ref = 0, u_dot_ref = 0, r_dot_ref = 0;
+    bool armed = false, flag_ref = false;
+    float u_hat = 0, psi_hat = 0, r_hat = 0, sig_u = 0, sig_r = 0, u_ref = 0.5, psi_ref = 0, r_ref = 0, u_dot_ref = 0, r_dot_ref = 0;
     float c_ref;
     int count=0;
     float IGu_prev = 0.0, IGr_prev = 0.0;
@@ -464,7 +472,7 @@ private:
     std::vector<float> memory_r; // Memoria para mantener los valores anteriores
 
     rclcpp::Subscription<asv_interfaces::msg::StateObserver>::SharedPtr subscriber_states_obs_;
-    rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr subscriber_references_;
+    rclcpp::Subscription<asv_interfaces::msg::ReferenceLlc>::SharedPtr subscriber_references_;
     rclcpp::Subscription<mavros_msgs::msg::State>::SharedPtr subscriber_state;
     rclcpp::Publisher<asv_interfaces::msg::PwmValues>::SharedPtr publisher_pwm;
     rclcpp::TimerBase::SharedPtr timer_;

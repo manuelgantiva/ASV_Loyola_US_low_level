@@ -3,6 +3,7 @@
 #include "mavros_msgs/msg/state.hpp"                //Interface state mavros
 #include "geometry_msgs/msg/vector3.hpp"            //Interface reference_llc x->u y->r z->psi
 #include "std_msgs/msg/float64.hpp"                 //Interface compass initial psi
+#include "asv_interfaces/msg/reference_llc.hpp"
 
 #include <cmath>
 
@@ -24,13 +25,20 @@ public:
         my_id = (this->get_parameter("my_id").as_string());
         reference_mode_ = this->get_parameter("reference_mode").as_bool();
 
+        // Inicialización a cero (opcional, normalmente ROS msgs ya inicializan en cero)
+        for (auto &v : history) {
+            v.x = 0.0f;
+            v.y = 0.0f;
+            v.z = 0.0f;
+        }
+
         subscriber_compass = this-> create_subscription<std_msgs::msg::Float64>("/" + my_id + "/mavros/global_position/compass_hdg",rclcpp::SensorDataQoS(),
                 std::bind(&RefLlcNode::callbackCompassData, this, std::placeholders::_1));
         subscriber_rc_in = this-> create_subscription<mavros_msgs::msg::RCIn>("/" + my_id + "/mavros/rc/in",10,
                 std::bind(&RefLlcNode::callbackRcIn, this, std::placeholders::_1));
         subscriber_mavros_state = this-> create_subscription<mavros_msgs::msg::State>("/" + my_id + "/mavros/state",1,
                 std::bind(&RefLlcNode::callbackMavrosState, this, std::placeholders::_1));
-        publisher_ref = this-> create_publisher<geometry_msgs::msg::Vector3>("/" + my_id + "/control/reference_llc",1);
+        publisher_ref = this-> create_publisher<asv_interfaces::msg::ReferenceLlc>("/" + my_id + "/control/reference_llc",1);
     	RCLCPP_INFO(this->get_logger(), "Reference Vel Node in %s has been started.", my_id.c_str());
     }
 
@@ -42,27 +50,58 @@ private:
             float u_ref=0.0;
             float r_ref=0.0;
 
-            auto ref = geometry_msgs::msg::Vector3();
-
             u_ref = normalizePwmSurge(msg->channels[2]);
             r_ref = normalizePwmYaw(msg->channels[0]);
 
-            if(reference_mode_ == true){
-                ref.x = u_ref;
-                ref.y = r_ref;
-            }else{
+            if(reference_mode_ == false){
                 float periodo = 10.0; // Período en segundos
                 u_ref = u_ref/2;
                 r_ref = r_ref/2;
-                ref.x = u_ref*(sin((2 * PI / periodo) * (counter_*0.1)))+u_ref;
-                ref.y = r_ref*(sin((2 * PI / periodo) * (counter_*0.1)))+r_ref;
+                u_ref = u_ref*(sin((2 * PI / periodo) * (counter_*0.1)))+u_ref;
+                r_ref = r_ref*(sin((2 * PI / periodo) * (counter_*0.1)))+r_ref;
                 counter_++;
             }
-                        
-            psi_act = psi_act+(ref.y*0.1);
-            ref.z = psi_act;
-            publisher_ref->publish(ref);
+
+            auto msg_ref = asv_interfaces::msg::ReferenceLlc();
+
+            std::vector<geometry_msgs::msg::Vector3> refs_;
+            refs_.reserve(static_cast<size_t>(N_t));
+
+            for (int i = 0; i < 10; ++i) {
+                refs_.push_back(history[i]);
+            }
+
+            float psi_i = psi_act;
+            psi_act = psi_act+(r_ref*0.1);
+            for (int i = 10; i < N_t; i++)
+            {
+                auto msg_i = geometry_msgs::msg::Vector3();
+                msg_i.x = u_ref;
+                msg_i.y = r_ref;
+                msg_i.z = psi_i + 0.1*msg_i.y; //psi_ref;
+                psi_i = msg_i.z;
+                refs_ .emplace_back(std::move(msg_i));
+            }
+
+            msg_ref.references = refs_;
+
+            publisher_ref->publish(msg_ref);
+
+            geometry_msgs::msg::Vector3 current_value;
+            current_value.x = u_ref;
+            current_value.y = r_ref;
+            current_value.z = psi_act; // valor calculado en el paso actual
+
+            updateHistory(current_value);
         }
+    }
+
+    void updateHistory(const geometry_msgs::msg::Vector3 &new_value) {
+        for (size_t i = 1; i < history.size(); ++i) {
+            history[i-1] = history[i];
+        }
+        // Insertar el nuevo valor en la última posición
+        history[history.size() - 1] = new_value;
     }
 
     float normalizePwmSurge(uint16_t PWM){
@@ -84,7 +123,7 @@ private:
         }
         // Cuantizar 6 pasos
         ref_vel = round(ref_vel / 0.1) * 0.1;
-        ref_vel = ref_vel * 1.5;
+        ref_vel = ref_vel * 2.0;
         return ref_vel;
     }
 
@@ -124,19 +163,27 @@ private:
         if(msg->armed == true && msg->armed!=armed){
             counter_ = 0;
             psi_act = init_psi;
+            for (auto &v : history) {
+                v.x = 0.0f;
+                v.y = 0.0f;
+                v.z = init_psi;
+            }
             RCLCPP_INFO(this->get_logger(), "Initial psi= %f", psi_act);
         }
         armed= msg->armed;
     }
 
     bool armed = false;
-    float init_psi = 0.0, psi_act = 0.0;
+    float init_psi = 0.0, psi_act = 0.0, N_t = 30;
     bool reference_mode_;
     int counter_=0;
     rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr subscriber_compass;
     rclcpp::Subscription<mavros_msgs::msg::RCIn>::SharedPtr subscriber_rc_in;
     rclcpp::Subscription<mavros_msgs::msg::State>::SharedPtr subscriber_mavros_state;
-    rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr publisher_ref;
+    rclcpp::Publisher<asv_interfaces::msg::ReferenceLlc>::SharedPtr publisher_ref;
+
+    // Historial fijo de 10 posiciones
+    std::array<geometry_msgs::msg::Vector3, 10> history;
 };
 
 int main(int argc, char **argv)

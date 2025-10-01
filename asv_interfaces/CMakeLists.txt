@@ -19,6 +19,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/StateNeighbor.msg"
   "msg/StateObserver.msg"
   "msg/XbeeObserver.msg"
+  "msg/ReferenceLlc.msg"
   "srv/SetObs.srv"
   "srv/SetLlc.srv"
   #"srv/ComputeRectangleArea.srv"

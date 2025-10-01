@@ -42,7 +42,6 @@ public:
         this-> declare_parameter("Wr_di", std::vector<float>{1.0, 1.0, 1.0});
         this-> declare_parameter("Wp_di", std::vector<float>{1.0, 1.0, 1.0, 1.0, 1.0, 1.0});
 
-        this-> declare_parameter("IMU_on", false);
         this-> declare_parameter("Sig_on", false);
         this-> declare_parameter("Pub_sig", false);
 
@@ -63,7 +62,6 @@ public:
         q = this->get_parameter("q").as_int();
         met = this->get_parameter("met").as_int();
 
-        IMU_on = this->get_parameter("IMU_on").as_bool();
         Sig_on = this->get_parameter("Sig_on").as_bool();
         pub_sig = static_cast<float>(this->get_parameter("Pub_sig").as_bool());
 
@@ -235,11 +233,7 @@ private:
                 IGr(1,0) = (IGr(1,0) + Sigmas(2))*0.1;
 
                 // Llamar al método de filtrado
-                if(IMU_on){
-                    Zr_next = Zonotopo::filteringR(Zr_prior, Yr_i, Cr, Rr, Eigen::MatrixXd::Identity(3, 3));
-                }else{
-                    Zr_next = Zonotopo::filteringPsi(Zr_prior, Yr_i.segment(0,1), Cr.block<1,3>(0,0), Rr.block<1,1>(0,0), Eigen::MatrixXd::Identity(3, 3));
-                }
+                Zr_next = Zonotopo::filteringR(Zr_prior, Yr_i, Cr, Rr, Eigen::MatrixXd::Identity(3, 3));
                 
                 //Calcular bandas rotacional
                 MatrixXd br = rs_z(Zr_next);
@@ -539,9 +533,9 @@ private:
                     return result;
                 }
             }
-            if (param.get_name() == "IMU_on"){
+            if (param.get_name() == "Pub_sig"){
                 RCLCPP_INFO(this->get_logger(), "changed param value");
-                IMU_on = this->get_parameter("IMU_on").as_bool();
+                pub_sig = this->get_parameter("Pub_sig").as_bool();
             }
             if (param.get_name() == "Sig_on"){
                 RCLCPP_INFO(this->get_logger(), "changed param value");
@@ -565,7 +559,7 @@ private:
 
     std::vector<double> Xu, Xv, Xr;
 
-    bool IMU_on, Sig_on, Flag = false;
+    bool Sig_on, Flag = false;
 
     float Max_w_r, Max_w_p, Max_n_p, Max_n_r, Max_n_psi;
 

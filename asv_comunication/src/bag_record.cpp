@@ -19,6 +19,7 @@
 #include "std_msgs/msg/float32_multi_array.hpp"          // Interface coeficientes polinomio
 #include "std_msgs/msg/bool.hpp"                    //Interface armed data
 #include "std_msgs/msg/float32_multi_array.hpp"     //Interface data core
+#include "asv_interfaces/msg/reference_llc.hpp"     //Interface vector reference_llc x->u y->r z->psi
 
 
 #include <rosbag2_cpp/writer.hpp>
@@ -51,13 +52,10 @@ public:
                 std::bind(&BagRecordNode::callbackVelocitiesSG, this, std::placeholders::_1));
         subscriber_setparam= this-> create_subscription<std_msgs::msg::Bool>("/" + name_id + "/observer/set_param",rclcpp::SensorDataQoS(),
                 std::bind(&BagRecordNode::callbackSetParam, this, std::placeholders::_1));        
-
         subscriber_state = this-> create_subscription<mavros_msgs::msg::State>("/" + name_id + "/mavros/state",1,
                 std::bind(&BagRecordNode::callbackMavrosState, this, std::placeholders::_1));
         subscriber_imu = this-> create_subscription<sensor_msgs::msg::Imu>("/" + name_id + "/mavros/imu/data",rclcpp::SensorDataQoS(),
                 std::bind(&BagRecordNode::callbackImuData, this, std::placeholders::_1));
-        subscriber_imu_raw = this-> create_subscription<sensor_msgs::msg::Imu>("/" + name_id + "/mavros/imu/data_raw",rclcpp::SensorDataQoS(),
-                std::bind(&BagRecordNode::callbackImuDataRaw, this, std::placeholders::_1));
         subscriber_imu_ext = this-> create_subscription<sensor_msgs::msg::Imu>("/" + name_id + "/comunication/imu_ext/data",rclcpp::SensorDataQoS(),
                 std::bind(&BagRecordNode::callbackImuDataExt, this, std::placeholders::_1));
         subscriber_gps_global = this-> create_subscription<sensor_msgs::msg::NavSatFix>("/" + name_id + "/mavros/global_position/global",
@@ -72,18 +70,16 @@ public:
                 std::bind(&BagRecordNode::callbackRcinData, this, std::placeholders::_1));
         subscriber_rc_over_in = this-> create_subscription<mavros_msgs::msg::OverrideRCIn>("/" + name_id + "/mavros/rc/override",10,
                 std::bind(&BagRecordNode::callbackRcOverinData, this, std::placeholders::_1));
-        subscriber_reference = this-> create_subscription<geometry_msgs::msg::Vector3>("/" + name_id + "/control/reference_llc",1,
+        subscriber_reference = this-> create_subscription<asv_interfaces::msg::ReferenceLlc>("/" + name_id + "/control/reference_llc",1,
                 std::bind(&BagRecordNode::callbackReference, this, std::placeholders::_1));
         subscriber_cmd_vel = this-> create_subscription<geometry_msgs::msg::Twist>("/" + name_id + "/mavros/setpoint_velocity/cmd_vel_unstamped"
                 ,1, std::bind(&BagRecordNode::callbackCmdVel, this, std::placeholders::_1));
-        subscriber_ifac_pwm = this-> create_subscription<asv_interfaces::msg::PwmValues>("/" + name_id + "/control/pwm_value_ifac",1,
-                std::bind(&BagRecordNode::callbackIfacPwm, this, std::placeholders::_1));
-        subscriber_mpc_pwm = this-> create_subscription<asv_interfaces::msg::PwmValues>("/" + name_id + "/control/pwm_value_mpc",1,
-                std::bind(&BagRecordNode::callbackMpcPwm, this, std::placeholders::_1));
         subscriber_pwm = this-> create_subscription<asv_interfaces::msg::PwmValues>("/" + name_id + "/control/pwm_values",1,
                 std::bind(&BagRecordNode::callbackPwms, this, std::placeholders::_1));
-        subscriber_mpc_state= this-> create_subscription<geometry_msgs::msg::Vector3>("/" + name_id + "/control/mpc_state",1,
-                std::bind(&BagRecordNode::callbackMpcState, this, std::placeholders::_1));
+        subscriber_mpc_state_llc= this-> create_subscription<geometry_msgs::msg::Vector3>("/" + name_id + "/control/mpc_state_llc",1,
+                std::bind(&BagRecordNode::callbackMpcStateLlc, this, std::placeholders::_1));
+        subscriber_mpc_state_mlc= this-> create_subscription<geometry_msgs::msg::Vector3>("/" + name_id + "/control/mpc_state_mlc",1,
+                std::bind(&BagRecordNode::callbackMpcStateMlc, this, std::placeholders::_1));
         subscriber_data_core= this-> create_subscription<std_msgs::msg::Float32MultiArray>("/" + name_id + "/observer/data_sensors",
                 rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackDataCore, this, std::placeholders::_1));       
         subscriber_state_bejarano= this-> create_subscription<asv_interfaces::msg::StateObserver>("/" + name_id + "/observer/state_observer_bejarano",
@@ -351,7 +347,7 @@ private:
     {
         if(armed==true){
             rclcpp::Time time_stamp = this->now();
-            writer_->write(msg, "/" + name_id + "/control/reference_llc", "geometry_msgs/msg/Vector3", time_stamp);
+            writer_->write(msg, "/" + name_id + "/control/reference_llc", "asv_interfaces/msg/ReferenceLlc", time_stamp);
         }
     }
 
@@ -363,22 +359,6 @@ private:
         }
     }
 
-    void callbackIfacPwm(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
-    {
-        if(armed==true){
-            rclcpp::Time time_stamp = this->now();
-            writer_->write(msg, "/" + name_id + "/control/pwm_value_ifac", "asv_interfaces/msg/PwmValues", time_stamp);
-        }
-    }
-
-    void callbackMpcPwm(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
-    {
-        if(armed==true){
-            rclcpp::Time time_stamp = this->now();
-            writer_->write(msg, "/" + name_id + "/control/pwm_value_mpc", "asv_interfaces/msg/PwmValues", time_stamp);
-        }
-    }
-
     void callbackPwms(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
     {
         if(armed==true){
@@ -387,11 +367,19 @@ private:
         }
     }
 
-    void callbackMpcState(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
+    void callbackMpcStateLlc(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
     {
         if(armed==true){
             rclcpp::Time time_stamp = this->now();
-            writer_->write(msg, "/" + name_id + "/control/mpc_state", "geometry_msgs/msg/Vector3", time_stamp);
+            writer_->write(msg, "/" + name_id + "/control/mpc_state_llc", "geometry_msgs/msg/Vector3", time_stamp);
+        }
+    }
+
+    void callbackMpcStateMlc(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
+    {
+        if(armed==true){
+            rclcpp::Time time_stamp = this->now();
+            writer_->write(msg, "/" + name_id + "/control/mpc_state_mlc", "geometry_msgs/msg/Vector3", time_stamp);
         }
     }
 
@@ -400,14 +388,6 @@ private:
         if(armed==true){
             rclcpp::Time time_stamp = this->now();
             writer_->write(msg, "/" + name_id + "/mavros/imu/data", "sensor_msgs/msg/Imu", time_stamp);
-        }
-    }
-
-    void callbackImuDataRaw(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
-    {
-        if(armed==true){
-            rclcpp::Time time_stamp = this->now();
-            writer_->write(msg, "/" + name_id + "/mavros/imu/data_raw", "sensor_msgs/msg/Imu", time_stamp);
         }
     }
 
@@ -503,7 +483,6 @@ private:
     rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr subscriber_setparam;
 
     rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr subscriber_imu;
-    rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr subscriber_imu_raw;
     rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr subscriber_imu_ext;
     rclcpp::Subscription<sensor_msgs::msg::NavSatFix>::SharedPtr subscriber_gps_global;
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr subscriber_gps_local;
@@ -511,12 +490,11 @@ private:
     rclcpp::Subscription<mavros_msgs::msg::RCOut>::SharedPtr subscriber_rcout;
     rclcpp::Subscription<mavros_msgs::msg::RCIn>::SharedPtr subscriber_rcin;
     rclcpp::Subscription<mavros_msgs::msg::OverrideRCIn>::SharedPtr subscriber_rc_over_in;
-    rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr subscriber_reference;
+    rclcpp::Subscription<asv_interfaces::msg::ReferenceLlc>::SharedPtr subscriber_reference;
     rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr subscriber_cmd_vel;
-    rclcpp::Subscription<asv_interfaces::msg::PwmValues>::SharedPtr subscriber_ifac_pwm;
-    rclcpp::Subscription<asv_interfaces::msg::PwmValues>::SharedPtr subscriber_mpc_pwm;
     rclcpp::Subscription<asv_interfaces::msg::PwmValues>::SharedPtr subscriber_pwm;
-    rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr subscriber_mpc_state;
+    rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr subscriber_mpc_state_llc;
+    rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr subscriber_mpc_state_mlc;
     rclcpp::Subscription<asv_interfaces::msg::StateObserver>::SharedPtr subscriber_states;
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr subscriber_pose_liu;
     rclcpp::Subscription<asv_interfaces::msg::StateObserver>::SharedPtr subscriber_state_liu;

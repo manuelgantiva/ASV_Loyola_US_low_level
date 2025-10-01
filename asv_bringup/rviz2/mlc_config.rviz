@@ -4,6 +4,7 @@ Panels:
     Name: Displays
     Property Tree Widget:
       Expanded:
+        - /RobotModel1
         - /TF1
         - /TF1/Frames1
         - /Pose1/Topic1
@@ -58,39 +59,39 @@ Visualization Manager:
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /ASV3/robot_description
+        Value: /ASV0/robot_description
       Enabled: true
       Links:
-        ASV3/Motor_derecha_link:
+        ASV0/Motor_derecha_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        ASV3/Motor_izquierda_link:
+        ASV0/Motor_izquierda_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        ASV3/asv_camera:
+        ASV0/asv_camera:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        ASV3/base_link:
+        ASV0/base_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        ASV3/camera_link_optical:
+        ASV0/camera_link_optical:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-        ASV3/gps_link:
+        ASV0/gps_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        ASV3/imu_link:
+        ASV0/imu_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
@@ -112,33 +113,19 @@ Visualization Manager:
       Enabled: true
       Frame Timeout: 15
       Frames:
-        ASV3/Motor_derecha_link:
+        ASV0/Motor_derecha_link:
           Value: true
-        ASV3/Motor_izquierda_link:
+        ASV0/Motor_izquierda_link:
           Value: true
-        ASV3/asv_camera:
+        ASV0/asv_camera:
           Value: true
-        ASV3/base_link:
+        ASV0/base_link:
           Value: true
-        ASV3/camera_link_optical:
-          Value: false
-        ASV3/gps_link:
+        ASV0/camera_link_optical:
           Value: true
-        ASV3/imu_link:
+        ASV0/gps_link:
           Value: true
-        ASV4/Motor_derecha_link:
-          Value: true
-        ASV4/Motor_izquierda_link:
-          Value: true
-        ASV4/asv_camera:
-          Value: true
-        ASV4/base_link:
-          Value: true
-        ASV4/camera_link_optical:
-          Value: true
-        ASV4/gps_link:
-          Value: true
-        ASV4/imu_link:
+        ASV0/imu_link:
           Value: true
         All Enabled: false
         map:
@@ -152,27 +139,16 @@ Visualization Manager:
       Show Names: true
       Tree:
         map:
-          ASV3/gps_link:
-            ASV3/base_link:
-              ASV3/Motor_derecha_link:
+          ASV0/gps_link:
+            ASV0/base_link:
+              ASV0/Motor_derecha_link:
                 {}
-              ASV3/Motor_izquierda_link:
+              ASV0/Motor_izquierda_link:
                 {}
-              ASV3/asv_camera:
-                ASV3/camera_link_optical:
+              ASV0/asv_camera:
+                ASV0/camera_link_optical:
                   {}
-              ASV3/imu_link:
-                {}
-          ASV4/gps_link:
-            ASV4/base_link:
-              ASV4/Motor_derecha_link:
-                {}
-              ASV4/Motor_izquierda_link:
-                {}
-              ASV4/asv_camera:
-                ASV4/camera_link_optical:
-                  {}
-              ASV4/imu_link:
+              ASV0/imu_link:
                 {}
           map_ned:
             {}
@@ -251,18 +227,18 @@ Visualization Manager:
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0
-        Y: 0
-        Z: 0
+        X: 2.5164146423339844
+        Y: 2.048212766647339
+        Z: 6.635737895965576
       Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.5103980302810669
+      Pitch: 0.33539775013923645
       Target Frame: ASV3/base_link
       Value: Orbit (rviz)
-      Yaw: 1.0054130554199219
+      Yaw: 4.673593997955322
     Saved: ~
 Window Geometry:
   Displays:

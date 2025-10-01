@@ -18,7 +18,7 @@ class ASVAgent():
         self.X = X
         self.pwm_l = 1500
         self.pwm_r = 1500
-        self.deadzone = [1450, 1550]
+        self.deadzone = [1450, 1550] # [1499.6, 1500.4]
 
     
     def static_2nd_ord(self, d_avg, d_D, f_r, beta):
@@ -135,7 +135,8 @@ class SimulatorASVWrapper(Node):
             f'/ASV{self.my_id}/mavros/set_stream_rate',
             self.set_stream_rate_position_callback
             )
-
+        
+        self.count_state = 0.0
 
         timer_period = self.get_parameter('Ts').get_parameter_value().double_value / 1000.0
         self.timer_out = self.create_timer(timer_period, self.calculateState)
@@ -209,22 +210,29 @@ class SimulatorASVWrapper(Node):
         msg_rc_in = RCIn()
 
         msg_rc_in.header.stamp = stamp_time
-        self.in_channel_vals[1] = 1700  #  APM  < 1400 <   MPC  < 1600 < IFAC
-        self.in_channel_vals[2] = 1700  #  ref vel
+        self.in_channel_vals[1] = 1800  #  APM  < 1400 <   MPC  < 1600 < IFAC
+        self.in_channel_vals[2] = 1850  #  ref vel
         
         self.in_channel_vals[3] = 1200  #  ZONO < 1400 < GUILLE < 1600 < LIU
         self.in_channel_vals[5] = 1500  #  AUTO < 1300 <   ROS  < 1700 < MANUAL
         msg_rc_in.channels = self.in_channel_vals
         self.publisher_rc_in.publish(msg_rc_in)
 
-        msg_state = State()
-        msg_state.header.stamp = self.get_clock().now().to_msg()
-        msg_state.connected = True
-        msg_state.armed = self.armed
-        msg_state.guided = True
-        msg_state.mode = "GUIDED"
-        msg_state.system_status = 0
-        self.publisher_state.publish(msg_state)
+        if(self.count_state < 10):
+            self.count_state += 1
+        else:
+            msg_state = State()
+            msg_state.header.stamp = self.get_clock().now().to_msg()
+            msg_state.connected = True
+            msg_state.armed = self.armed
+            msg_state.guided = True
+            msg_state.mode = "GUIDED"
+            msg_state.system_status = 0
+            self.publisher_state.publish(msg_state)
+            self.count_state = 0.0
+        
+
+        
 
     def obtainENU(self):
         x, y, psi = self.agent.eta
