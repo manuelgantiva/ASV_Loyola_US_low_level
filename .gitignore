@@ -3,6 +3,13 @@
 *.VC.opendb
 *.vscode/
 
+# Python
+**/__pycache__/**
+
+# Misc.
+acados_solver_plugins/src/plugins/
+acados_solver_plugins_example/src/plugins/
+
 # Compiled Object files
 *.slo
 *.lo
