@@ -7,8 +7,7 @@
 **/__pycache__/**
 
 # Misc.
-acados_solver_plugins/src/plugins/
-acados_solver_plugins_example/src/plugins/
+asv_acados/src/plugins/
 
 # Compiled Object files
 *.slo
