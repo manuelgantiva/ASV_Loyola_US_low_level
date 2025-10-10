@@ -109,6 +109,12 @@ ament_target_dependencies(mpc_llc_rt PUBLIC rclcpp mavros_msgs geometry_msgs asv
 add_executable(mpc_mlc_pf_rt src/mpc_mlc_pf_rt.cpp)
 ament_target_dependencies(mpc_mlc_pf_rt PUBLIC rclcpp mavros_msgs geometry_msgs asv_interfaces pluginlib acados_solver_base)
 
+add_executable(mpc_mlc_pf_mod_rt src/mpc_mlc_pf_mod_rt.cpp)
+ament_target_dependencies(mpc_mlc_pf_mod_rt PUBLIC rclcpp mavros_msgs geometry_msgs asv_interfaces pluginlib acados_solver_base)
+
+add_executable(mpc_mlc_pf_coor_rt src/mpc_mlc_pf_coor_rt.cpp)
+ament_target_dependencies(mpc_mlc_pf_coor_rt PUBLIC rclcpp mavros_msgs geometry_msgs asv_interfaces pluginlib acados_solver_base)
+
 #-----------------------------------------------------
 #   Tests
 #-----------------------------------------------------
@@ -127,6 +133,8 @@ endif()
 install(TARGETS 
   mpc_llc_rt
   mpc_mlc_pf_rt
+  mpc_mlc_pf_mod_rt
+  mpc_mlc_pf_coor_rt
   DESTINATION lib/${PROJECT_NAME})
 
 # Install plugins

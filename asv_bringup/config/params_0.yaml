@@ -1,4 +1,4 @@
-ASV0: #/**
+ASV0:
   observer:
     observer_bejarano:
       ros__parameters:
@@ -132,6 +132,70 @@ ASV0: #/**
         Delta_r_ref_max: 0.005
         Xv_bar: [-0.2503897, -0.0321815, 0.0028707, 0.0211998, -0.0066645, 0.7247758, -0.2352875, -0.0178921]
         Eps: 0.2488
+        path_d: 1
+    mpc_mlc_pf_mod:
+      ros__parameters:
+        Ts: 500.0         #ms
+        N_p: 60         # 80
+        T_p: 3.0
+        Q: [10.0, 0.5, 0.0, 0.0, 150.0]
+        R: [0.0, 30.0, 10.0] 
+        Rd: [10.0, 0.0, 300.0] 
+        x_e_bar_max: 100.0
+        x_e_bar_min: -100.0
+        y_e_bar_max: 100.0
+        y_e_bar_min: -100.0
+        v_bar_max: 1.0
+        v_bar_min: -1.0
+        u_ref_max: 2.0
+        u_ref_min: 0.3
+        u_tar_max: 3.0
+        u_tar_min: 0.3
+        r_ref_max: 0.3
+        r_ref_min: -0.3
+        Delta_u_ref_min: -0.01
+        Delta_u_ref_max: 0.01
+        Delta_u_tar_min: -0.1
+        Delta_u_tar_max: 0.1
+        Delta_r_ref_min: -0.005
+        Delta_r_ref_max: 0.005
+        Xv_bar: [-0.2503897, -0.0321815, 0.0028707, 0.0211998, -0.0066645, 0.7247758, -0.2352875, -0.0178921]
+        Eps: 0.2488
+        rho: 3.0
+        theta: -2.0944
+        path_d: 1
+    mpc_mlc_pf_coor:
+      ros__parameters:
+        Ts: 500.0         #ms
+        N_p: 60         # 80
+        N_w: 20
+        T_p: 3.0
+        Q: [10.0, 0.5, 0.0, 0.0, 150.0]
+        R: [0.0, 30.0, 10.0] 
+        Rd: [10.0, 0.0, 300.0] 
+        Dw: 20.0
+        x_e_bar_max: 100.0
+        x_e_bar_min: -100.0
+        y_e_bar_max: 100.0
+        y_e_bar_min: -100.0
+        v_bar_max: 1.0
+        v_bar_min: -1.0
+        u_ref_max: 2.0
+        u_ref_min: 0.3
+        u_tar_max: 3.0
+        u_tar_min: 0.3
+        r_ref_max: 0.3
+        r_ref_min: -0.3
+        Delta_u_ref_min: -0.01
+        Delta_u_ref_max: 0.01
+        Delta_u_tar_min: -0.1
+        Delta_u_tar_max: 0.1
+        Delta_r_ref_min: -0.005
+        Delta_r_ref_max: 0.005
+        Xv_bar: [-0.2503897, -0.0321815, 0.0028707, 0.0211998, -0.0066645, 0.7247758, -0.2352875, -0.0178921]
+        Eps: 0.2488
+        rho: 3.0
+        theta: -2.0944
         path_d: 1
   simulator:
     simulator_asv_wrapper:

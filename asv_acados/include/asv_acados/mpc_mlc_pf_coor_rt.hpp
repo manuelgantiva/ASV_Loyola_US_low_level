@@ -3,7 +3,9 @@
 #include "geometry_msgs/msg/vector3.hpp"            //Interface reference_llc x->u y->r z->psi
 #include "std_msgs/msg/float64.hpp"                 //Interface ref vel mid level controller
 #include "asv_interfaces/msg/state_observer.hpp"    //Interface state observer
-#include "asv_interfaces/msg/reference_llc.hpp"
+#include "asv_interfaces/msg/reference_llc.hpp"     //Interface reference_llc references y utar
+#include "std_msgs/msg/float32_multi_array.hpp"     //Interface w predictions
+#include "std_msgs/msg/float32.hpp"                 // w
 
 #include "geometry_msgs/msg/twist_stamped.hpp"      //Interface velocity
 
@@ -18,10 +20,10 @@
 
 using std::placeholders::_1;
 
-class MpcMlcPfRtNode : public rclcpp::Node 
+class MpcMlcPfCoorRtNode : public rclcpp::Node 
 {
 public:
-    MpcMlcPfRtNode() : Node("mpc_mlc_pf_rt")
+    MpcMlcPfCoorRtNode() : Node("mpc_mlc_pf_coor_rt")
     {
         std::string my_id; 
         this-> declare_parameter("my_id", "ASV0");
@@ -29,10 +31,12 @@ public:
         this-> declare_parameter("Ts", 400.0);
 
         this->declare_parameter<int>("N_p", 60);
+        this->declare_parameter<int>("N_w", 20);
         this->declare_parameter<float>("T_p", 3.0);
         this->declare_parameter<std::vector<double>>("Q", {10.0, 10.0, 0.0, 0.0, 0.0});
         this->declare_parameter<std::vector<double>>("R", {1.0, 0.0, 0.0});
         this->declare_parameter<std::vector<double>>("Rd", {0.0, 0.0, 0.0});
+        this->declare_parameter<double>("Dw", 5.0);
 
         this->declare_parameter<double>("x_e_bar_max", 100.0);
         this->declare_parameter<double>("x_e_bar_min", -100.0);
@@ -56,6 +60,9 @@ public:
         this-> declare_parameter("Xv_bar", std::vector<double>{-0.2503897, -0.0321815, 0.0028707, 0.0211998, -0.0066645, 0.7247758, -0.2352875, -0.0178921});
         this-> declare_parameter<double>("Eps", 0.2488);
 
+        this-> declare_parameter<double>("rho", 4.0);
+        this-> declare_parameter<double>("theta", 0.0);
+
         this-> declare_parameter("path_d", 0); // path_d = #Path deseado #
         
         my_id = (this->get_parameter("my_id").as_string());    
@@ -63,9 +70,11 @@ public:
         
         // Leer parámetros y asignar a variables miembro
         this->get_parameter("N_p", N_p);
+        this->get_parameter("N_w", N_w);
         Q_ = this->get_parameter("Q").as_double_array();
         R_ = this->get_parameter("R").as_double_array();
         Rd_ = this->get_parameter("Rd").as_double_array();
+        D_w_ = this->get_parameter("Dw").as_double();
 
         this->get_parameter("x_e_bar_max", x_e_bar_max_);
         this->get_parameter("x_e_bar_min", x_e_bar_min_);
@@ -89,13 +98,16 @@ public:
         Xv_bar = this->get_parameter("Xv_bar").as_double_array();
         this->get_parameter("Eps", Eps_);
 
-        path_d  = this->get_parameter("path_d").as_int();
+        rho  = this->get_parameter("rho").as_double();
+        theta= this->get_parameter("theta").as_double();
+
+        path_d= this->get_parameter("path_d").as_int();
 
         float T_p;
         this->get_parameter("T_p", T_p);
         N_t = static_cast<int>(std::ceil(T_p / Ts));
 
-        std::string solver_plugin_name = "asv_acados/PfAsvAcadosSolver";
+        std::string solver_plugin_name = "asv_acados/PfModAsvAcadosSolver";
         acados_solver_loader_ = std::make_shared<pluginlib::ClassLoader<acados::AcadosSolver>>("acados_solver_base", "acados::AcadosSolver");
         acados_solver_ = std::unique_ptr<acados::AcadosSolver>(acados_solver_loader_->createUnmanagedInstance(solver_plugin_name));
         std::cout << "Loading solver plugin \"" << solver_plugin_name << "\"" << std::endl;
@@ -107,28 +119,43 @@ public:
         auto options_sensors_ = rclcpp::SubscriptionOptions();
         options_sensors_.callback_group=cb_group_sensors_;
 
-        params_callback_handle_ = this->add_on_set_parameters_callback(std::bind(&MpcMlcPfRtNode::param_callback, this, _1));
+        params_callback_handle_ = this->add_on_set_parameters_callback(std::bind(&MpcMlcPfCoorRtNode::param_callback, this, _1));
 
         timer_ = this -> create_wall_timer(std::chrono::milliseconds(int(Ts*1000.0)),
-                std::bind(&MpcMlcPfRtNode::calculateMidLevelController, this), cb_group_obs_);
+                std::bind(&MpcMlcPfCoorRtNode::calculateMidLevelController, this), cb_group_obs_);
 
         subscriber_states_obs_ = this-> create_subscription<asv_interfaces::msg::StateObserver>(
-            "/" + my_id + "/observer/state_observer",rclcpp::SensorDataQoS(), std::bind(&MpcMlcPfRtNode::callbackStates,
+            "/" + my_id + "/observer/state_observer",rclcpp::SensorDataQoS(), std::bind(&MpcMlcPfCoorRtNode::callbackStates,
             this, std::placeholders::_1), options_sensors_);
         subscriber_references_ = this-> create_subscription<std_msgs::msg::Float64>(
-            "/" + my_id + "/control/reference_mlc", 1, std::bind(&MpcMlcPfRtNode::callbackVelReference,
+            "/" + my_id + "/control/reference_mlc", 1, std::bind(&MpcMlcPfCoorRtNode::callbackVelReference,
             this, std::placeholders::_1), options_sensors_);
         subscriber_state = this-> create_subscription<mavros_msgs::msg::State>("/" + my_id + "/mavros/state",1,
-                std::bind(&MpcMlcPfRtNode::callbackStateData, this, std::placeholders::_1), options_sensors_);
+                std::bind(&MpcMlcPfCoorRtNode::callbackStateData, this, std::placeholders::_1), options_sensors_);
 
         /*subscriber_vel_ = this-> create_subscription<geometry_msgs::msg::TwistStamped>("/" + my_id + "/mavros/local_position/velocity_body",
-                rclcpp::SensorDataQoS(), std::bind(&MpcMlcPfRtNode::callbackVel, this, std::placeholders::_1), options_sensors_); */ 
+                rclcpp::SensorDataQoS(), std::bind(&MpcMlcPfCoorRtNode::callbackVel, this, std::placeholders::_1), options_sensors_); */ 
 
         publisher_llc = this-> create_publisher<asv_interfaces::msg::ReferenceLlc>("/" + my_id + "/control/reference_llc",1);
         publisher_error = this-> create_publisher<geometry_msgs::msg::Vector3>("/" + my_id + "/control/error_mlc",1);
         publisher_mpc_state = this-> create_publisher<geometry_msgs::msg::Vector3>("/" + my_id + "/control/mpc_state_mlc",1);
+
+        publisher_w_pre = this-> create_publisher<std_msgs::msg::Float32MultiArray>("/" + my_id + "/control/w_pred",1);
+
+        // Lista de todos los barcos
+        std::vector<std::string> all_ids = {"ASV0", "ASV1", "ASV3"};
+
+        // Iteramos y nos suscribimos a todos menos a nosotros mismos
+        for (const auto &id : all_ids) {
+            if (id != my_id) {
+                auto sub = this->create_subscription<std_msgs::msg::Float32MultiArray>("/" + id + "/control/w_pred", 1,
+                    std::bind(&MpcMlcPfCoorRtNode::wPredCallback, this, std::placeholders::_1),// pasamos el id del barco también
+                    options_sensors_);
+                subs_.push_back(sub); // guardamos el shared_ptr en un vector para que no se destruya
+            }
+        }
         
-    	RCLCPP_INFO(this->get_logger(), "Mpc MLC Path Following Real Time Node has been started.");
+    	RCLCPP_INFO(this->get_logger(), "Mpc MLC Path Following Coordinated Real Time Node has been started.");
     }
 
 private:
@@ -157,11 +184,24 @@ private:
                 con["u_ref"] = std::vector{0.5};
                 con["u_tar"] = std::vector{0.4};
                 con["r_ref"] = std::vector{0.0};
+
+                w_avg.clear();
+                w_avg.shrink_to_fit();
+                w_avg.reserve(N_w);
+                w_avg.emplace_back(w_i);
+                
                 // Get optimal control input
                 for (int k = 0; k < N_p; ++k) {
                     u_hist.emplace_back(u_def); 
                     con_hist.emplace_back(con); 
+                    if (k < N_w){
+                        float w_k = w_avg.back();
+                        evolve_w(w_k, 0.4);
+                        w_avg.emplace_back(w_k);
+                    }
                 }   
+
+                count_ws = 0;
 
                 is_first_itr_= true; 
                 u_ref_ant = 0.5;
@@ -184,7 +224,7 @@ private:
                 float xe_i;
                 float ye_i;
                 float v_bar_i;
-
+                std::vector<float> w_avg_i;
                 {
                     std::lock_guard<std::mutex> lock(mutex_);
                     x_hat_i = x_hat;
@@ -193,14 +233,19 @@ private:
                     r_hat_i = r_hat;
                     psi_hat_i=psi_hat;
                     u_d_i=u_d;
+                    w_avg_i=w_avg;
+                    count_ws=0;
                 }
 
                 get_inicial_values(x_hat_i, y_hat_i, psi_hat_i, v_hat_i, r_hat_i, xe_i, ye_i, v_bar_i);                
-
                 Eigen::VectorXd y_ref(11);
-                y_ref << 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, u_d_i, 0.0, 0.0, 0.0, 0.0;
-
                 for (int j = 0; j < N_p; j++){
+                    
+                    if(j < N_w){
+                        y_ref << 0.0, 0.0, 0.0, w_avg_i[j], 0.0, 0.0, u_d_i, 0.0, 0.0, 0.0, 0.0;
+                    }else{
+                        y_ref << 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, u_d_i, 0.0, 0.0, 0.0, 0.0;
+                    }
                     if (true != acados::utils::set_cost_y_ref(*acados_solver_, j, y_ref)) {
                         RCLCPP_ERROR(this->get_logger(), "Failed to set NMPC references!");
                     } 
@@ -320,6 +365,18 @@ private:
                 publisher_llc->publish(msg);
                 publisher_error->publish(msg_e);
 
+                std::vector<float> w_s;
+                w_s.reserve(static_cast<size_t>(N_w));
+
+                for (int i = 0; i < N_w; i++)
+                {
+                    w_s.push_back(con_hist[i]["w"][0]);
+                }
+
+                auto msg_ws = std_msgs::msg::Float32MultiArray();
+                msg_ws.data = w_s;
+                publisher_w_pre->publish(msg_ws);
+
                 auto end = std::chrono::high_resolution_clock::now();
                 std::chrono::duration<double> elapsed = end - start;
                 t_proc = elapsed.count()*1000; // miliseconds
@@ -333,6 +390,21 @@ private:
                 count=count+1;
             }
         }        
+    }
+
+    void wPredCallback(const std_msgs::msg::Float32MultiArray::SharedPtr msg){
+        std::vector<float> w_n;
+        w_n.reserve(static_cast<size_t>(N_w));
+        w_n = msg->data;
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            count_ws += 1;
+            float r1 = 1/count_ws;
+            float r2 = 1 - r1;
+            for (size_t i = 0; i < w_avg.size(); ++i) {
+                w_avg[i] = w_avg[i] * r2 + w_n[i] * r1;
+            }
+        }
     }
 
     void callbackStates(const asv_interfaces::msg::StateObserver::SharedPtr msg)
@@ -376,14 +448,21 @@ private:
     void get_inicial_values(float x, float y, float psi, float v, float r,
                         float &xe, float &ye, float &v_bar) {
 
-        evolve_w();
+        evolve_w(w_i, u_tar_ant);
 
         std::vector<float> path = spatial_path(w_i);
 
         // Obtener puntos de trayectoria
-        float xp = path[0];
-        float yp = path[1];
-        float phip = path[2];
+        float xc = path[0];
+        float yc = path[1];
+        float phic = path[2];
+        float dxc = path[3];
+        float dyc = path[4];
+        float dphic = path[5];
+
+        float xp = xc + rho * cos(phic+theta);  
+        float yp = yc + rho * sin(phic+theta);
+        float phip = atan2 (dyc + dphic*(rho * cos(phic+theta)), dxc + dphic*(rho * sin(phic+theta)));
 
         // Matriz de rotación transpuesta
         float R11 =  cos(phip);
@@ -401,13 +480,13 @@ private:
         // RCLCPP_INFO(this->get_logger(), "Target point: Xe: %f, Ye: %f y v_bar: %f ", xe, ye, v_bar);
     }
 
-    void evolve_w() {
-        std::vector<float> path = spatial_path(w_i);
+    void evolve_w(float &w, const float u_tar) {
+        std::vector<float> path = spatial_path(w);
         float dx = path[3];
         float dy = path[4];
         float F = sqrt(dx*dx + dy*dy); // Norma
-        float w_dot = u_tar_ant / F;
-        w_i += Ts * w_dot;
+        float w_dot = u_tar / F;
+        w += Ts * w_dot;
     }
 
     rcl_interfaces::msg::SetParametersResult param_callback(const std::vector<rclcpp::Parameter> &params){
@@ -420,6 +499,18 @@ private:
                     Precompile();
                 } else {
                     RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 1-100");
+                    result.successful = false;
+                    result.reason = "Value out of range";
+                    return result;
+                }
+            }
+            if (param.get_name() == "N_w") {
+                if (param.as_int() > 1 && param.as_int() < N_p) {
+                    RCLCPP_INFO(this->get_logger(), "changed param value");
+                    N_w = param.as_int();
+                    Precompile();
+                } else {
+                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 1-Np");
                     result.successful = false;
                     result.reason = "Value out of range";
                     return result;
@@ -460,6 +551,19 @@ private:
                     RCLCPP_INFO(this->get_logger(), "could not change param value, Rd must have 3 elements");
                     result.successful = false;
                     result.reason = "Invalid Rd size";
+                    return result;
+                }
+            }
+            if (param.get_name() == "Dw") {
+                if (param.get_type() == rclcpp::ParameterType::PARAMETER_DOUBLE &&
+                    param.as_double() >= 0.0 && param.as_double() < 100) {
+                    RCLCPP_INFO(this->get_logger(), "changed param value");
+                    D_w_ = param.as_double();
+                    Precompile();
+                } else {
+                    RCLCPP_WARN(this->get_logger(), "Invalid value for 'D_w'");
+                    result.successful = false;
+                    result.reason = "Value out of range";
                     return result;
                 }
             }
@@ -570,6 +674,30 @@ private:
                     return result;
                 }
             }
+            if (param.get_name() == "rho") {
+                if (param.get_type() == rclcpp::ParameterType::PARAMETER_DOUBLE &&
+                    param.as_double() >= 0.0 && param.as_double() < 10.0) {
+                    rho = param.as_double();
+                    Precompile();
+                } else {
+                    RCLCPP_WARN(this->get_logger(), "could not change param value, should be between 0.0-10.0");
+                    result.successful = false;
+                    result.reason = "Value out of range";
+                    return result;
+                }
+            }
+            if (param.get_name() == "theta") {
+                if (param.get_type() == rclcpp::ParameterType::PARAMETER_DOUBLE &&
+                    param.as_double() >= -3.141592 && param.as_double() <= 3.141592) {
+                    theta = param.as_double();
+                    Precompile();
+                } else {
+                    RCLCPP_WARN(this->get_logger(), "could not change param value, should be between -3.141592- 3.141592");
+                    result.successful = false;
+                    result.reason = "Value out of range";
+                    return result;
+                }
+            }
         }
         result.successful = true;
         result.reason = "Success";
@@ -583,6 +711,8 @@ private:
         acados_solver_->init(N_p, Ts);
         p_values_map["Xv_bar"] = Xv_bar;
         p_values_map["Eps_"] = std::vector{Eps_};
+        p_values_map["rho_"] = std::vector{rho};
+        p_values_map["theta_"] = std::vector{theta};
         switch(path_d) {
             case 0:
                 p_values_map["coef"] = std::vector{0.0, 0.0, 1.0, 0.0};  //  a y b Circulo c y d Lineal
@@ -615,6 +745,10 @@ private:
         We.diagonal().head(Q_.size()) = Eigen::Map<const Eigen::VectorXd>(Q_.data(), Q_.size());
         We.diagonal().tail(R_.size()) = Eigen::Map<const Eigen::VectorXd>(R_.data(), R_.size());
 
+        w_avg.clear();
+        w_avg.reserve(N_w);
+        w_avg.emplace_back(w_i);
+
         u_hist.clear();
         u_hist.shrink_to_fit();
         acados::ValueMap u_def;
@@ -631,12 +765,20 @@ private:
         con_map["r_ref"] = std::vector{0.0};
 
         for (int idx = 0; idx <= N_p; idx++) {
+            if (idx < N_w){
+                float w_k = w_avg.back();
+                evolve_w(w_k, 0.4);
+                w_avg.emplace_back(w_k);
+                W(3, 3) = D_w_;
+            }else{
+                W(3, 3) = 0.0;
+            }
             if (idx>0){
                 acados_solver_->set_state_bounds(idx, idxbx, lbx, ubx);
             }
             if (idx==N_p){
                 acados::utils::set_cost_W(*acados_solver_, N_p, We);
-            } 
+            }   
             if (idx < N_p){
                 acados_solver_->set_control_bounds(idx, idxbu, lbu, ubu);
                 acados::utils::set_cost_W(*acados_solver_, idx, W);
@@ -647,24 +789,29 @@ private:
     }
 
     std::vector<float> spatial_path(const float& w) {
-        float x_p, y_p, dx, dy;
+        float x_p, y_p, dx, dy, ddx, ddy;
         switch(path_d) {
             case 0:
                 x_p  = w+10;  // 
                 y_p  = 10;    // 
                 dx   = 1;     // 
                 dy   = 0;     //
+                ddx   = 0;     // 
+                ddy   = 0;     //
                 break;
             case 1:
                 x_p  = 30-30*cos(w);  
                 y_p  = 30*sin(w);     
                 dx   = 30*sin(w);     
-                dy   = 30*cos(w);    
+                dy   = 30*cos(w);   
+                ddx   = 30*cos(w);     
+                ddy   = -30*sin(w);    
                 break;
         }
         float phi  = atan2(dy, dx);
+        float dphi = (ddy*dx - ddx*dy)/(dx*dx + dy*dy);
         // Retornar un vector con las variables MX ordenadas
-        return {x_p, y_p, phi, dx, dy};
+        return {x_p, y_p, phi, dx, dy, dphi};
     }
 
 
@@ -673,19 +820,22 @@ private:
     float w_i = 0.0;
 
     float u_ref_ant = 0.5, u_tar_ant = 0.5, r_ref_ant = 0.0;
-    int count=0, count_faild = 0;
+    int count=0, count_faild = 0, count_ws = 0;
     //------Params-------//
     float Ts;  
 
-    int N_p, N_t;
+    int N_p, N_t, N_w;
     double x_e_bar_max_, x_e_bar_min_, y_e_bar_max_, y_e_bar_min_, v_bar_max_, v_bar_min_, u_ref_max_, u_ref_min_, u_tar_max_, u_tar_min_;
     double r_ref_max_, r_ref_min_, Delta_u_ref_min_, Delta_u_ref_max_, Delta_u_tar_min_,  Delta_u_tar_max_, Delta_r_ref_min_, Delta_r_ref_max_;
     double Eps_;
+    double rho, theta;
 
     int path_d; /*Variable para elegir path*/
 
     std::vector<double> Xv_bar;
     std::vector<double> Q_, R_, Rd_;
+    double D_w_;
+    std::vector<float> w_avg;
 
     std::vector<acados::ValueMap> u_hist;
     std::vector<acados::ValueMap> con_hist;
@@ -696,9 +846,12 @@ private:
     rclcpp::Publisher<asv_interfaces::msg::ReferenceLlc>::SharedPtr publisher_llc;
     rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr publisher_error;
     rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr publisher_mpc_state;
+    rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr publisher_w_pre;
     rclcpp::TimerBase::SharedPtr timer_;
 
     rclcpp::Subscription<geometry_msgs::msg::TwistStamped>::SharedPtr subscriber_vel_;
+
+    std::vector<rclcpp::Subscription<std_msgs::msg::Float32MultiArray>::SharedPtr> subs_;
 
     // mutex callback group: 
     std::mutex mutex_;

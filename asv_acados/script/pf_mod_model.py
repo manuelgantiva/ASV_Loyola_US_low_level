@@ -4,6 +4,8 @@ def pf_model():
 
     Xv_bar = MX.sym('Xv_bar', 8)
     Eps_ = MX.sym('Eps_', 1)
+    rho_ = MX.sym('rho_', 1)
+    theta_ = MX.sym('theta_', 1)
 
     v_bar_min_ = -1.0
     u_ref_min_ = 0.5
@@ -69,12 +71,21 @@ def pf_model():
     # Definir la dinámica
     dx     = coef[0]*sin(w) + coef[2]# 30*sin(w) # coef[0] si x = -30*cos(w)
     dy     = coef[1]*cos(w) + coef[3]# 30*cos(w) # coef[1] si y = 30*sin(w)
-    ddx    = coef[0]*cos(w)  # 30*cos(w) # 0
-    ddy    = -coef[1]*sin(w) # -30*sin(w) # 0
-    phi    = atan2(dy, dx)
-
+    ddx    = coef[0]*cos(w)   # 30*cos(w)  # 0
+    ddy    = -coef[1]*sin(w)  # -30*sin(w) # 0
+    d3x    = -coef[0]*sin(w)  # -30*sin(w) # 0
+    d3y    = -coef[1]*cos(w)  # -30*cos(w) # 0
+    phi_c  = atan2(dy, dx)
     F = sqrt(dx*dx + dy*dy)
-    dphi = (ddy*dx - ddx*dy)/(dx*dx + dy*dy)
+    dphi_c = (ddy*dx - ddx*dy)/(dx*dx + dy*dy)
+    ddphi_c= ( (d3y*dx - d3x*dy)*(dx*dx + dy*dy) - 2 *(ddy*dx - ddx*dy) * (ddx*dx + dy*ddy) )/((dx*dx + dy*dy)*(dx*dx + dy*dy))
+
+    M = rho_*cos(phi_c+theta_)
+    N = rho_*sin(phi_c+theta_)
+
+    phi = atan2(dy + dphi_c * M ,dx - dphi_c * N)
+    dphi_p = ((ddy*dx - ddx*dy) + (dphi_c**3*rho_**2) + N*(-ddy*dphi_c- dphi_c**2*dx + ddphi_c*dy) + M*(-ddx*dphi_c + dphi_c**2*dy + ddphi_c*dx))
+    dphi = dphi_p / ( (dx**2+dy**2) + 2*dphi_c*(dy*M-dx*N) + (dphi_c**2*rho_**2))
 
     v = v_bar - Eps_*r_ref
 
@@ -103,6 +114,8 @@ def pf_model():
     p = vertcat(
         Xv_bar,
         Eps_,
+        rho_,
+        theta_,
         coef)  # Concatenamos los parámetros constantes y los disturbios
     
     # constraint on forces    

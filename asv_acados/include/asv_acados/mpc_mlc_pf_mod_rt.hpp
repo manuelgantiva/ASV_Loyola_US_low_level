@@ -18,10 +18,10 @@
 
 using std::placeholders::_1;
 
-class MpcMlcPfRtNode : public rclcpp::Node 
+class MpcMlcPfModRtNode : public rclcpp::Node 
 {
 public:
-    MpcMlcPfRtNode() : Node("mpc_mlc_pf_rt")
+    MpcMlcPfModRtNode() : Node("mpc_mlc_pf_mod_rt")
     {
         std::string my_id; 
         this-> declare_parameter("my_id", "ASV0");
@@ -56,6 +56,9 @@ public:
         this-> declare_parameter("Xv_bar", std::vector<double>{-0.2503897, -0.0321815, 0.0028707, 0.0211998, -0.0066645, 0.7247758, -0.2352875, -0.0178921});
         this-> declare_parameter<double>("Eps", 0.2488);
 
+        this-> declare_parameter<double>("rho", 4.0);
+        this-> declare_parameter<double>("theta", 0.0);
+
         this-> declare_parameter("path_d", 0); // path_d = #Path deseado #
         
         my_id = (this->get_parameter("my_id").as_string());    
@@ -89,13 +92,16 @@ public:
         Xv_bar = this->get_parameter("Xv_bar").as_double_array();
         this->get_parameter("Eps", Eps_);
 
-        path_d  = this->get_parameter("path_d").as_int();
+        rho  = this->get_parameter("rho").as_double();
+        theta= this->get_parameter("theta").as_double();
+
+        path_d= this->get_parameter("path_d").as_int();
 
         float T_p;
         this->get_parameter("T_p", T_p);
         N_t = static_cast<int>(std::ceil(T_p / Ts));
 
-        std::string solver_plugin_name = "asv_acados/PfAsvAcadosSolver";
+        std::string solver_plugin_name = "asv_acados/PfModAsvAcadosSolver";
         acados_solver_loader_ = std::make_shared<pluginlib::ClassLoader<acados::AcadosSolver>>("acados_solver_base", "acados::AcadosSolver");
         acados_solver_ = std::unique_ptr<acados::AcadosSolver>(acados_solver_loader_->createUnmanagedInstance(solver_plugin_name));
         std::cout << "Loading solver plugin \"" << solver_plugin_name << "\"" << std::endl;
@@ -107,28 +113,28 @@ public:
         auto options_sensors_ = rclcpp::SubscriptionOptions();
         options_sensors_.callback_group=cb_group_sensors_;
 
-        params_callback_handle_ = this->add_on_set_parameters_callback(std::bind(&MpcMlcPfRtNode::param_callback, this, _1));
-
         timer_ = this -> create_wall_timer(std::chrono::milliseconds(int(Ts*1000.0)),
-                std::bind(&MpcMlcPfRtNode::calculateMidLevelController, this), cb_group_obs_);
+                std::bind(&MpcMlcPfModRtNode::calculateMidLevelController, this), cb_group_obs_);
+        
+        params_callback_handle_ = this->add_on_set_parameters_callback(std::bind(&MpcMlcPfModRtNode::param_callback, this, _1));
 
         subscriber_states_obs_ = this-> create_subscription<asv_interfaces::msg::StateObserver>(
-            "/" + my_id + "/observer/state_observer",rclcpp::SensorDataQoS(), std::bind(&MpcMlcPfRtNode::callbackStates,
+            "/" + my_id + "/observer/state_observer",rclcpp::SensorDataQoS(), std::bind(&MpcMlcPfModRtNode::callbackStates,
             this, std::placeholders::_1), options_sensors_);
         subscriber_references_ = this-> create_subscription<std_msgs::msg::Float64>(
-            "/" + my_id + "/control/reference_mlc", 1, std::bind(&MpcMlcPfRtNode::callbackVelReference,
+            "/" + my_id + "/control/reference_mlc", 1, std::bind(&MpcMlcPfModRtNode::callbackVelReference,
             this, std::placeholders::_1), options_sensors_);
         subscriber_state = this-> create_subscription<mavros_msgs::msg::State>("/" + my_id + "/mavros/state",1,
-                std::bind(&MpcMlcPfRtNode::callbackStateData, this, std::placeholders::_1), options_sensors_);
+                std::bind(&MpcMlcPfModRtNode::callbackStateData, this, std::placeholders::_1), options_sensors_);
 
         /*subscriber_vel_ = this-> create_subscription<geometry_msgs::msg::TwistStamped>("/" + my_id + "/mavros/local_position/velocity_body",
-                rclcpp::SensorDataQoS(), std::bind(&MpcMlcPfRtNode::callbackVel, this, std::placeholders::_1), options_sensors_); */ 
+                rclcpp::SensorDataQoS(), std::bind(&MpcMlcPfModRtNode::callbackVel, this, std::placeholders::_1), options_sensors_); */ 
 
         publisher_llc = this-> create_publisher<asv_interfaces::msg::ReferenceLlc>("/" + my_id + "/control/reference_llc",1);
         publisher_error = this-> create_publisher<geometry_msgs::msg::Vector3>("/" + my_id + "/control/error_mlc",1);
         publisher_mpc_state = this-> create_publisher<geometry_msgs::msg::Vector3>("/" + my_id + "/control/mpc_state_mlc",1);
         
-    	RCLCPP_INFO(this->get_logger(), "Mpc MLC Path Following Real Time Node has been started.");
+    	RCLCPP_INFO(this->get_logger(), "Mpc MLC Path Following Modified Real Time Node has been started.");
     }
 
 private:
@@ -381,9 +387,16 @@ private:
         std::vector<float> path = spatial_path(w_i);
 
         // Obtener puntos de trayectoria
-        float xp = path[0];
-        float yp = path[1];
-        float phip = path[2];
+        float xc = path[0];
+        float yc = path[1];
+        float phic = path[2];
+        float dxc = path[3];
+        float dyc = path[4];
+        float dphic = path[5];
+
+        float xp = xc + rho * cos(phic+theta);  
+        float yp = yc + rho * sin(phic+theta);
+        float phip = atan2 (dyc + dphic*(rho * cos(phic+theta)), dxc + dphic*(rho * sin(phic+theta)));
 
         // Matriz de rotación transpuesta
         float R11 =  cos(phip);
@@ -570,6 +583,30 @@ private:
                     return result;
                 }
             }
+            if (param.get_name() == "rho") {
+                if (param.get_type() == rclcpp::ParameterType::PARAMETER_DOUBLE &&
+                    param.as_double() >= 0.0 && param.as_double() < 10.0) {
+                    rho = param.as_double();
+                    Precompile();
+                } else {
+                    RCLCPP_WARN(this->get_logger(), "could not change param value, should be between 0.0-10.0");
+                    result.successful = false;
+                    result.reason = "Value out of range";
+                    return result;
+                }
+            }
+            if (param.get_name() == "theta") {
+                if (param.get_type() == rclcpp::ParameterType::PARAMETER_DOUBLE &&
+                    param.as_double() >= -3.141592 && param.as_double() <= 3.141592) {
+                    theta = param.as_double();
+                    Precompile();
+                } else {
+                    RCLCPP_WARN(this->get_logger(), "could not change param value, should be between -3.141592- 3.141592");
+                    result.successful = false;
+                    result.reason = "Value out of range";
+                    return result;
+                }
+            }
         }
         result.successful = true;
         result.reason = "Success";
@@ -583,6 +620,8 @@ private:
         acados_solver_->init(N_p, Ts);
         p_values_map["Xv_bar"] = Xv_bar;
         p_values_map["Eps_"] = std::vector{Eps_};
+        p_values_map["rho_"] = std::vector{rho};
+        p_values_map["theta_"] = std::vector{theta};
         switch(path_d) {
             case 0:
                 p_values_map["coef"] = std::vector{0.0, 0.0, 1.0, 0.0};  //  a y b Circulo c y d Lineal
@@ -647,24 +686,29 @@ private:
     }
 
     std::vector<float> spatial_path(const float& w) {
-        float x_p, y_p, dx, dy;
+        float x_p, y_p, dx, dy, ddx, ddy;
         switch(path_d) {
             case 0:
                 x_p  = w+10;  // 
                 y_p  = 10;    // 
                 dx   = 1;     // 
                 dy   = 0;     //
+                ddx   = 0;     // 
+                ddy   = 0;     //
                 break;
             case 1:
                 x_p  = 30-30*cos(w);  
                 y_p  = 30*sin(w);     
                 dx   = 30*sin(w);     
-                dy   = 30*cos(w);    
+                dy   = 30*cos(w);   
+                ddx   = 30*cos(w);     
+                ddy   = -30*sin(w);    
                 break;
         }
         float phi  = atan2(dy, dx);
+        float dphi = (ddy*dx - ddx*dy)/(dx*dx + dy*dy);
         // Retornar un vector con las variables MX ordenadas
-        return {x_p, y_p, phi, dx, dy};
+        return {x_p, y_p, phi, dx, dy, dphi};
     }
 
 
@@ -681,6 +725,7 @@ private:
     double x_e_bar_max_, x_e_bar_min_, y_e_bar_max_, y_e_bar_min_, v_bar_max_, v_bar_min_, u_ref_max_, u_ref_min_, u_tar_max_, u_tar_min_;
     double r_ref_max_, r_ref_min_, Delta_u_ref_min_, Delta_u_ref_max_, Delta_u_tar_min_,  Delta_u_tar_max_, Delta_r_ref_min_, Delta_r_ref_max_;
     double Eps_;
+    double rho, theta;
 
     int path_d; /*Variable para elegir path*/
 

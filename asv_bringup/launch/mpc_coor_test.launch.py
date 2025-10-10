@@ -408,8 +408,8 @@ def generate_launch_description():
     # nodes.append(mux_llc_node)
     # nodes.append(wang_mlc_node)
     # nodes.append(mpc_mlc_pf_rt_node)
-    nodes.append(mpc_mlc_pf_mod_rt_node)
-    # nodes.append(mpc_mlc_pf_coor_rt_node)
+    # nodes.append(mpc_mlc_pf_mod_rt_node)
+    nodes.append(mpc_mlc_pf_coor_rt_node)
 
     
     
