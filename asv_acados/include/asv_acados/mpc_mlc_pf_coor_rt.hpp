@@ -556,7 +556,7 @@ private:
             }
             if (param.get_name() == "Dw") {
                 if (param.get_type() == rclcpp::ParameterType::PARAMETER_DOUBLE &&
-                    param.as_double() >= 0.0 && param.as_double() < 100) {
+                    param.as_double() >= 0.0 && param.as_double() < 2000) {
                     RCLCPP_INFO(this->get_logger(), "changed param value");
                     D_w_ = param.as_double();
                     Precompile();
@@ -715,7 +715,7 @@ private:
         p_values_map["theta_"] = std::vector{theta};
         switch(path_d) {
             case 0:
-                p_values_map["coef"] = std::vector{0.0, 0.0, 1.0, 0.0};  //  a y b Circulo c y d Lineal
+                p_values_map["coef"] = std::vector{0.0, 0.0, 1.0, 1.0};  //  a y b Circulo c y d Lineal
                 break;
             case 1:
                 p_values_map["coef"] = std::vector{30.0, 30.0, 0.0, 0.0};  //  a y b Circulo c y d Lineal
@@ -792,10 +792,10 @@ private:
         float x_p, y_p, dx, dy, ddx, ddy;
         switch(path_d) {
             case 0:
-                x_p  = w+10;  // 
-                y_p  = 10;    // 
+                x_p  = w+5;  // 
+                y_p  = w+5;    // 
                 dx   = 1;     // 
-                dy   = 0;     //
+                dy   = 1;     //
                 ddx   = 0;     // 
                 ddy   = 0;     //
                 break;

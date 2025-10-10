@@ -163,7 +163,7 @@ ASV3:
         Eps: 0.2488
         rho: 3.0
         theta: 2.0944
-        path_d: 1
+        path_d: 0
     mpc_mlc_pf_coor:
       ros__parameters:
         Ts: 500.0         #ms
@@ -173,7 +173,7 @@ ASV3:
         Q: [10.0, 0.5, 0.0, 0.0, 150.0]
         R: [0.0, 30.0, 10.0] 
         Rd: [10.0, 0.0, 300.0] 
-        Dw: 20.0
+        Dw: 500.0
         x_e_bar_max: 100.0
         x_e_bar_min: -100.0
         y_e_bar_max: 100.0
@@ -196,7 +196,7 @@ ASV3:
         Eps: 0.2488
         rho: 3.0
         theta: 2.0944
-        path_d: 1
+        path_d: 0
   simulator:
     simulator_asv_wrapper:
       ros__parameters:
