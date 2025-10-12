@@ -253,9 +253,9 @@ private:
     float w1 = 0, u_tar_act1 = 0, w_dot1 = 0;
     float w3 = 0, u_tar_act3 = 0, w_dot3 = 0;
 
-    float rho0 = 3.0, theta0 = -2.0944;
-    float rho1 = 3.0, theta1 = 0;
-    float rho3 = 3.0, theta3 = 2.0944;
+    float rho0 = 4.0, theta0 = -2.0944;
+    float rho1 = 4.0, theta1 = 0;
+    float rho3 = 4.0, theta3 = 2.0944;
     int path_d = 0;
     rclcpp::Subscription<asv_interfaces::msg::ReferenceLlc>::SharedPtr subscriber_utar0;
     rclcpp::Subscription<asv_interfaces::msg::ReferenceLlc>::SharedPtr subscriber_utar1;
