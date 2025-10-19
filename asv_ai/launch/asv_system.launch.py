@@ -1,10 +1,11 @@
-import os
-from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, OpaqueFunction, ExecuteProcess
-from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, Command
+from launch.actions import DeclareLaunchArgument, ExecuteProcess, OpaqueFunction
+from launch.substitutions import Command, LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
-from launch_ros.substitutions import FindPackageShare
 from launch_ros.parameter_descriptions import ParameterValue
+from launch_ros.substitutions import FindPackageShare
+
+from launch import LaunchDescription
+
 
 def launch_setup(context, *args, **kwargs):
     """
@@ -13,7 +14,7 @@ def launch_setup(context, *args, **kwargs):
     """
     num_agents_str = LaunchConfiguration('num_agents').perform(context)
     num_agents = int(num_agents_str)
-    
+
     urdf_path = PathJoinSubstitution([
         FindPackageShare('yf_description'),
         'urdf',
@@ -46,7 +47,7 @@ def launch_setup(context, *args, **kwargs):
                 'robot_description': robot_description,
                 'publish_frequency': 15.0,  # Reduced from default 30Hz to 15Hz for performance
                 # The frame_prefix is not needed because the xacro file handles it
-                # 'frame_prefix': f'agent_{i}/' 
+                # 'frame_prefix': f'agent_{i}/'
             }],
             remappings=[
                 ('/robot_description', '/robot_description')
@@ -54,7 +55,7 @@ def launch_setup(context, *args, **kwargs):
             output='screen'
         )
         nodes_to_launch.append(robot_state_publisher_node)
-    
+
     return nodes_to_launch
 
 def generate_launch_description():
@@ -64,10 +65,10 @@ def generate_launch_description():
     model_path_arg = DeclareLaunchArgument(
         'model_path', default_value='', description='Path to pre-trained PPO model'
     )
-    
+
     num_agents = LaunchConfiguration('num_agents')
     model_path = LaunchConfiguration('model_path')
-    
+
     env_node = Node(
         package='asv_ai',
         executable='asv_env_node',
@@ -75,7 +76,7 @@ def generate_launch_description():
         parameters=[{'num_agents': num_agents}],
         output='screen'
     )
-    
+
     ppo_node = Node(
         package='asv_ai',
         executable='asv_ppo_node',
@@ -83,7 +84,7 @@ def generate_launch_description():
         parameters=[{'num_agents': num_agents, 'model_path': model_path}],
         output='screen'
     )
-    
+
     rviz_config_path = PathJoinSubstitution([
         FindPackageShare('asv_ai'), 'rviz', 'asv.rviz'
     ])
@@ -99,18 +100,18 @@ def generate_launch_description():
         cmd=['rqt_graph'],
         shell=True
     )
-    
+
     ld = LaunchDescription()
-    
+
     ld.add_action(num_agents_arg)
     ld.add_action(model_path_arg)
-    
+
     ld.add_action(env_node)
     ld.add_action(ppo_node)
     ld.add_action(rviz_node)
     ld.add_action(rqt_graph_node)
-    
+
     ld.add_action(OpaqueFunction(function=launch_setup))
-    
+
     # This return statement was missing
     return ld

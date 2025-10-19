@@ -1,27 +1,26 @@
 import numpy as np
-import gymnasium as gym
 
 # Surge o avance
-# Sway o desplazamiento lateral 
+# Sway o desplazamiento lateral
 # Yaw o giro del angulo de la proa
 
-class ASVAgent():
+class ASVAgent:
     """
     ASV According to state
     X = [x_est, y_est, psi_est, u_est, v_est, r_est]
     """
     mass = 23.8 # Peso del barco en kg
-    
-    rotationalInertia = 1.76 # Momento de inercia del barco en kg*m^2 (yaw) 
-    
+
+    rotationalInertia = 1.76 # Momento de inercia del barco en kg*m^2 (yaw)
+
     xG = 0.046 # Centro de gravedad ligeramente desplazado
 
     X_udot =  -2 # Resistance of water to linear acceleration in the surge direction
-    Y_vdot = -10 # Same for sway 
+    Y_vdot = -10 # Same for sway
     Y_rdot = 0 # Added mass coupling between yaw and sway. Indicates how yaw motion affects the sway hydrodynamic forces.
     N_vdot = 0 # Represents how sway motion affects the yaw hydrodynamic forces.
     N_rdot = -1 # Resistance of water to rotational acceleration in yaw.
-    
+
     x_u = -0.72253 # Linear drag coefficient in surge
     x_u_abs_u = -1.32742 # Nonlinear drag forces due to water resistance, proportional to the square of velocity.
     y_v = -0.88965
@@ -52,7 +51,7 @@ class ASVAgent():
         self.beta_m=None # En el paper es beta, angulo de la formación con respecto al eje x (Si es 0 debe estar justo enfrente del centroide) Norte a este equivale a rotacion positiva
 
         # Mass or effective intertia matrix
-        # Represents the ASV's resistance to linear and rotational accelerations 
+        # Represents the ASV's resistance to linear and rotational accelerations
         # in surge (x-direction), sway (y-direction), and yaw (rotation about z-axis).
         self.m = np.array([[self.mass - self.X_udot, 0, 0],
                            [0, self.mass - self.Y_vdot, self.mass*self.xG - self.Y_rdot],
@@ -78,7 +77,7 @@ class ASVAgent():
     # Se puede agregar ruido a la observación y se puede especificar la varianza del ruido
     def observe(self, add_noise=False, sigma2=0.01):
         return self.x.T[0]
-    
+
     @staticmethod
     # Traduce la acción del agente a fuerza y momento de rotación para el ASV
     def get_force_tau(action):
@@ -87,13 +86,13 @@ class ASVAgent():
         action 1 es el momento de rotación [-0.5, 0.5]
         '''
         return np.vstack([action[0] + 1, 0, action[1]/2.3])
-    
-    # Simular el movimiento del ASV. 
+
+    # Simular el movimiento del ASV.
     # Calcula cómo el estado del ASV (posición, orientación y velocidades)
     # cambia bajo la acción de fuerzas y momentos proporcionados por action.
-    # Este es un simulador de la dinámica del ASV. Para ls deberes a ros solo vamos a hacer que evolve envie datos de accion. 
+    # Este es un simulador de la dinámica del ASV. Para ls deberes a ros solo vamos a hacer que evolve envie datos de accion.
     def evolve(self, action): #specific for that boat
-        
+
         for _ in range(4):
             _, _, psi, u_r, v_r, r = self.x.flat
             ROT = np.array([[np.cos(psi), -np.sin(psi), 0],
@@ -115,19 +114,19 @@ class ASVAgent():
                 ])
             eta_dot = np.matmul(ROT, self.x[3:])# variation of position
             nu_dot = np.matmul(self.invM, self.get_force_tau(action) - np.matmul(self.c+D, self.x[3:]))# speed variation
-            
+
             # Update the state of the ASV with new position and velocity after the action has taken place
             xdot = np.vstack([eta_dot, nu_dot])
             self.x += xdot*self.dt
 
             # -180 180 (Normalizacion del angulo)
             self.x[2] = (self.x[2] + np.pi) % (2 * np.pi) - np.pi
-    
+
     # Distancia entre el ASV y un punto dado
     def distanceTo(self, point):
         return np.linalg.norm(np.subtract(self.x[:2], point))
-    
-    # Calcula la posición esperada de un vehículo en formación 
+
+    # Calcula la posición esperada de un vehículo en formación
     # (o de referencia) en base a un punto líder y un ángulo de la línea de formación
     def expected_position(self, x_v,  slope):
         '''
@@ -147,7 +146,7 @@ class ASVAgent():
         '''
         return np.linalg.norm(self.expected_position(x_v, slope) - self.x[:2].flat)
 
-#verify extistence 
+#verify extistence
     # Se remplaza la sgte funcion
     #def Rv(self):
     #    return self.k_v*(self.x[4]*np.cos(self.beta) - self.x[4]*np.sin(self.beta))
@@ -156,9 +155,9 @@ class ASVAgent():
     def Rv(self, x_v, slope):
         x_p1 = self.expected_position(x_v, slope) - self.x[:2]
         angle = np.arctan2(x_p1[1], x_p1[0]) - self.x[2]
-        return self.k_v*(self.x[3]*np.cos(angle) - (np.abs(self.x[4]) + np.abs(self.x[5]))*np.abs(np.sin(angle)))  # 
+        return self.k_v*(self.x[3]*np.cos(angle) - (np.abs(self.x[4]) + np.abs(self.x[5]))*np.abs(np.sin(angle)))  #
                               # x[3] (surge) grande y cos pequeño (mejor). x[4] (sway) y x[5] (yaw) pequeños y sen grande (mejor)
-    
+
     # Recompensa por distancia (posicion)
     def Rd(self,x_v, slope):
         err_max=10

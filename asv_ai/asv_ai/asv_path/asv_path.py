@@ -5,7 +5,7 @@ import numpy as np
 
 
 # Tareyectoria parametrizada por theta. El parametro puede controlar la forma de la trayectoria (lider virtual)
-class ParametrizedPath():
+class ParametrizedPath:
     # parametrized by theta
     # Inicializa la instancia de ParametrizedPath
     def __init__(self,path_no=0, theta=0): # path_no: 0, 1, 2 identifica la trayectoria
@@ -38,10 +38,10 @@ class ParametrizedPath():
                     return np.array([[scaled_theta], [scaled_theta]]), np.array([0.3])  # scaled derivative
                 else:
                     return np.array([[scaled_theta], [scaled_theta]])
-    
+
     # find the projection x_p of point x_c along the path at theta
     def projection(self, x_c):
-        
+
         match self.path_no:
             case 0:
                 a, b= (x_c[0] + x_c[1])/2, (x_c[0] + x_c[1])/2
@@ -51,15 +51,15 @@ class ParametrizedPath():
                 a, b= (x_c[0] + x_c[1])/2, (x_c[0] + x_c[1])/2
 
         return np.array([a, b])
-    
+
     # find the along track error e = ||x_p - x(theta)||
     def along_track_error(self, x_c):
         return np.linalg.norm(self.projection(x_c) - self.path(self.theta))
-    
+
     # find the cross track error e = ||x_p - x_c||
     def cross_track_error(self, x_c):
         return np.linalg.norm(self.projection(x_c) - x_c)
-    
+
     # find the state of the path following system
     def state(self, x_c):
         return self.cross_track_error(x_c)
@@ -84,7 +84,7 @@ if __name__ == '__main__':
     #Current position
     x_c = np.array([[1], [4]])
     plt.plot(x_c[0], x_c[1], 'ob', label='x_c')
-    
+
     #Projection of x_c on the path
     x_p = param_p.projection(x_c)
     plt.plot(x_p[0], x_p[1], 'og', label='x_p')

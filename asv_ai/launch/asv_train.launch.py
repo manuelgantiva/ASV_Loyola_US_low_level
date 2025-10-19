@@ -1,19 +1,20 @@
-import os
-from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, OpaqueFunction
-from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, Command
+from launch.substitutions import Command, LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
-from launch_ros.substitutions import FindPackageShare
 from launch_ros.parameter_descriptions import ParameterValue
+from launch_ros.substitutions import FindPackageShare
+
+from launch import LaunchDescription
+
 
 def generate_launch_description():
     # Declare all the launch arguments
     num_agents_arg = DeclareLaunchArgument(
-        'num_agents', default_value='2', 
+        'num_agents', default_value='2',
         description='Number of ASV agents'
     )
     model_path_arg = DeclareLaunchArgument(
-        'model_path', default_value='', 
+        'model_path', default_value='',
         description='Path to pre-trained PPO model'
     )
     train_freq_arg = DeclareLaunchArgument(
@@ -40,7 +41,7 @@ def generate_launch_description():
         'training_mode', default_value='fast',
         description='Training mode: fast (minimal logging) or debug (full logging)'
     )
-    
+
     # Get the launch configurations
     num_agents = LaunchConfiguration('num_agents')
     model_path = LaunchConfiguration('model_path')
@@ -50,7 +51,7 @@ def generate_launch_description():
     rollout_dir = LaunchConfiguration('rollout_dir')
     enable_viz = LaunchConfiguration('enable_visualization')
     training_mode = LaunchConfiguration('training_mode')
-    
+
     # Define nodes that don't depend on agent count
     env_node = Node(
         package='asv_ai',
@@ -62,13 +63,13 @@ def generate_launch_description():
         }],
         output='screen'
     )
-    
+
     ppo_node = Node(
         package='asv_ai',
         executable='asv_ppo_node',
         name='asv_ppo_node',
         parameters=[{
-            'num_agents': num_agents, 
+            'num_agents': num_agents,
             'model_path': model_path,
             'training_enabled': True,
             'train_frequency': train_frequency,
@@ -79,11 +80,11 @@ def generate_launch_description():
         }],
         output='screen'
     )
-    
+
     rviz_config_path = PathJoinSubstitution([
         FindPackageShare('asv_ai'), 'rviz', 'asv.rviz'
     ])
-    
+
     # Function to create agent nodes - this matches your system launch file
     def launch_setup(context):
         num_agents_str = LaunchConfiguration('num_agents').perform(context)
@@ -91,7 +92,7 @@ def generate_launch_description():
         enable_viz_str = LaunchConfiguration('enable_visualization').perform(context)
         enable_viz_value = enable_viz_str.lower() == 'true'
         training_mode_str = LaunchConfiguration('training_mode').perform(context)
-        
+
         urdf_path = PathJoinSubstitution([
             FindPackageShare('yf_description'),  # Changed from asv_description to yf_description
             'urdf',
@@ -99,13 +100,13 @@ def generate_launch_description():
         ])
 
         nodes_to_launch = []
-        
+
         # Conditional RViz2 launch for performance (only if visualization enabled)
         if enable_viz_value:
             rviz_config_path = PathJoinSubstitution([
                 FindPackageShare('asv_ai'), 'rviz', 'asv.rviz'
             ])
-            
+
             rviz_node = Node(
                 package='rviz2',
                 executable='rviz2',
@@ -114,7 +115,7 @@ def generate_launch_description():
                 output='screen'
             )
             nodes_to_launch.append(rviz_node)
-        
+
         for i in range(num_agents_value):
             robot_description = ParameterValue(
                 Command(['xacro ', urdf_path, f' id:={i}', ' own:=true']),
@@ -150,12 +151,12 @@ def generate_launch_description():
                 output='log'  # Always log for robot state publisher to reduce noise
             )
             nodes_to_launch.append(robot_state_publisher_node)
-        
+
         return nodes_to_launch
-    
+
     # Add all to launch description
     ld = LaunchDescription()
-    
+
     # Add all arguments
     ld.add_action(num_agents_arg)
     ld.add_action(model_path_arg)
@@ -165,11 +166,11 @@ def generate_launch_description():
     ld.add_action(rollout_dir_arg)
     ld.add_action(enable_viz_arg)
     ld.add_action(training_mode_arg)
-    
+
     # Add core nodes (env and ppo)
     ld.add_action(env_node)
     ld.add_action(ppo_node)
     # Note: RViz2 is now conditionally launched within launch_setup
     ld.add_action(OpaqueFunction(function=launch_setup))
-    
+
     return ld
