@@ -2,22 +2,24 @@ import cv2
 import gymnasium as gym
 import numpy as np
 from gymnasium import spaces
+
 from ..asv_agent.asv_agent import ASVAgent
 from ..asv_path.asv_path import ParametrizedPath
+
 
 class Environment(gym.Env):
     def __init__(self, num_agents=2):
         super(Environment, self).__init__()
         self.num_agents = num_agents
-        
+
         # Action: [vyaw_rate, forward_velocity_change] for each agent
         self.action_space = spaces.Box(low=-1, high=1, shape=(self.num_agents, 2), dtype=np.float32)
         # Observation: [x, y, yaw, vx, vy, vyaw] for each agent
         self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(self.num_agents, 6), dtype=np.float32)
-        
+
         self.state = np.zeros((self.num_agents, 6))
         self.dt = 0.1  # Simulation time step
-        
+
         # Add formation control components
         self.param_path = ParametrizedPath()
         self.formation_distance = 3.0
@@ -25,10 +27,10 @@ class Environment(gym.Env):
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
-        
+
         # Initialize path parameter
         self.param_path.theta = np.random.uniform(5, 15)
-        
+
         for i in range(self.num_agents):
             start_x = i * 4.0 - (self.num_agents - 1) * 2.0  # Smaller spacing
             self.state[i] = [start_x, 0.0, np.pi / 2, 1.0, 0.0, 0.0]
@@ -54,7 +56,7 @@ class Environment(gym.Env):
         # Calculate reward and done state
         reward = self._calculate_reward()
         done = self._check_done()
-        
+
         return self._get_obs(), reward, done, False, self._get_info()
 
     def _calculate_reward(self):
@@ -64,44 +66,44 @@ class Environment(gym.Env):
         """
         # Get virtual leader position and path derivative
         pos_v, deriv = self.param_path.path(self.param_path.theta, True)
-        
+
         # Calculate expected positions for each agent
         cos_angles = np.cos(deriv.item() + np.array(self.agent_betas))
         sin_angles = np.sin(deriv.item() + np.array(self.agent_betas))
         expected_positions = pos_v.flatten()[np.newaxis, :] + self.formation_distance * np.column_stack([cos_angles, sin_angles])
-        
+
         # Get current agent positions and orientations
         agent_positions = self.state[:, :2]  # [x, y] for each agent
         agent_orientations = self.state[:, 2]  # yaw for each agent
         agent_velocities = self.state[:, 3:6]  # [vx, vy, vyaw] for each agent
-        
+
         # Calculate position errors and angles to target
         position_errors = expected_positions - agent_positions
         angles_to_target = np.arctan2(position_errors[:, 1], position_errors[:, 0]) - agent_orientations
-        
+
         # Velocity rewards (Rv components) - rewards moving toward formation goal
         k_v = 2.75
-        rv_components = k_v * (agent_velocities[:, 0] * np.cos(angles_to_target) - 
-                              (np.abs(agent_velocities[:, 1]) + np.abs(agent_velocities[:, 2])) * 
+        rv_components = k_v * (agent_velocities[:, 0] * np.cos(angles_to_target) -
+                              (np.abs(agent_velocities[:, 1]) + np.abs(agent_velocities[:, 2])) *
                               np.abs(np.sin(angles_to_target)))
-        
+
         # Distance rewards (Rd components) - penalizes formation error
         k_d = 2.0
         err_max = 10.0
         errors = np.linalg.norm(position_errors, axis=1)
         rd_components = k_d * (-errors / err_max)
-        
+
         # Average rewards
         total_rv = np.mean(rv_components)
         total_rd = np.mean(rd_components)
-        
+
         # Final reward (same as Environment2)
         reward = total_rv + total_rd
-        
+
         # Penalty for collision (keep existing collision logic)
         if self._check_collision():
             reward -= 100
-        
+
         return reward
 
     def _check_done(self):
@@ -113,19 +115,19 @@ class Environment(gym.Env):
         # Check collision (failure)
         if self._check_collision():
             return True
-            
+
         # Check formation success (like Environment2)
         try:
             centroid = np.mean(self.state[:, :2], axis=0)
             ate = self.param_path.along_track_error(centroid)
-            
+
             # Episode succeeds when along-track error is small
             if ate < 5.0:
                 return True
         except:
             # If calculation fails, don't end episode
             pass
-            
+
         return False
 
     def _check_collision(self):
@@ -157,14 +159,14 @@ class EnvOriginal(gym.Env):
         #inicializar clase parametrized path
         self.param_p = ParametrizedPath()
         self.current_step=0 #supervisar cuántos steps se han dado (contador)
-        
+
         #Crear instancias de ASVAgent sin el argumento 'id' y con estado inicial aleatorio
         self.agents = [ASVAgent(id=n) for n in range (self.n)]
         self.beta_m()
 
-        #Esta fórmula garantiza que cada vehículo se posicione en un ángulo 
-        #uniformemente distribuido alrededor del líder virtual, formando así 
-        #una formación circular o en función de la geometría deseada ajustando la fórmula de 
+        #Esta fórmula garantiza que cada vehículo se posicione en un ángulo
+        #uniformemente distribuido alrededor del líder virtual, formando así
+        #una formación circular o en función de la geometría deseada ajustando la fórmula de
         #beta_m = 2 * np.pi * i / self.n
 
 
@@ -176,7 +178,7 @@ class EnvOriginal(gym.Env):
         self.action_space = spaces.Box(
             low=np.array([-1, -1]*self.n),
             high=np.array([1, 1, ]*self.n), dtype=np.float32)
-        
+
         # posicion (dos primeros) orientacion (tercera), velocidad (cuarta y quinta) y velocidad angular (sexta) de los ASVs. Posicion deseada (dos ultimos)
         obs_space_l = np.array(
         [-15, -15, -np.pi, -3.6, -3.6, -np.pi/3, -15, -15]*self.n, dtype=np.float32)
@@ -185,16 +187,16 @@ class EnvOriginal(gym.Env):
         obs_space_l = np.hstack(
             [obs_space_l, np.array(
                 [-15, -15, 0, 0], dtype=np.float32)])#lider virtual pos (dos primeros) y error froma (tercero) y cross track error (cuarto) (minimos valores)
-        
+
         # Límites superiores de las observaciones (posición y velocidad de los ASVs, posición y derivada de la trayectoria, error de formación y error de seguimiento)
         obs_space_h = np.array(
         [35, 35, np.pi, 3.6, 3.6, np.pi/3, 35, 35]*self.n, dtype=np.float32)
-        
+
         obs_space_h = np.hstack(
             [obs_space_h, np.array(
                 [35, 35, 100, 100], dtype=np.float32)]
         )
-    
+
         # Example for using image as input (channel-first; channel-last also works):
         self.observation_space = spaces.Box(low=obs_space_l, high=obs_space_h, dtype=np.float32)
 
@@ -216,7 +218,7 @@ class EnvOriginal(gym.Env):
 
         # Posición y velocidad del lider virtual
         pos_v, deriv = self.param_p.path(self.param_p.theta, True)
- 
+
         # Inicializacion del vector observaciones y error de formación
         state = np.array([])
         error_f = 0
@@ -232,10 +234,10 @@ class EnvOriginal(gym.Env):
 
             # Calcula el error de formación individual de cada ASV
             error_f += agent.error_f(pos_v, deriv)
- 
+
         # Almacena la posicion del lider virutal, el error de formación promedio y cross-track error promedio (error perpendicular de los agentes respecto a la trayectoria)
         state = np.vstack([state, pos_v[0], pos_v[1], error_f/self.n,
-                           self.param_p.cross_track_error(np.mean( 
+                           self.param_p.cross_track_error(np.mean(
                                np.stack([agent.x[:2] for agent in self.agents]), axis=0))],
                                  dtype=np.float32).reshape(-1)
         if with_v:
@@ -253,17 +255,17 @@ class EnvOriginal(gym.Env):
             agent.evolve(action[i*2:i*2+2])
         observation, x_v, deriv = self._get_obs(with_v=True)
         #Imprime reward y el tipo de dato
-                
+
         #recompenso mediante rv y rd
         # Calcula la metrica de direccion de la velocidad de cada ASV respecto a la trayectoria desdeada
         # Promedio que se usa en parte de la recompensa
-        rv = [agent.Rv(x_v,deriv) for agent in self.agents] #deriva 
+        rv = [agent.Rv(x_v,deriv) for agent in self.agents] #deriva
         rv = sum(rv)/len(rv)
         # Desviacion de la posicion de cada ASV respecto a la posicion deseada
         rd = [agent.Rd(x_v, deriv) for agent in self.agents] #pos deseada (formation error)
         rd = sum(rd)/len(rd)
         #extrayendo el primer elemento de rv(que es un array) convirtiendolo en consecuencia en un escalar
-        rv = rv.item() if isinstance(rv, np.ndarray) and rv.shape == (1,) else rv 
+        rv = rv.item() if isinstance(rv, np.ndarray) and rv.shape == (1,) else rv
 
         # Recompensa total
         reward = rv + rd
@@ -281,18 +283,18 @@ class EnvOriginal(gym.Env):
         # self.param_p.update_theta(np.mean(np.stack([agent.x[:2] for agent in self.agents]), axis=0), 10)
 
         # Devuelve el estado actual del entorno despues del paso, la recompensa para el paso, si el episodio termino y si el paso fue truncado
-        return observation, reward, terminated, False, {} 
-    
+        return observation, reward, terminated, False, {}
+
 
     # Reinicia el entorno y los agentes devolviendo los agentes a una posicion aleatoria
     def reset(self, seed=None, options=None):
-        
+
         # for agent in self.agents:
         #     # randomize agents position
         #     agent.x = np.array([[np.random.uniform(0, 75)], [np.random.uniform(0, 75)], [
         #                        np.random.uniform(-np.pi, np.pi)], [0], [0], [0]], dtype=np.float32)
         # self.current_step = 0 #cuando reiniciamos la simulación, decimos que no ocurrió ningún paso del step (reinicio contador)
-        
+
         # Reinicia el parametro que controla la posicion del lider virtual y la trayectoria
         self.param_p.theta = np.random.uniform(5, 15)  # Near origin
 
@@ -301,8 +303,8 @@ class EnvOriginal(gym.Env):
             agent.x = np.array([[(2 - -1^(i+1))*5],
                                 [(2 + -1^(i+1))*5],
                                 [np.random.rand()*3],[0], [0], [0]], dtype=np.float32)
-            
-            # 
+
+            #
             # 14 sin rand
             factor = 0.4 # El 60% de las veces se reinicia la posicion de los ASVs
             if np.random.rand() > factor:
@@ -310,14 +312,14 @@ class EnvOriginal(gym.Env):
 
                 agent.x[0] =  agent.expected_position(pos_v, deriv)[0] - 5 # Small offset toward origin
                 agent.x[1] =  agent.expected_position(pos_v, deriv)[1] - 5
-                
+
                 x_p1 = agent.expected_position(pos_v, deriv) - agent.x[:2]
                 angle = np.arctan2(x_p1[1], x_p1[0]) # Angulo entre la posicion esperada y la posicion actual
                 agent.x[2] = angle
                 agent.x[3] = np.random.rand() # Velocidad lineal aleatoria dentro del rango
 
         self.current_step = 0 #en cada step estamos contando (reinicio contador)
-            
+
         return self._get_obs(), {}
 
 
@@ -352,7 +354,7 @@ class EnvOriginal(gym.Env):
             cv2.fillPoly(self.canvas, np.int32([points]), RED)
             cv2.circle(self.canvas, (int(pos_a_v[1][0] + x_pad), int(pos_a_v[0][0] + y_pad)),
                        5, (255, 255, 0), -1)
-            
+
         # Dibuja el lider virtual (circulo verde), el centro promedio de los ASV (circulo amarillo) y la proyeccion del centro promedio (circulo magenta)
         cv2.circle(
             self.canvas, (int(pos_v[1][0] + x_pad), int(pos_v[0][0] + y_pad)), 5, (0, 255, 0), -1)
@@ -360,11 +362,11 @@ class EnvOriginal(gym.Env):
             self.canvas, (int(pos_c[1][0] + x_pad), int(pos_c[0][0] + y_pad)), 3, (0, 255, 255), -1)
         cv2.circle(
             self.canvas, (int(pos_p[1][0] + x_pad), int(pos_p[0][0] + y_pad)), 5, (255, 0, 255), -1)
-        
+
 
         _, x_v, deriv = self._get_obs(with_v=True)
         #Imprime reward y el tipo de dato
-                
+
         #recompenso mediante rv y rd
         rv = [agent.Rv(x_v,deriv) for agent in self.agents] #deriva (recompensa de velocidad)
         rv = sum(rv)/len(rv) # promedio de la recompensa de velocidad
@@ -375,7 +377,7 @@ class EnvOriginal(gym.Env):
         self.canvas = cv2.flip(self.canvas, 0) # invierte la imagen para que el origen sea en la esquina inferior izquierda
         # zoom in
         self.canvas = cv2.resize(self.canvas, (640, 480), interpolation=cv2.INTER_AREA) # amplia la imagen a 640x480 pixeles
-        
+
         # Imprime la recompensa y el error de formación en la ventana de visualización
         with np.printoptions(precision=3, suppress=True):
             cv2.putText(self.canvas, f"reward: {rv[0]:0.2f} + {rd:0.2f} =  {reward}", (10, 30),
@@ -383,9 +385,9 @@ class EnvOriginal(gym.Env):
             ate = self.param_p.along_track_error(np.mean(np.stack([agent.x[:2] for agent in self.agents]), axis=0))
             cv2.putText(self.canvas, f"ate: {ate:0.2f}", (10, 70),
                         cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
-            
 
-        # if human imprime la imagen en una ventana 
+
+        # if human imprime la imagen en una ventana
         if mode == "human":
             cv2.imshow("Game", self.canvas)
             cv2.waitKey(1)
@@ -406,19 +408,19 @@ class EnvOriginal(gym.Env):
 # #     # Create the model PPO
 # #     model = PPO("MlpPolicy", env, verbose=1) # Multilayer perceptron policy PPO training model
 # #     env.reset() # Reinicia el entorno
-    
+
 # #     # Run the model (inicializa el bucle principal mienrtas running = true)
 # #     running = True
 # #     observation, _ = env.reset()
 
-# #     # Toma decisiones. Utiliza la obs actual para predecir el siguiente paso 
+# #     # Toma decisiones. Utiliza la obs actual para predecir el siguiente paso
 # #     while running:
 # #         action, _ = model.predict(observation)
 
 # #         # Ejecuta un paso en el entorno (observation = nuevo estado del entorno, reward = recompensa obtenida, terminated = si el episodio termino, truncated = si el paso fue truncado)
 # #         observation, reward, terminated, truncated, info = env.step([0,0,0,0])
-# #         # print(observation)   
-        
+# #         # print(observation)
+
 # #         env.render("human")
 # #         if (terminated or truncated or env.current_step > 2048):
 # #             observation, _ = env.reset()
@@ -438,14 +440,14 @@ class Environment2(gym.Env):
         #inicializar clase parametrized path
         self.param_p = ParametrizedPath()
         self.current_step=0 #supervisar cuántos steps se han dado (contador)
-        
+
         #Crear instancias de ASVAgent sin el argumento 'id' y con estado inicial aleatorio
         self.agents = [ASVAgent(id=n) for n in range (self.n)]
         self.beta_m()
 
-        #Esta fórmula garantiza que cada vehículo se posicione en un ángulo 
-        #uniformemente distribuido alrededor del líder virtual, formando así 
-        #una formación circular o en función de la geometría deseada ajustando la fórmula de 
+        #Esta fórmula garantiza que cada vehículo se posicione en un ángulo
+        #uniformemente distribuido alrededor del líder virtual, formando así
+        #una formación circular o en función de la geometría deseada ajustando la fórmula de
         #beta_m = 2 * np.pi * i / self.n
 
 
@@ -457,7 +459,7 @@ class Environment2(gym.Env):
         self.action_space = spaces.Box(
             low=np.array([-1, -1]*self.n),
             high=np.array([1, 1, ]*self.n), dtype=np.float32)
-        
+
         # posicion (dos primeros) orientacion (tercera), velocidad (cuarta y quinta) y velocidad angular (sexta) de los ASVs. Posicion deseada (dos ultimos)
         obs_space_l = np.array(
         [0, 0, -np.pi, -3.6, -3.6, -np.pi/3, 0, 0]*self.n, dtype=np.float32)
@@ -466,16 +468,16 @@ class Environment2(gym.Env):
         obs_space_l = np.hstack(
             [obs_space_l, np.array(
                 [0, 0, 0, 0], dtype=np.float32)])#lider virtual pos (dos primeros) y error froma (tercero) y cross track error (cuarto) (minimos valores)
-        
+
         # Límites superiores de las observaciones (posición y velocidad de los ASVs, posición y derivada de la trayectoria, error de formación y error de seguimiento)
         obs_space_h = np.array(
         [75, 75, np.pi, 3.6, 3.6, np.pi/3, 75, 75]*self.n, dtype=np.float32)
-        
+
         obs_space_h = np.hstack(
             [obs_space_h, np.array(
                 [75, 75, 100, 100], dtype=np.float32)]
         )
-    
+
         # Example for using image as input (channel-first; channel-last also works):
         self.observation_space = spaces.Box(low=obs_space_l, high=obs_space_h, dtype=np.float32)
 
@@ -497,7 +499,7 @@ class Environment2(gym.Env):
 
         # Posición y velocidad del lider virtual
         pos_v, deriv = self.param_p.path(self.param_p.theta, True)
- 
+
         # Inicializacion del vector observaciones y error de formación
         state = np.array([])
         error_f = 0
@@ -513,10 +515,10 @@ class Environment2(gym.Env):
 
             # Calcula el error de formación individual de cada ASV
             error_f += agent.error_f(pos_v, deriv)
- 
+
         # Almacena la posicion del lider virutal, el error de formación promedio y cross-track error promedio (error perpendicular de los agentes respecto a la trayectoria)
         state = np.vstack([state, pos_v[0], pos_v[1], error_f/self.n,
-                           self.param_p.cross_track_error(np.mean( 
+                           self.param_p.cross_track_error(np.mean(
                                np.stack([agent.x[:2] for agent in self.agents]), axis=0))],
                                  dtype=np.float32).reshape(-1)
         if with_v:
@@ -534,17 +536,17 @@ class Environment2(gym.Env):
             agent.evolve(action[i*2:i*2+2])
         observation, x_v, deriv = self._get_obs(with_v=True)
         #Imprime reward y el tipo de dato
-                
+
         #recompenso mediante rv y rd
         # Calcula la metrica de direccion de la velocidad de cada ASV respecto a la trayectoria desdeada
         # Promedio que se usa en parte de la recompensa
-        rv = [agent.Rv(x_v,deriv) for agent in self.agents] #deriva 
+        rv = [agent.Rv(x_v,deriv) for agent in self.agents] #deriva
         rv = sum(rv)/len(rv)
         # Desviacion de la posicion de cada ASV respecto a la posicion deseada
         rd = [agent.Rd(x_v, deriv) for agent in self.agents] #pos deseada (formation error)
         rd = sum(rd)/len(rd)
         #extrayendo el primer elemento de rv(que es un array) convirtiendolo en consecuencia en un escalar
-        rv = rv.item() if isinstance(rv, np.ndarray) and rv.shape == (1,) else rv 
+        rv = rv.item() if isinstance(rv, np.ndarray) and rv.shape == (1,) else rv
 
         # Recompensa total
         reward = rv + rd
@@ -562,18 +564,18 @@ class Environment2(gym.Env):
         # self.param_p.update_theta(np.mean(np.stack([agent.x[:2] for agent in self.agents]), axis=0), 10)
 
         # Devuelve el estado actual del entorno despues del paso, la recompensa para el paso, si el episodio termino y si el paso fue truncado
-        return observation, reward, terminated, False, {} 
-    
+        return observation, reward, terminated, False, {}
+
 
     # Reinicia el entorno y los agentes devolviendo los agentes a una posicion aleatoria
     def reset(self, seed=None, options=None):
-        
+
         # for agent in self.agents:
         #     # randomize agents position
         #     agent.x = np.array([[np.random.uniform(0, 75)], [np.random.uniform(0, 75)], [
         #                        np.random.uniform(-np.pi, np.pi)], [0], [0], [0]], dtype=np.float32)
         # self.current_step = 0 #cuando reiniciamos la simulación, decimos que no ocurrió ningún paso del step (reinicio contador)
-        
+
         # Reinicia el parametro que controla la posicion del lider virtual y la trayectoria
         self.param_p.theta = np.random.uniform(40, 70)  # 30, 50
 
@@ -582,8 +584,8 @@ class Environment2(gym.Env):
             agent.x = np.array([[(2 - -1^(i+1))*5],
                                 [(2 + -1^(i+1))*5],
                                 [np.random.rand()*3],[0], [0], [0]], dtype=np.float32)
-            
-            # 
+
+            #
             # 14 sin rand
             factor = 0.4 # El 60% de las veces se reinicia la posicion de los ASVs
             if np.random.rand() > factor:
@@ -591,14 +593,14 @@ class Environment2(gym.Env):
 
                 agent.x[0] =  agent.expected_position(pos_v, deriv)[0] - 50 # Desplegar la formación en un rango de 50
                 agent.x[1] =  agent.expected_position(pos_v, deriv)[1] - 50
-                
+
                 x_p1 = agent.expected_position(pos_v, deriv) - agent.x[:2]
                 angle = np.arctan2(x_p1[1], x_p1[0]) # Angulo entre la posicion esperada y la posicion actual
                 agent.x[2] = angle
                 agent.x[3] = np.random.rand() # Velocidad lineal aleatoria dentro del rango
 
         self.current_step = 0 #en cada step estamos contando (reinicio contador)
-            
+
         return self._get_obs(), {}
 
 
@@ -633,7 +635,7 @@ class Environment2(gym.Env):
             cv2.fillPoly(self.canvas, np.int32([points]), RED)
             cv2.circle(self.canvas, (int(pos_a_v[1][0] + x_pad), int(pos_a_v[0][0] + y_pad)),
                        5, (255, 255, 0), -1)
-            
+
         # Dibuja el lider virtual (circulo verde), el centro promedio de los ASV (circulo amarillo) y la proyeccion del centro promedio (circulo magenta)
         cv2.circle(
             self.canvas, (int(pos_v[1][0] + x_pad), int(pos_v[0][0] + y_pad)), 5, (0, 255, 0), -1)
@@ -641,11 +643,11 @@ class Environment2(gym.Env):
             self.canvas, (int(pos_c[1][0] + x_pad), int(pos_c[0][0] + y_pad)), 3, (0, 255, 255), -1)
         cv2.circle(
             self.canvas, (int(pos_p[1][0] + x_pad), int(pos_p[0][0] + y_pad)), 5, (255, 0, 255), -1)
-        
+
 
         _, x_v, deriv = self._get_obs(with_v=True)
         #Imprime reward y el tipo de dato
-                
+
         #recompenso mediante rv y rd
         rv = [agent.Rv(x_v,deriv) for agent in self.agents] #deriva (recompensa de velocidad)
         rv = sum(rv)/len(rv) # promedio de la recompensa de velocidad
@@ -656,7 +658,7 @@ class Environment2(gym.Env):
         self.canvas = cv2.flip(self.canvas, 0) # invierte la imagen para que el origen sea en la esquina inferior izquierda
         # zoom in
         self.canvas = cv2.resize(self.canvas, (640, 480), interpolation=cv2.INTER_AREA) # amplia la imagen a 640x480 pixeles
-        
+
         # Imprime la recompensa y el error de formación en la ventana de visualización
         with np.printoptions(precision=3, suppress=True):
             cv2.putText(self.canvas, f"reward: {rv[0]:0.2f} + {rd:0.2f} =  {reward}", (10, 30),
@@ -664,9 +666,9 @@ class Environment2(gym.Env):
             ate = self.param_p.along_track_error(np.mean(np.stack([agent.x[:2] for agent in self.agents]), axis=0))
             cv2.putText(self.canvas, f"ate: {ate:0.2f}", (10, 70),
                         cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
-            
 
-        # if human imprime la imagen en una ventana 
+
+        # if human imprime la imagen en una ventana
         if mode == "human":
             cv2.imshow("Game", self.canvas)
             cv2.waitKey(1)
@@ -687,19 +689,19 @@ if __name__ == "__main__":
     # Create the model PPO
     model = PPO("MlpPolicy", env, verbose=1) # Multilayer perceptron policy PPO training model
     env.reset() # Reinicia el entorno
-    
+
     # Run the model (inicializa el bucle principal mienrtas running = true)
     running = True
     observation, _ = env.reset()
 
-    # Toma decisiones. Utiliza la obs actual para predecir el siguiente paso 
+    # Toma decisiones. Utiliza la obs actual para predecir el siguiente paso
     while running:
         action, _ = model.predict(observation)
 
         # Ejecuta un paso en el entorno (observation = nuevo estado del entorno, reward = recompensa obtenida, terminated = si el episodio termino, truncated = si el paso fue truncado)
         observation, reward, terminated, truncated, info = env.step([0,0,0,0])
-        # print(observation)   
-        
+        # print(observation)
+
         env.render("human")
         if (terminated or truncated or env.current_step > 2048):
             observation, _ = env.reset()
