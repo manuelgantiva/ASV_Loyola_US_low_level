@@ -34,11 +34,24 @@ class DataConverter:
         return tensor.detach().cpu().numpy()
 
     @staticmethod
-    def state_to_ppo_input(state_array, num_agents):
-        """Extract agent states from the extended state array and
-        reshape for PPO."""
-        agent_states = state_array[:num_agents * 6]
-        return agent_states.reshape((num_agents, 6))
+    def state_to_ppo_input(state_array, num_agents, obs_dim_per_agent=6):
+        """Extract agent states from the extended state array.
+        
+        Returns a FLAT 1D array for homogeneity with PPO observation space.
+        Format: [agent0_obs0, agent0_obs1, ..., agent1_obs0, agent1_obs1, ...]
+        
+        Args:
+            state_array: Full state array from environment
+            num_agents: Number of agents
+            obs_dim_per_agent: Observation dimensions per agent (default 6)
+            
+        Returns:
+            1D numpy array of shape (num_agents * obs_dim_per_agent,)
+        """
+        total_obs_size = num_agents * obs_dim_per_agent
+        agent_states = state_array[:total_obs_size]
+        # Return as 1D flat array (homogeneous format)
+        return agent_states.flatten()
 
     @staticmethod
     def ppo_output_to_actions(actions, num_agents):

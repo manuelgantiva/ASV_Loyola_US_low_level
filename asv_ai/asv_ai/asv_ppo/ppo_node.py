@@ -128,6 +128,7 @@ class PPONode(Node):  # Renamed from ASVPPONode for generalization (Point 8)
             # Manually set the spaces
             self.model.observation_space = self.observation_space
             self.model.action_space = self.action_space
+            self.model.n_envs = 1  # Single environment (ROS2 provides the environment)
             # Now initialize the model
             self.model._setup_model()
             self.get_logger().info('No existing model found, starting with new PPO model.')
@@ -229,9 +230,13 @@ class PPONode(Node):  # Renamed from ASVPPONode for generalization (Point 8)
     def _predict_and_publish(self, flat_state: np.ndarray):
         """Process environment state, predict actions, and publish to ROS topics."""
         try:
-            # Format state for the model
-            agent_states = DataConverter.state_to_ppo_input(flat_state, self.num_agents)
-            self.current_obs = agent_states.reshape(-1)  # Store current observation (s_t)
+            # Format state for the model (returns 1D flat array for homogeneity)
+            agent_states = DataConverter.state_to_ppo_input(
+                flat_state, 
+                self.num_agents, 
+                self.obs_dim_per_agent
+            )
+            self.current_obs = agent_states  # Already flat, no need to reshape
 
             # Get actions, values, and log_probs from policy network
             # Note: This call is NECESSARY (Point 7 resolved):
@@ -851,13 +856,26 @@ class PPONode(Node):  # Renamed from ASVPPONode for generalization (Point 8)
 
                 # Verify the model loaded correctly and spaces match
                 if hasattr(self.model, 'policy') and self.model.policy is not None:
-                    # Validate that loaded model spaces match our expected spaces
-                    if (self.model.observation_space.shape == self.observation_space.shape and
-                        self.model.action_space.shape == self.action_space.shape):
-                        self.get_logger().info(f"✓ Successfully loaded and verified model from {description}")
+                    # STRICT validation: spaces must match EXACTLY for homogeneity
+                    model_obs_shape = self.model.observation_space.shape
+                    model_act_shape = self.model.action_space.shape
+                    expected_obs_shape = self.observation_space.shape
+                    expected_act_shape = self.action_space.shape
+                    
+                    # Check for EXACT match (strict homogeneity)
+                    if (model_obs_shape == expected_obs_shape and 
+                        model_act_shape == expected_act_shape):
+                        self.get_logger().info(f"✓ Model spaces match exactly: obs={model_obs_shape}, action={model_act_shape}")
                         return model_path
                     else:
-                        self.get_logger().warn(f"✗ Model spaces don't match: obs={self.model.observation_space.shape} vs {self.observation_space.shape}, action={self.model.action_space.shape} vs {self.action_space.shape}")
+                        # Reject incompatible models for integrity
+                        self.get_logger().error(f"✗ INCOMPATIBLE MODEL - Space shapes don't match:")
+                        self.get_logger().error(f"  Expected: obs={expected_obs_shape}, action={expected_act_shape}")
+                        self.get_logger().error(f"  Got:      obs={model_obs_shape}, action={model_act_shape}")
+                        self.get_logger().error(f"  → Model trained with different space format")
+                        self.get_logger().error(f"  → Please retrain model or use compatible checkpoint")
+                        # Don't return this model - try next candidate
+                        continue
                 else:
                     self.get_logger().warn(f"✗ Model loaded but appears invalid from {description}")
 
