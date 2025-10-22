@@ -16,9 +16,9 @@ from std_srvs.srv import Trigger
 from ..utils.data_conversion import DataConverter
 
 
-class ASVPPONode(Node):
+class PPONode(Node):  # Renamed from ASVPPONode for generalization (Point 8)
     def __init__(self):
-        super().__init__('asv_ppo_node')
+        super().__init__('ppo_node')  # Renamed from asv_ppo_node for generalization
 
         # Parameters - Environment Configuration
         self.declare_parameter('num_agents', 2)
@@ -233,13 +233,18 @@ class ASVPPONode(Node):
             agent_states = DataConverter.state_to_ppo_input(flat_state, self.num_agents)
             self.current_obs = agent_states.reshape(-1)  # Store current observation (s_t)
 
-            # Get values and log_probs for rollout buffer
+            # Get actions, values, and log_probs from policy network
+            # Note: This call is NECESSARY (Point 7 resolved):
+            # - actions: needed for agent control
+            # - values: V(s_t) needed for PPO advantage calculation in training buffer
+            # - log_probs: π(a_t|s_t) needed for PPO policy gradient updates
+            # We cannot use model.predict() because it only returns actions without values/log_probs
             with th.no_grad():
                 # Reshape to (1, -1) instead of keeping 2D
                 obs_tensor = DataConverter.numpy_to_tensor(self.current_obs)
-                obs_tensor = obs_tensor.reshape(1, -1)  # Reshape to (1, 12) - batch of 1 with 12 features
+                obs_tensor = obs_tensor.reshape(1, -1)  # Reshape to (1, obs_dim) - batch of 1
 
-                # Call policy and get results
+                # Call policy forward pass to get all three outputs
                 actions, values, log_probs = self.model.policy(obs_tensor)
 
                 # Convert to numpy first
@@ -884,7 +889,7 @@ class ASVPPONode(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = ASVPPONode()
+    node = PPONode()  # Updated to use renamed class (Point 8)
     rclpy.spin(node)
     node.destroy_node()
     rclpy.shutdown()

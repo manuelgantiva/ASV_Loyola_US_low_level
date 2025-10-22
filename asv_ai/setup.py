@@ -27,7 +27,7 @@ setup(
         'console_scripts': [
             'asv_env_node = asv_ai.asv_env.asv_env_node:main',
             'asv_agent_node = asv_ai.asv_agent.asv_agent_node:main',
-            'asv_ppo_node = asv_ai.asv_ppo.asv_ppo_node:main',
+            'ppo_node = asv_ai.asv_ppo.ppo_node:main',
         ],
     },
 )
