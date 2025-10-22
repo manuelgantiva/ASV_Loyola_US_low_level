@@ -20,12 +20,16 @@ class ASVPPONode(Node):
     def __init__(self):
         super().__init__('asv_ppo_node')
 
-        # Parameters
+        # Parameters - Environment Configuration
         self.declare_parameter('num_agents', 2)
         self.declare_parameter('model_path', '')
         self.declare_parameter('rollout_dir', os.path.expanduser('~/Desktop/ASV_Rollouts'))
         self.declare_parameter('rollout_save_every', 50)
         self.declare_parameter('rollout_collection_enabled', True)
+        
+        # Parameters - State/Action Space Dimensions (generalizable for any robot/environment)
+        self.declare_parameter('obs_dim_per_agent', 6)  # Default: [x, y, yaw, vx, vy, vyaw]
+        self.declare_parameter('action_dim_per_agent', 2)  # Default: [vyaw_rate, acceleration]
 
         # Resolve parameters
         self.num_agents = self.get_parameter('num_agents').value
@@ -33,6 +37,11 @@ class ASVPPONode(Node):
         self.rollout_dir = os.path.expanduser(self.get_parameter('rollout_dir').value)
         self.rollout_save_every = int(self.get_parameter('rollout_save_every').value)
         self.rollout_collection_enabled = self.get_parameter('rollout_collection_enabled').value
+        
+        # Resolve space dimensions (generalizable)
+        self.obs_dim_per_agent = self.get_parameter('obs_dim_per_agent').value
+        self.action_dim_per_agent = self.get_parameter('action_dim_per_agent').value
+        
         os.makedirs(self.rollout_dir, exist_ok=True)
 
         # Runtime buffers/state - Temporal sequence for RL training
@@ -88,9 +97,10 @@ class ASVPPONode(Node):
 
         self.reset_client = self.create_client(Trigger, '/environment/reset')
 
-        # Define observation and action spaces for PPO model
-        obs_dim = self.num_agents * 6  # Each agent has [x,y,yaw,vx,vy,vyaw]
-        action_dim = self.num_agents * 2  # Each agent has [vyaw_rate, acceleration]
+        # Define observation and action spaces for PPO model (generalizable via parameters)
+        # These stay in PPO node as they are model-specific, not environment-specific
+        obs_dim = self.num_agents * self.obs_dim_per_agent
+        action_dim = self.num_agents * self.action_dim_per_agent
 
         self.observation_space = spaces.Box(
             low=-np.inf, high=np.inf,
@@ -196,8 +206,9 @@ class ASVPPONode(Node):
             if self._agents_out_of_bounds(flat_state):
                 problematic_positions = []
                 for i in range(self.num_agents):
-                    agent_x = flat_state[i * 6]
-                    agent_y = flat_state[i * 6 + 1]
+                    # Use parameterized dimensions instead of hardcoded values
+                    agent_x = flat_state[i * self.obs_dim_per_agent]
+                    agent_y = flat_state[i * self.obs_dim_per_agent + 1]
                     problematic_positions.append([agent_x, agent_y])
 
                 self.get_logger().warn(f"Agents detected out of bounds at positions: {problematic_positions}")
@@ -741,9 +752,9 @@ class ASVPPONode(Node):
         MIN_Y, MAX_Y = -15.0, 35.0  # Wider than our clipping bounds
 
         for i in range(self.num_agents):
-            # Extract agent position (x, y)
-            agent_x = flat_state[i * 6]
-            agent_y = flat_state[i * 6 + 1]
+            # Extract agent position (x, y) - uses parameterized dimensions
+            agent_x = flat_state[i * self.obs_dim_per_agent]
+            agent_y = flat_state[i * self.obs_dim_per_agent + 1]
 
             # Check if out of bounds
             if (agent_x < MIN_X or agent_x > MAX_X or
@@ -757,13 +768,17 @@ class ASVPPONode(Node):
             return
 
         if self.last_position is not None and self.current_obs is not None:
-            # Check if agents haven't moved
-            if np.allclose(self.last_position, self.current_obs[:12], atol=0.1):
+            # Check if agents haven't moved (using parameterized dimensions)
+            # Only check position data for all agents (first obs_dim_per_agent * num_agents elements)
+            obs_size = self.obs_dim_per_agent * self.num_agents
+            if np.allclose(self.last_position, self.current_obs[:obs_size], atol=0.1):
                 self.get_logger().warn("Agents appear stuck. Requesting environment reset")
                 self.reset_environment()
 
         if self.current_obs is not None:
-            self.last_position = self.current_obs[:12].copy()
+            # Store only the position data for comparison
+            obs_size = self.obs_dim_per_agent * self.num_agents
+            self.last_position = self.current_obs[:obs_size].copy()
 
     def _find_and_load_best_model(self):
         """Smart model loading: try multiple sources in order of preference.
