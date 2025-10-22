@@ -13,7 +13,6 @@ from stable_baselines3.common.buffers import RolloutBuffer
 from std_msgs.msg import Bool, Float32, Float32MultiArray
 from std_srvs.srv import Trigger
 
-from ..asv_env.asv_env import Environment as SimEnv
 from ..utils.data_conversion import DataConverter
 
 
@@ -89,15 +88,38 @@ class ASVPPONode(Node):
 
         self.reset_client = self.create_client(Trigger, '/environment/reset')
 
-        # Create a dummy environment to get space information
-        dummy_env = SimEnv(num_agents=self.num_agents)
+        # Define observation and action spaces for PPO model
+        obs_dim = self.num_agents * 6  # Each agent has [x,y,yaw,vx,vy,vyaw]
+        action_dim = self.num_agents * 2  # Each agent has [vyaw_rate, acceleration]
+
+        self.observation_space = spaces.Box(
+            low=-np.inf, high=np.inf,
+            shape=(obs_dim,),
+            dtype=np.float32
+        )
+        self.action_space = spaces.Box(
+            low=-1, high=1,
+            shape=(action_dim,),
+            dtype=np.float32
+        )
 
         # Smart model loading: try multiple sources in order of preference
-        loaded_model_path = self._find_and_load_best_model(dummy_env)
+        loaded_model_path = self._find_and_load_best_model()
         if loaded_model_path:
             self.get_logger().info(f'Successfully loaded model from {loaded_model_path}')
         else:
-            self.model = PPO("MlpPolicy", dummy_env, verbose=0)
+            # Create new PPO model with explicit spaces (no environment needed)
+            self.model = PPO(
+                "MlpPolicy",
+                env=None,
+                verbose=0,
+                _init_setup_model=False  # We'll set spaces manually
+            )
+            # Manually set the spaces
+            self.model.observation_space = self.observation_space
+            self.model.action_space = self.action_space
+            # Now initialize the model
+            self.model._setup_model()
             self.get_logger().info('No existing model found, starting with new PPO model.')
 
         self.model_ready = True
@@ -109,22 +131,8 @@ class ASVPPONode(Node):
 
         # Add after model initialization:
         if self.training_enabled:
-            # Define observation and action spaces
-            obs_dim = self.num_agents * 6  # Each agent has [x,y,yaw,vx,vy,vyaw]
-            action_dim = self.num_agents * 2  # Each agent has [vyaw_rate, acceleration]
-
-            # Create spaces matching the model's expectations
-            self.observation_space = spaces.Box(
-                low=-np.inf, high=np.inf,
-                shape=(obs_dim,),
-                dtype=np.float32
-            )
-            self.action_space = spaces.Box(
-                low=-1, high=1,
-                shape=(action_dim,),
-                dtype=np.float32
-            )
-
+            # observation_space and action_space already defined above
+            
             # Create training buffer with optimized configuration
             self.buffer_size = 200  # 2x larger for better experience diversity
             self.min_training_size = 50  # Train when 50 transitions available
@@ -757,7 +765,7 @@ class ASVPPONode(Node):
         if self.current_obs is not None:
             self.last_position = self.current_obs[:12].copy()
 
-    def _find_and_load_best_model(self, dummy_env):
+    def _find_and_load_best_model(self):
         """Smart model loading: try multiple sources in order of preference.
         
         Returns the path of the loaded model, or None if no model was loaded.
@@ -816,12 +824,18 @@ class ASVPPONode(Node):
         for model_path, description in model_candidates:
             try:
                 self.get_logger().info(f"Attempting to load model from {description}: {model_path}")
-                self.model = PPO.load(model_path, env=dummy_env)
+                # Load model without environment - we'll validate spaces separately
+                self.model = PPO.load(model_path, env=None)
 
-                # Verify the model loaded correctly
+                # Verify the model loaded correctly and spaces match
                 if hasattr(self.model, 'policy') and self.model.policy is not None:
-                    self.get_logger().info(f"✓ Successfully loaded and verified model from {description}")
-                    return model_path
+                    # Validate that loaded model spaces match our expected spaces
+                    if (self.model.observation_space.shape == self.observation_space.shape and
+                        self.model.action_space.shape == self.action_space.shape):
+                        self.get_logger().info(f"✓ Successfully loaded and verified model from {description}")
+                        return model_path
+                    else:
+                        self.get_logger().warn(f"✗ Model spaces don't match: obs={self.model.observation_space.shape} vs {self.observation_space.shape}, action={self.model.action_space.shape} vs {self.action_space.shape}")
                 else:
                     self.get_logger().warn(f"✗ Model loaded but appears invalid from {description}")
 
