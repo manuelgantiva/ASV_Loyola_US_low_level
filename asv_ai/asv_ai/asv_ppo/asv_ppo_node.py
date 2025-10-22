@@ -36,15 +36,16 @@ class ASVPPONode(Node):
         self.rollout_collection_enabled = self.get_parameter('rollout_collection_enabled').value
         os.makedirs(self.rollout_dir, exist_ok=True)
 
-        # Runtime buffers/state
-        self.rollout_data = []
-        self.last_state = None
-        self.last_obs = None
-        self.last_action = None
-        self.last_reward = None
-        self.last_values = None
-        self.last_log_probs = None
-        self.latest_obs = None
+        # Runtime buffers/state - Temporal sequence for RL training
+        # For RL we need transition tuples: (s_t-1, a_t-1, r_t, s_t)
+        self.rollout_data = []  # Collected rollout data for logging
+        self.last_state = None  # Full raw state from previous step (for rollout logging)
+        self.prev_obs = None    # Processed observation from PREVIOUS step (s_t-1) - where action was taken
+        self.last_action = None # Action taken at previous step (a_t-1)
+        self.last_reward = None # Reward received at current step (r_t)
+        self.last_values = None # Value estimate from previous step (V(s_t-1))
+        self.last_log_probs = None # Log probability of action from previous step
+        self.current_obs = None # CURRENT observation (s_t) - result after taking action
         self.episode_start = np.ones(1, dtype=bool)  # Start of first episode
         self.model_ready = False
         self._pending_state = None  # buffer a state if it arrives before model is ready
@@ -139,10 +140,10 @@ class ASVPPONode(Node):
                 n_envs=1
             )
 
-            # Training state variables
+            # Training state variables (note: current_obs already defined above)
             self.values = []  # Store value estimates
             self.log_probs = []  # Store log probabilities
-            self.latest_obs = None  # Latest observation
+            # self.current_obs already initialized above in Runtime buffers section
             self.dones = np.zeros(1, dtype=bool)  # Episode termination flags
             self.episode_start = np.zeros(1, dtype=bool)  # Episode start flags
 
@@ -211,12 +212,12 @@ class ASVPPONode(Node):
         try:
             # Format state for the model
             agent_states = DataConverter.state_to_ppo_input(flat_state, self.num_agents)
-            self.latest_obs = agent_states.reshape(-1)  # Store for training buffer
+            self.current_obs = agent_states.reshape(-1)  # Store current observation (s_t)
 
             # Get values and log_probs for rollout buffer
             with th.no_grad():
                 # Reshape to (1, -1) instead of keeping 2D
-                obs_tensor = DataConverter.numpy_to_tensor(self.latest_obs)
+                obs_tensor = DataConverter.numpy_to_tensor(self.current_obs)
                 obs_tensor = obs_tensor.reshape(1, -1)  # Reshape to (1, 12) - batch of 1 with 12 features
 
                 # Call policy and get results
@@ -234,7 +235,8 @@ class ASVPPONode(Node):
                     actions_np = np.clip(actions_np + noise, -1, 1)
 
             # If training is enabled, add to buffer with smart memory management
-            if self.training_enabled and self.last_obs is not None and self.last_action is not None:
+            # We create transition (s_t-1, a_t-1, r_t, s_t) using prev_obs from last step
+            if self.training_enabled and self.prev_obs is not None and self.last_action is not None:
                 try:
                     buffer_size = len(self.training_buffer.observations)
 
@@ -248,9 +250,9 @@ class ASVPPONode(Node):
                     # Only add to buffer if there's space
                     if buffer_size < self.training_buffer.buffer_size:
                         with th.no_grad():
-                            # Add to rollout buffer - note that self.last_obs is already flattened
+                            # Add transition to rollout buffer using prev_obs (s_t-1)
                             self.training_buffer.add(
-                                obs=self.last_obs.reshape(1, -1),
+                                obs=self.prev_obs.reshape(1, -1),
                                 action=self.last_action.reshape(1, -1),
                                 reward=np.array([self.last_reward or 0.0]),
                                 episode_start=self.episode_start,
@@ -260,8 +262,8 @@ class ASVPPONode(Node):
                 except Exception as e:
                     self.get_logger().error(f"Error adding to training buffer: {e}")
 
-            # Store current values for next iteration
-            self.last_obs = self.latest_obs
+            # Store current values for next iteration (shift current -> previous)
+            self.prev_obs = self.current_obs  # Current becomes previous for next step
             self.last_action = actions_np
             self.last_values = values
             self.last_log_probs = log_probs
@@ -475,16 +477,16 @@ class ASVPPONode(Node):
                 # Set done flag for current step
                 self.dones = np.ones(1, dtype=bool)
 
-                # Add final transition with terminal state
-                if self.latest_obs is not None:
+                # Add final transition with terminal state (current_obs is the terminal state)
+                if self.current_obs is not None:
                     with th.no_grad():
-                        obs_tensor = DataConverter.numpy_to_tensor(self.latest_obs)
+                        obs_tensor = DataConverter.numpy_to_tensor(self.current_obs)
                         obs_tensor = obs_tensor.reshape(1, -1)
                         _, values, _ = self.model.policy.forward(obs_tensor)
 
-                        # Use correct parameter names
+                        # Add final transition to buffer
                         self.training_buffer.add(
-                            obs=self.latest_obs.reshape(1, -1),
+                            obs=self.current_obs.reshape(1, -1),
                             action=self.last_action.reshape(1, -1) if self.last_action is not None
                                 else np.zeros((1, self.action_space.shape[0])),
                             reward=np.array([self.last_reward or 0.0]),
@@ -746,14 +748,14 @@ class ASVPPONode(Node):
             self.last_position = None
             return
 
-        if self.last_position is not None and self.latest_obs is not None:
+        if self.last_position is not None and self.current_obs is not None:
             # Check if agents haven't moved
-            if np.allclose(self.last_position, self.latest_obs[:12], atol=0.1):
+            if np.allclose(self.last_position, self.current_obs[:12], atol=0.1):
                 self.get_logger().warn("Agents appear stuck. Requesting environment reset")
                 self.reset_environment()
 
-        if self.latest_obs is not None:
-            self.last_position = self.latest_obs[:12].copy()
+        if self.current_obs is not None:
+            self.last_position = self.current_obs[:12].copy()
 
     def _find_and_load_best_model(self, dummy_env):
         """Smart model loading: try multiple sources in order of preference.
