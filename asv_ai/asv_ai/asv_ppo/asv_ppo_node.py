@@ -335,7 +335,8 @@ class ASVPPONode(Node):
         """Convert flat state array to structured dictionary."""
         try:
             # Calculate indices for different parts of the state
-            agent_state_size = 6  # [x, y, yaw, vx, vy, vyaw]
+            # Use parameterized observation dimensions instead of hardcoded values
+            agent_state_size = self.obs_dim_per_agent  # [x, y, yaw, vx, vy, vyaw] by default
             agent_desired_pos_size = 2  # [desired_x, desired_y]
 
             # Start and end indices
@@ -400,7 +401,8 @@ class ASVPPONode(Node):
             action_array = action_array.flatten()
 
             for i in range(self.num_agents):
-                start_idx = i * 2
+                # Use parameterized action dimensions instead of hardcoded 2
+                start_idx = i * self.action_dim_per_agent
                 actions.append({
                     "agent_id": i,
                     "vyaw_rate": float(action_array[start_idx]),
