@@ -38,6 +38,13 @@ public:
             [this](const asv_interfaces::msg::ReferenceLlc::SharedPtr msg){
                 callbackErrorMlc(msg, 3);
             });
+        
+        subscriber_utar4 = this->create_subscription<asv_interfaces::msg::ReferenceLlc>(
+            "/ASV4/control/reference_llc", 1,
+            [this](const asv_interfaces::msg::ReferenceLlc::SharedPtr msg){
+                callbackErrorMlc(msg, 4);
+            });
+
 
 
         publisher_center0 = this-> create_publisher<geometry_msgs::msg::PoseStamped>("/ASV0/control/center_pose",1);
@@ -48,6 +55,9 @@ public:
 
         publisher_center3 = this-> create_publisher<geometry_msgs::msg::PoseStamped>("/ASV3/control/center_pose",1);
         publisher_target3 = this-> create_publisher<geometry_msgs::msg::PoseStamped>("/ASV3/control/target_pose",1);
+
+        publisher_center4 = this-> create_publisher<geometry_msgs::msg::PoseStamped>("/ASV4/control/center_pose",1);
+        publisher_target4 = this-> create_publisher<geometry_msgs::msg::PoseStamped>("/ASV4/control/target_pose",1);
 
 
     	RCLCPP_INFO(this->get_logger(), "Target position Coordinate Node has been started.");
@@ -79,6 +89,13 @@ private:
             float dx = path[3];
             float dy = path[4];
             w_dot3 = u_tar_act3 / (std::sqrt(dx*dx + dy*dy));
+        }else if (drone_id == 4)
+        {
+            u_tar_act4 = msg->u_tar.data;
+            std::vector<float> path = spatial_path(w4);
+            float dx = path[3];
+            float dy = path[4];
+            w_dot4 = u_tar_act4 / (std::sqrt(dx*dx + dy*dy));
         }
     }
 
@@ -93,6 +110,9 @@ private:
             w3 = 0;
             u_tar_act3 = 0;
             w_dot3 = 0;
+            w4 = 0;
+            u_tar_act4 = 0;
+            w_dot4 = 0;
         }else{
 
             auto msg_pose = geometry_msgs::msg::PoseStamped();
@@ -211,9 +231,48 @@ private:
             msg_pose.pose.orientation.w = q.w();
             publisher_center3->publish(msg_pose); 
 
+            path = spatial_path(w4);
+
+            // Obtener puntos de trayectoria
+            xc = path[0];
+            yc = path[1];
+            phic = path[2];
+            dxc = path[3];
+            dyc = path[4];
+            dphic = path[5];
+
+            xp = xc + rho4 * cos(phic+theta4);  
+            yp = yc + rho4 * sin(phic+theta4);
+            phip = atan2 (dyc + dphic*(rho4 * cos(phic+theta4)), dxc + dphic*(rho4 * sin(phic+theta4)));
+
+            // Send the pose base_link
+            msg_pose.header.stamp = this->now();
+            msg_pose.header.frame_id = "map_ned";
+            msg_pose.pose.position.x= xp;
+            msg_pose.pose.position.y= yp;
+            msg_pose.pose.position.z= 0.0;
+
+            q.setRPY(0, 0, phip);
+            msg_pose.pose.orientation.x = q.x();
+            msg_pose.pose.orientation.y = q.y();
+            msg_pose.pose.orientation.z = q.z();
+            msg_pose.pose.orientation.w = q.w();
+            publisher_target3->publish(msg_pose); 
+
+            msg_pose.pose.position.x= xc;
+            msg_pose.pose.position.y= yc;
+            msg_pose.pose.position.z= 0.0;
+            q.setRPY(0, 0, phic);
+            msg_pose.pose.orientation.x = q.x();
+            msg_pose.pose.orientation.y = q.y();
+            msg_pose.pose.orientation.z = q.z();
+            msg_pose.pose.orientation.w = q.w();
+            publisher_center3->publish(msg_pose); 
+
             w0 = w0 +0.1*w_dot0;
             w1 = w1 +0.1*w_dot1;
             w3 = w3 +0.1*w_dot3;
+            w4 = w4 +0.1*w_dot4;
         }
     }
 
@@ -252,14 +311,17 @@ private:
     float w0 = 0, u_tar_act0 = 0, w_dot0 = 0;
     float w1 = 0, u_tar_act1 = 0, w_dot1 = 0;
     float w3 = 0, u_tar_act3 = 0, w_dot3 = 0;
+    float w4 = 0, u_tar_act4 = 0, w_dot4 = 0;
 
-    float rho0 = 4.0, theta0 = -2.0944;
-    float rho1 = 4.0, theta1 = 0;
-    float rho3 = 4.0, theta3 = 2.0944;
+    float rho0 = 4.0, theta0 = 3.141592; // -2.0944;
+    float rho1 = 4.0, theta1 = -1.570796; // 0;
+    float rho3 = 4.0, theta3 = 1.570796; // 2.0944;
+    float rho4 = 4.0, theta4 =  0.0; // 2.0944;
     int path_d = 0;
     rclcpp::Subscription<asv_interfaces::msg::ReferenceLlc>::SharedPtr subscriber_utar0;
     rclcpp::Subscription<asv_interfaces::msg::ReferenceLlc>::SharedPtr subscriber_utar1;
     rclcpp::Subscription<asv_interfaces::msg::ReferenceLlc>::SharedPtr subscriber_utar3;
+    rclcpp::Subscription<asv_interfaces::msg::ReferenceLlc>::SharedPtr subscriber_utar4;
     rclcpp::Subscription<mavros_msgs::msg::State>::SharedPtr subscriber_mavros_state;
     rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr publisher_target0;
     rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr publisher_center0;
@@ -267,6 +329,8 @@ private:
     rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr publisher_center1;
     rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr publisher_target3;
     rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr publisher_center3;
+    rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr publisher_target4;
+    rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr publisher_center4;
     rclcpp::TimerBase::SharedPtr timer_;
 
 };
