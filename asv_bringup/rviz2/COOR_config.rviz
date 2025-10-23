@@ -6,7 +6,7 @@ Panels:
       Expanded:
         - /Pose 01/Topic1
       Splitter Ratio: 0.6470588445663452
-    Tree Height: 719
+    Tree Height: 1079
   - Class: rviz_common/Selection
     Name: Selection
   - Class: rviz_common/Tool Properties
@@ -85,6 +85,36 @@ Visualization Manager:
           Value: true
         wamv0/wamv0/right_propeller_link:
           Value: true
+        wamv1/wamv1/base_link:
+          Value: true
+        wamv1/wamv1/base_link/contact_sensor:
+          Value: true
+        wamv1/wamv1/compass_wamv_link:
+          Value: true
+        wamv1/wamv1/compass_wamv_link/compass_wamv_sensor:
+          Value: true
+        wamv1/wamv1/cpu_cases_link:
+          Value: true
+        wamv1/wamv1/gps_wamv_link:
+          Value: true
+        wamv1/wamv1/gps_wamv_link/navsat:
+          Value: true
+        wamv1/wamv1/imu_wamv_link:
+          Value: true
+        wamv1/wamv1/imu_wamv_link/imu_wamv_sensor:
+          Value: true
+        wamv1/wamv1/left_battery_link:
+          Value: true
+        wamv1/wamv1/left_engine_link:
+          Value: true
+        wamv1/wamv1/left_propeller_link:
+          Value: true
+        wamv1/wamv1/right_battery_link:
+          Value: true
+        wamv1/wamv1/right_engine_link:
+          Value: true
+        wamv1/wamv1/right_propeller_link:
+          Value: true
         wamv3/wamv3/base_link:
           Value: true
         wamv3/wamv3/base_link/contact_sensor:
@@ -114,6 +144,36 @@ Visualization Manager:
         wamv3/wamv3/right_engine_link:
           Value: true
         wamv3/wamv3/right_propeller_link:
+          Value: true
+        wamv4/wamv4/base_link:
+          Value: true
+        wamv4/wamv4/base_link/contact_sensor:
+          Value: true
+        wamv4/wamv4/compass_wamv_link:
+          Value: true
+        wamv4/wamv4/compass_wamv_link/compass_wamv_sensor:
+          Value: true
+        wamv4/wamv4/cpu_cases_link:
+          Value: true
+        wamv4/wamv4/gps_wamv_link:
+          Value: true
+        wamv4/wamv4/gps_wamv_link/navsat:
+          Value: true
+        wamv4/wamv4/imu_wamv_link:
+          Value: true
+        wamv4/wamv4/imu_wamv_link/imu_wamv_sensor:
+          Value: true
+        wamv4/wamv4/left_battery_link:
+          Value: true
+        wamv4/wamv4/left_engine_link:
+          Value: true
+        wamv4/wamv4/left_propeller_link:
+          Value: true
+        wamv4/wamv4/right_battery_link:
+          Value: true
+        wamv4/wamv4/right_engine_link:
+          Value: true
+        wamv4/wamv4/right_propeller_link:
           Value: true
         world:
           Value: false
@@ -151,6 +211,30 @@ Visualization Manager:
             wamv0/wamv0/right_engine_link:
               wamv0/wamv0/right_propeller_link:
                 {}
+          wamv1/wamv1/base_link:
+            wamv1/wamv1/base_link/contact_sensor:
+              {}
+            wamv1/wamv1/compass_wamv_link:
+              wamv1/wamv1/compass_wamv_link/compass_wamv_sensor:
+                {}
+            wamv1/wamv1/cpu_cases_link:
+              {}
+            wamv1/wamv1/gps_wamv_link:
+              wamv1/wamv1/gps_wamv_link/navsat:
+                {}
+            wamv1/wamv1/imu_wamv_link:
+              wamv1/wamv1/imu_wamv_link/imu_wamv_sensor:
+                {}
+            wamv1/wamv1/left_battery_link:
+              {}
+            wamv1/wamv1/left_engine_link:
+              wamv1/wamv1/left_propeller_link:
+                {}
+            wamv1/wamv1/right_battery_link:
+              {}
+            wamv1/wamv1/right_engine_link:
+              wamv1/wamv1/right_propeller_link:
+                {}
           wamv3/wamv3/base_link:
             wamv3/wamv3/base_link/contact_sensor:
               {}
@@ -174,6 +258,30 @@ Visualization Manager:
               {}
             wamv3/wamv3/right_engine_link:
               wamv3/wamv3/right_propeller_link:
+                {}
+          wamv4/wamv4/base_link:
+            wamv4/wamv4/base_link/contact_sensor:
+              {}
+            wamv4/wamv4/compass_wamv_link:
+              wamv4/wamv4/compass_wamv_link/compass_wamv_sensor:
+                {}
+            wamv4/wamv4/cpu_cases_link:
+              {}
+            wamv4/wamv4/gps_wamv_link:
+              wamv4/wamv4/gps_wamv_link/navsat:
+                {}
+            wamv4/wamv4/imu_wamv_link:
+              wamv4/wamv4/imu_wamv_link/imu_wamv_sensor:
+                {}
+            wamv4/wamv4/left_battery_link:
+              {}
+            wamv4/wamv4/left_engine_link:
+              wamv4/wamv4/left_propeller_link:
+                {}
+            wamv4/wamv4/right_battery_link:
+              {}
+            wamv4/wamv4/right_engine_link:
+              wamv4/wamv4/right_propeller_link:
                 {}
       Update Interval: 0
       Value: true
@@ -350,20 +458,156 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /wamv1/robot_description
-      Enabled: false
+      Enabled: true
       Links:
         All Links Enabled: true
         Expand Joint Details: false
         Expand Link Details: false
         Expand Tree: false
         Link Tree Style: Links in Alphabetic Order
+        wamv1/base_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        wamv1/compass_wamv_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        wamv1/cpu_cases_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        wamv1/gps_wamv_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        wamv1/imu_wamv_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        wamv1/left_battery_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        wamv1/left_engine_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        wamv1/left_propeller_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        wamv1/right_battery_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        wamv1/right_engine_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        wamv1/right_propeller_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
       Mass Properties:
         Inertia: false
         Mass: false
       Name: ASV1
       TF Prefix: wamv1
       Update Interval: 0
-      Value: false
+      Value: true
+      Visual Enabled: true
+    - Alpha: 0.699999988079071
+      Class: rviz_default_plugins/RobotModel
+      Collision Enabled: false
+      Description File: ""
+      Description Source: Topic
+      Description Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /wamv4/robot_description
+      Enabled: true
+      Links:
+        All Links Enabled: true
+        Expand Joint Details: false
+        Expand Link Details: false
+        Expand Tree: false
+        Link Tree Style: Links in Alphabetic Order
+        wamv4/base_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        wamv4/compass_wamv_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        wamv4/cpu_cases_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        wamv4/gps_wamv_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        wamv4/imu_wamv_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        wamv4/left_battery_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        wamv4/left_engine_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        wamv4/left_propeller_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        wamv4/right_battery_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        wamv4/right_engine_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        wamv4/right_propeller_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+      Mass Properties:
+        Inertia: false
+        Mass: false
+      Name: ASV4
+      TF Prefix: wamv4
+      Update Interval: 0
+      Value: true
       Visual Enabled: true
     - Alpha: 1
       Axes Length: 1
@@ -545,6 +789,66 @@ Visualization Manager:
         Reliability Policy: Reliable
         Value: /ASV3/control/center_pose
       Value: true
+    - Alpha: 1
+      Axes Length: 1
+      Axes Radius: 0.10000000149011612
+      Class: rviz_default_plugins/Pose
+      Color: 255; 25; 0
+      Enabled: true
+      Head Length: 0.30000001192092896
+      Head Radius: 0.10000000149011612
+      Name: Pose 4
+      Shaft Length: 1
+      Shaft Radius: 0.05000000074505806
+      Shape: Arrow
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep All
+        Reliability Policy: Best Effort
+        Value: /ASV4/observer/pose_zono
+      Value: true
+    - Alpha: 1
+      Axes Length: 1
+      Axes Radius: 0.10000000149011612
+      Class: rviz_default_plugins/Pose
+      Color: 205; 171; 143
+      Enabled: true
+      Head Length: 0.30000001192092896
+      Head Radius: 0.20000000298023224
+      Name: Target 4
+      Shaft Length: 1
+      Shaft Radius: 0.10000000149011612
+      Shape: Arrow
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /ASV4/control/target_pose
+      Value: true
+    - Alpha: 1
+      Axes Length: 1
+      Axes Radius: 0.10000000149011612
+      Class: rviz_default_plugins/Pose
+      Color: 99; 69; 44
+      Enabled: true
+      Head Length: 0.30000001192092896
+      Head Radius: 0.10000000149011612
+      Name: Center 4
+      Shaft Length: 1
+      Shaft Radius: 0.05000000074505806
+      Shape: Arrow
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /ASV4/control/center_pose
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -591,7 +895,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/ThirdPersonFollower
-      Distance: 27.730789184570312
+      Distance: 18.07396125793457
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -606,18 +910,18 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.41039830446243286
+      Pitch: 0.44039851427078247
       Target Frame: wamv0/wamv0/base_link
       Value: ThirdPersonFollower (rviz_default_plugins)
-      Yaw: 3.130408763885498
+      Yaw: 2.7503879070281982
     Saved: ~
 Window Geometry:
   Displays:
     collapsed: false
-  Height: 1016
+  Height: 1376
   Hide Left Dock: false
-  Hide Right Dock: true
-  QMainWindow State: 000000ff00000000fd00000004000000000000030d0000035afc0200000008fb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000003d0000035a000000c900fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261000000010000025e000004c2fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a00560069006500770073000000003d000004c2000000a400fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e100000197000000030000073a0000003efc0100000002fb0000000800540069006d006501000000000000073a000002fb00fffffffb0000000800540069006d00650100000000000004500000000000000000000004270000035a00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  Hide Right Dock: false
+  QMainWindow State: 000000ff00000000fd00000004000000000000037b000004c2fc0200000008fb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000003d000004c2000000c900fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261000000010000025e000004c2fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a00560069006500770073010000003d000004c2000000a400fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e1000001970000000300000d2a0000003efc0100000002fb0000000800540069006d0065010000000000000d2a000002fb00fffffffb0000000800540069006d0065010000000000000450000000000000000000000745000004c200000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Selection:
     collapsed: false
   Time:
@@ -625,7 +929,7 @@ Window Geometry:
   Tool Properties:
     collapsed: false
   Views:
-    collapsed: true
-  Width: 1850
+    collapsed: false
+  Width: 3370
   X: 70
   Y: 27
