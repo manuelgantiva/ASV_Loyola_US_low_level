@@ -143,7 +143,7 @@ public:
         publisher_w_pre = this-> create_publisher<std_msgs::msg::Float32MultiArray>("/" + my_id + "/control/w_pred",1);
 
         // Lista de todos los barcos
-        std::vector<std::string> all_ids = {"ASV0", "ASV1", "ASV3"};
+        std::vector<std::string> all_ids = {"ASV0", "ASV1", "ASV3", "ASV4"};
 
         // Iteramos y nos suscribimos a todos menos a nosotros mismos
         for (const auto &id : all_ids) {
