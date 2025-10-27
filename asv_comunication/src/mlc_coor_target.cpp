@@ -17,7 +17,7 @@ public:
 
         timer_ = this -> create_wall_timer(std::chrono::milliseconds(100),
                 std::bind(&MlcCoorTargetNode::calculateTargetPose, this));
-        subscriber_mavros_state = this-> create_subscription<mavros_msgs::msg::State>("/ASV0/mavros/state",1,
+        subscriber_mavros_state = this-> create_subscription<mavros_msgs::msg::State>("/ASV4/mavros/state",1,
                 std::bind(&MlcCoorTargetNode::callbackMavrosState, this, std::placeholders::_1));
 
         // Suscriptores para ASV0, ASV1 y ASV3
@@ -257,7 +257,7 @@ private:
             msg_pose.pose.orientation.y = q.y();
             msg_pose.pose.orientation.z = q.z();
             msg_pose.pose.orientation.w = q.w();
-            publisher_target3->publish(msg_pose); 
+            publisher_target4->publish(msg_pose); 
 
             msg_pose.pose.position.x= xc;
             msg_pose.pose.position.y= yc;
@@ -267,7 +267,7 @@ private:
             msg_pose.pose.orientation.y = q.y();
             msg_pose.pose.orientation.z = q.z();
             msg_pose.pose.orientation.w = q.w();
-            publisher_center3->publish(msg_pose); 
+            publisher_center4->publish(msg_pose); 
 
             w0 = w0 +0.1*w_dot0;
             w1 = w1 +0.1*w_dot1;
