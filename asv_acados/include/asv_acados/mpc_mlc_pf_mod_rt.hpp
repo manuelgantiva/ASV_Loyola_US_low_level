@@ -698,7 +698,7 @@ private:
                 break;
             case 1:
                 x_p  = 30-30*cos(w);  
-                y_p  = 30*sin(w);     
+                y_p  = 5+30*sin(w);     
                 dx   = 30*sin(w);     
                 dy   = 30*cos(w);   
                 ddx   = 30*cos(w);     

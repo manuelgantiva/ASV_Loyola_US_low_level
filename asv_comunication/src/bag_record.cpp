@@ -124,6 +124,8 @@ public:
                 std::bind(&BagRecordNode::callbackAcceleration, this, std::placeholders::_1));
         subscriber_accel_ext = this-> create_subscription<geometry_msgs::msg::Twist>("/" + name_id + "/control/accel_imu_ext",1,
                 std::bind(&BagRecordNode::callbackAccelerationExt, this, std::placeholders::_1));
+        subscriber_w_pred = this-> create_subscription<std_msgs::msg::Float32MultiArray>("/" + name_id + "/control/w_pred",1,
+                std::bind(&BagRecordNode::callbackWPred, this, std::placeholders::_1));
 
     	RCLCPP_INFO(this->get_logger(), "Bag Record Node has been started.");
     }
@@ -468,6 +470,13 @@ private:
         }
     }
     
+    void callbackWPred(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
+    {
+        if(armed==true){
+            rclcpp::Time time_stamp = this->now();
+            writer_->write(msg, "/" + name_id + "/control/w_pred", "std_msgs/msg/Float32MultiArray", time_stamp);
+        }
+    }
    
 
     std::string my_id, name_id;
@@ -517,6 +526,8 @@ private:
     rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr subscriber_error_mlc;
     rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr subscriber_accel;
     rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr subscriber_accel_ext;
+    rclcpp::Subscription<std_msgs::msg::Float32MultiArray>::SharedPtr subscriber_w_pred;
+    
 };
 
 int main(int argc, char **argv)
