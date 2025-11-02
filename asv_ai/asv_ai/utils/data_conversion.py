@@ -95,9 +95,9 @@ class DataConverter:
         return observations
 
     @staticmethod
-    def prepare_sb3_training_data(state_array, action_array, reward_value,
-                                  done_value):
-        """Format data in the way SB3 expects for training."""
+    def prepare_training_data(state_array, action_array, reward_value,
+                              done_value):
+        """Format data for PPO training (formerly prepare_sb3_training_data)."""
         obs = DataConverter.numpy_to_tensor(state_array)
         actions = DataConverter.numpy_to_tensor(action_array)
         rewards = np.array([float(reward_value)])

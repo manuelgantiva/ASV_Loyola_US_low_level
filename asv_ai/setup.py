@@ -16,7 +16,7 @@ setup(
         (os.path.join('share', package_name, 'launch'), glob('launch/*.launch.py')),
         (os.path.join('share', package_name, 'rviz'), glob('rviz/*.rviz')),
     ],
-    install_requires=['setuptools', 'stable_baselines3', 'gymnasium', 'numpy>=1.22.4,<2.0', 'opencv-python'],
+    install_requires=['setuptools', 'gymnasium', 'numpy>=1.22.4,<2.0', 'opencv-python', 'torch', 'torchvision'],
     zip_safe=True,
     maintainer='Your Name',
     maintainer_email='your.email@example.com',

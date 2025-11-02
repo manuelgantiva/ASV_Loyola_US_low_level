@@ -425,6 +425,7 @@ class EnvOriginal(gym.Env):
 # #         if (terminated or truncated or env.current_step > 2048):
 # #             observation, _ = env.reset()
 # #             # running = False
+# Old test code removed - now using custom PPO implementation in main section below
 
 
 class Environment2(gym.Env):
@@ -680,14 +681,17 @@ class Environment2(gym.Env):
 
 
 if __name__ == "__main__":
-    # cheking env
-    from stable_baselines3 import PPO
+    # checking env - now using custom PPO implementation
+    from ..asv_ppo.algorithms.ppo_algorithm import CustomPPO
+    import numpy as np
 
     # Create the environment
     env = Environment(render_mode="human")
 
-    # Create the model PPO
-    model = PPO("MlpPolicy", env, verbose=1) # Multilayer perceptron policy PPO training model
+    # Create the custom PPO model
+    obs_dim = env.observation_space.shape[0]
+    action_dim = env.action_space.shape[0]
+    model = CustomPPO(obs_dim=obs_dim, action_dim=action_dim, device='cpu')
     env.reset() # Reinicia el entorno
 
     # Run the model (inicializa el bucle principal mienrtas running = true)
