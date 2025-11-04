@@ -667,6 +667,7 @@ private:
                 if(param.as_int() >= 0 and param.as_int() <= 1){
                     RCLCPP_INFO(this->get_logger(), "changed param value");
                     path_d = param.as_int();
+                    Precompile();
                 }else{
                     RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-1");
                     result.successful = false;
@@ -718,7 +719,7 @@ private:
                 p_values_map["coef"] = std::vector{0.0, 0.0, 1.0, 1.0};  //  a y b Circulo c y d Lineal
                 break;
             case 1:
-                p_values_map["coef"] = std::vector{30.0, 30.0, 0.0, 0.0};  //  a y b Circulo c y d Lineal
+                p_values_map["coef"] = std::vector{33.0, 33.0, 0.0, 0.0};  //  a y b Circulo c y d Lineal
                 break;
         }
 
@@ -792,20 +793,20 @@ private:
         float x_p, y_p, dx, dy, ddx, ddy;
         switch(path_d) {
             case 0:
-                x_p  = w+5;  // 
-                y_p  = w+5;    // 
+                x_p  = w+7;  // 
+                y_p  = w+7;    // 
                 dx   = 1;     // 
                 dy   = 1;     //
                 ddx   = 0;     // 
                 ddy   = 0;     //
                 break;
             case 1:
-                x_p  = 30-30*cos(w);  
-                y_p  = 5+30*sin(w);     
-                dx   = 30*sin(w);     
-                dy   = 30*cos(w);   
-                ddx   = 30*cos(w);     
-                ddy   = -30*sin(w);    
+                x_p  = 40-33*cos(w);  
+                y_p  = 7+33*sin(w);     
+                dx   = 33*sin(w);     
+                dy   = 33*cos(w);   
+                ddx   = 33*cos(w);     
+                ddy   = -33*sin(w);    
                 break;
         }
         float phi  = atan2(dy, dx);

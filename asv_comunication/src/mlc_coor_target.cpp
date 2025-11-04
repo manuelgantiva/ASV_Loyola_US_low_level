@@ -285,20 +285,20 @@ private:
         float x_p, y_p, dx, dy, ddx, ddy;
         switch(path_d) {
             case 0:
-                x_p  = w+5;  // 
-                y_p  = w+5;    // 
+                x_p  = w+7;  // 
+                y_p  = w+7;    // 
                 dx   = 1;     // 
                 dy   = 1;     //
                 ddx   = 0;     // 
                 ddy   = 0;     //
                 break;
             case 1:
-                x_p  = 30-30*cos(w);  
-                y_p  = 5+30*sin(w);     
-                dx   = 30*sin(w);     
-                dy   = 30*cos(w);   
-                ddx   = 30*cos(w);     
-                ddy   = -30*sin(w);    
+                x_p  = 40-33*cos(w);  
+                y_p  = 7+33*sin(w);     
+                dx   = 33*sin(w);     
+                dy   = 33*cos(w);   
+                ddx   = 33*cos(w);     
+                ddy   = -33*sin(w);    
                 break;
         }
         float phi  = atan2(dy, dx);
@@ -313,10 +313,10 @@ private:
     float w3 = 0, u_tar_act3 = 0, w_dot3 = 0;
     float w4 = 0, u_tar_act4 = 0, w_dot4 = 0;
 
-    float rho0 = 4.0, theta0 = 3.141592; // -2.0944;
-    float rho1 = 4.0, theta1 = -1.570796; // 0;
-    float rho3 = 4.0, theta3 = 1.570796; // 2.0944;
-    float rho4 = 4.0, theta4 =  0.0; // 2.0944;
+    float rho0 = 6.0, theta0 = 3.141592; // -2.0944;
+    float rho1 = 6.0, theta1 = -1.570796; // 0;
+    float rho3 = 6.0, theta3 = 1.570796; // 2.0944;
+    float rho4 = 3.0, theta4 =  0.0; // 2.0944;
     int path_d = 0;
     rclcpp::Subscription<asv_interfaces::msg::ReferenceLlc>::SharedPtr subscriber_utar0;
     rclcpp::Subscription<asv_interfaces::msg::ReferenceLlc>::SharedPtr subscriber_utar1;

@@ -563,6 +563,7 @@ private:
                 if(param.as_int() >= 0 and param.as_int() <= 1){
                     RCLCPP_INFO(this->get_logger(), "changed param value");
                     path_d = param.as_int();
+                    Precompile();
                 }else{
                     RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 0-1");
                     result.successful = false;
@@ -650,14 +651,14 @@ private:
         float x_p, y_p, dx, dy;
         switch(path_d) {
             case 0:
-                x_p  = w+10;  // 
-                y_p  = 10;    // 
+                x_p  = w + 5;  // 
+                y_p  = w + 5;    // 
                 dx   = 1;     // 
                 dy   = 0;     //
                 break;
             case 1:
-                x_p  = 30-30*cos(w);  
-                y_p  = 30*sin(w);     
+                x_p  = 35-30*cos(w);  
+                y_p  = 5+30*sin(w);     
                 dx   = 30*sin(w);     
                 dy   = 30*cos(w);    
                 break;

@@ -103,9 +103,9 @@ def export_asv_pf_ocp():
     # ocp.solver_options.sim_method_num_stages = 1
     # ocp.solver_options.sim_method_num_steps = 1
     
-    ocp.solver_options.sim_method_num_stages = 3  # Método de Kutta orden 3
-    ocp.solver_options.sim_method_num_steps = 2   # Balance entre precisión y costo
-    ocp.solver_options.sim_method_jac_reuse = 2   # Reutilizar Jacobiano por más pasos
+    ocp.solver_options.sim_method_num_stages = 4  # Método de Kutta orden 3
+    ocp.solver_options.sim_method_num_steps = 3   # Balance entre precisión y costo
+    ocp.solver_options.sim_method_jac_reuse = 3   # Reutilizar Jacobiano por más pasos
 
     ocp.solver_options.qp_solver_cond_N = N
     ocp.solver_options.N_horizon = N

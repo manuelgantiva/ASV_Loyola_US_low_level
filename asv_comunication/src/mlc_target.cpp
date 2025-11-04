@@ -45,8 +45,8 @@ private:
             u_tar_act = 0;
             w_dot = 0;
         }else{
-            float xp  = w+10;  // 30-30*cos(w); //   
-            float yp  = 10;    // 30*sin(w);    //   
+            float xp  = w+5;   // 35-30*cos(w); //   
+            float yp  = w+5;   // 5+30*sin(w);    //   
             float dxp = 1;     // 30*sin(w);    //   
             float dyp = 0;     // 30*cos(w);    //   
             float psip = atan2(dyp, dxp);

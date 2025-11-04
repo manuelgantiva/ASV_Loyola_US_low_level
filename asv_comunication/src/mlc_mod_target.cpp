@@ -15,7 +15,7 @@ public:
     MlcModTargetNode() : Node("mlc_mod_target") 
     {
         std::string my_id; 
-        this-> declare_parameter("my_id", "ASV0");
+        this-> declare_parameter("my_id", "ASV3");
     
         my_id = (this->get_parameter("my_id").as_string());
 
@@ -100,20 +100,20 @@ private:
         float x_p, y_p, dx, dy, ddx, ddy;
         switch(path_d) {
             case 0:
-                x_p  = w+10;  // 
-                y_p  = 10;    // 
+                x_p  = w+7;  // 
+                y_p  = w+7;    // 
                 dx   = 1;     // 
-                dy   = 0;     //
+                dy   = 1;     //
                 ddx   = 0;     // 
                 ddy   = 0;     //
                 break;
             case 1:
-                x_p  = 30-30*cos(w);  
-                y_p  = 30*sin(w);     
-                dx   = 30*sin(w);     
-                dy   = 30*cos(w);   
-                ddx   = 30*cos(w);     
-                ddy   = -30*sin(w);    
+                x_p  = 40-33*cos(w);  
+                y_p  = 7+33*sin(w);     
+                dx   = 33*sin(w);     
+                dy   = 33*cos(w);   
+                ddx   = 33*cos(w);     
+                ddy   = -33*sin(w);    
                 break;
         }
         float phi  = atan2(dy, dx);
@@ -125,7 +125,7 @@ private:
     bool armed = false;
     float w = 0, u_tar_act = 0, w_dot = 0;
 
-    float rho = 3.0, theta = -2.0944;
+    float rho = 6.0, theta = 1.570796;
     int path_d = 1;
     rclcpp::Subscription<asv_interfaces::msg::ReferenceLlc>::SharedPtr subscriber_utar;
     rclcpp::Subscription<mavros_msgs::msg::State>::SharedPtr subscriber_mavros_state;

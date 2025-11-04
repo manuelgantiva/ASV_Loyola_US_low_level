@@ -138,7 +138,7 @@ ASV4:
         Ts: 500.0         #ms
         N_p: 60         # 80
         T_p: 3.0
-        Q: [10.0, 0.5, 0.0, 0.0, 150.0]
+        Q: [20.0, 0.5, 0.0, 0.0, 150.0]
         R: [0.0, 30.0, 10.0] 
         Rd: [10.0, 0.0, 300.0] 
         x_e_bar_max: 100.0
@@ -155,22 +155,22 @@ ASV4:
         r_ref_min: -0.3
         Delta_u_ref_min: -0.01
         Delta_u_ref_max: 0.01
-        Delta_u_tar_min: -0.1
-        Delta_u_tar_max: 0.1
-        Delta_r_ref_min: -0.005
-        Delta_r_ref_max: 0.005
+        Delta_u_tar_min: -0.05
+        Delta_u_tar_max: 0.05
+        Delta_r_ref_min: -0.05
+        Delta_r_ref_max: 0.05
         Xv_bar: [-0.2503897, -0.0321815, 0.0028707, 0.0211998, -0.0066645, 0.7247758, -0.2352875, -0.0178921]
         Eps: 0.2488
-        rho: 4.5
+        rho: 6.0
         theta: 0.0
-        path_d: 0
+        path_d: 1
     mpc_mlc_pf_coor:
       ros__parameters:
         Ts: 500.0         #ms
         N_p: 60         # 80
         N_w: 20
         T_p: 3.0
-        Q: [10.0, 0.5, 0.0, 0.0, 150.0]
+        Q: [20.0, 0.5, 0.0, 0.0, 150.0]
         R: [0.0, 30.0, 10.0] 
         Rd: [10.0, 0.0, 300.0] 
         Dw: 2.0
@@ -188,15 +188,15 @@ ASV4:
         r_ref_min: -0.3
         Delta_u_ref_min: -0.01
         Delta_u_ref_max: 0.01
-        Delta_u_tar_min: -0.1
-        Delta_u_tar_max: 0.1
-        Delta_r_ref_min: -0.005
-        Delta_r_ref_max: 0.005
+        Delta_u_tar_min: -0.05
+        Delta_u_tar_max: 0.05
+        Delta_r_ref_min: -0.05
+        Delta_r_ref_max: 0.05
         Xv_bar: [-0.2503897, -0.0321815, 0.0028707, 0.0211998, -0.0066645, 0.7247758, -0.2352875, -0.0178921]
         Eps: 0.2488
-        rho: 4.5
+        rho: 6.0
         theta: 0.0
-        path_d: 0
+        path_d: 1
   simulator:
     simulator_asv_wrapper:
       ros__parameters:
