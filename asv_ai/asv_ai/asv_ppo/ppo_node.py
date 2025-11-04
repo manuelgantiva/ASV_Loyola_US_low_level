@@ -6,27 +6,35 @@ import time
 import numpy as np
 import rclpy
 import torch as th
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
 from gymnasium import spaces
 from rclpy.node import Node
-from stable_baselines3 import PPO
-from stable_baselines3.common.buffers import RolloutBuffer
+# from stable_baselines3 import PPO  # Replaced with CustomPPO
+# from stable_baselines3.common.buffers import RolloutBuffer  # Replaced with CustomRolloutBuffer
 from std_msgs.msg import Bool, Float32, Float32MultiArray
 from std_srvs.srv import Trigger
 
-from ..asv_env.asv_env import Environment as SimEnv
 from ..utils.data_conversion import DataConverter
+from .networks import CustomActorCritic
+from .algorithms import CustomRolloutBuffer, RolloutBufferSamples, CustomPPO
 
 
-class ASVPPONode(Node):
+class PPONode(Node):  # Renamed from ASVPPONode for generalization (Point 8)
     def __init__(self):
-        super().__init__('asv_ppo_node')
+        super().__init__('ppo_node')  # Renamed from asv_ppo_node for generalization
 
-        # Parameters
+        # Parameters - Environment Configuration
         self.declare_parameter('num_agents', 2)
         self.declare_parameter('model_path', '')
         self.declare_parameter('rollout_dir', os.path.expanduser('~/Desktop/ASV_Rollouts'))
-        self.declare_parameter('rollout_save_every', 50)
+        self.declare_parameter('rollout_save_every', 500)
         self.declare_parameter('rollout_collection_enabled', True)
+        
+        # Parameters - State/Action Space Dimensions (generalizable for any robot/environment)
+        self.declare_parameter('obs_dim_per_agent', 6)  # Default: [x, y, yaw, vx, vy, vyaw]
+        self.declare_parameter('action_dim_per_agent', 2)  # Default: [vyaw_rate, acceleration]
 
         # Resolve parameters
         self.num_agents = self.get_parameter('num_agents').value
@@ -34,17 +42,23 @@ class ASVPPONode(Node):
         self.rollout_dir = os.path.expanduser(self.get_parameter('rollout_dir').value)
         self.rollout_save_every = int(self.get_parameter('rollout_save_every').value)
         self.rollout_collection_enabled = self.get_parameter('rollout_collection_enabled').value
+        
+        # Resolve space dimensions (generalizable)
+        self.obs_dim_per_agent = self.get_parameter('obs_dim_per_agent').value
+        self.action_dim_per_agent = self.get_parameter('action_dim_per_agent').value
+        
         os.makedirs(self.rollout_dir, exist_ok=True)
 
-        # Runtime buffers/state
-        self.rollout_data = []
-        self.last_state = None
-        self.last_obs = None
-        self.last_action = None
-        self.last_reward = None
-        self.last_values = None
-        self.last_log_probs = None
-        self.latest_obs = None
+        # Runtime buffers/state - Temporal sequence for RL training
+        # For RL we need transition tuples: (s_t-1, a_t-1, r_t, s_t)
+        self.rollout_data = []  # Collected rollout data for logging
+        self.last_state = None  # Full raw state from previous step (for rollout logging)
+        self.prev_obs = None    # Processed observation from PREVIOUS step (s_t-1) - where action was taken
+        self.last_action = None # Action taken at previous step (a_t-1)
+        self.last_reward = None # Reward received at current step (r_t)
+        self.last_values = None # Value estimate from previous step (V(s_t-1))
+        self.last_log_probs = None # Log probability of action from previous step
+        self.current_obs = None # CURRENT observation (s_t) - result after taking action
         self.episode_start = np.ones(1, dtype=bool)  # Start of first episode
         self.model_ready = False
         self._pending_state = None  # buffer a state if it arrives before model is ready
@@ -69,6 +83,11 @@ class ASVPPONode(Node):
         self.declare_parameter('gamma', 0.99)  # Discount factor
         self.declare_parameter('gae_lambda', 0.95)  # GAE lambda
         self.declare_parameter('max_episodes', 1000)
+        
+        # Model saving parameters
+        self.declare_parameter('save_frequency', 500)  # Save every N episodes
+        self.declare_parameter('auto_save_enabled', True)  # Enable periodic saving
+        self.declare_parameter('save_on_improvement', True)  # Save when reward improves
 
         # Get training parameters
         self.training_enabled = self.get_parameter('training_enabled').value
@@ -78,6 +97,15 @@ class ASVPPONode(Node):
         self.gamma = self.get_parameter('gamma').value
         self.gae_lambda = self.get_parameter('gae_lambda').value
         self.max_episodes = self.get_parameter('max_episodes').value
+        
+        # Get model saving parameters
+        self.save_frequency = self.get_parameter('save_frequency').value
+        self.auto_save_enabled = self.get_parameter('auto_save_enabled').value
+        self.save_on_improvement = self.get_parameter('save_on_improvement').value
+        
+        # Model saving state
+        self.best_episode_reward = float('-inf')
+        self.last_save_episode = 0
 
         # Publishers and Subscribers FIRST to avoid missing early messages
         self.state_sub = self.create_subscription(Float32MultiArray, '/environment/state', self.state_callback, 10)
@@ -88,16 +116,39 @@ class ASVPPONode(Node):
 
         self.reset_client = self.create_client(Trigger, '/environment/reset')
 
-        # Create a dummy environment to get space information
-        dummy_env = SimEnv(num_agents=self.num_agents)
+        # Define observation and action spaces for PPO model (generalizable via parameters)
+        # These stay in PPO node as they are model-specific, not environment-specific
+        obs_dim = self.num_agents * self.obs_dim_per_agent
+        action_dim = self.num_agents * self.action_dim_per_agent
+
+        self.observation_space = spaces.Box(
+            low=-np.inf, high=np.inf,
+            shape=(obs_dim,),
+            dtype=np.float32
+        )
+        self.action_space = spaces.Box(
+            low=-1, high=1,
+            shape=(action_dim,),
+            dtype=np.float32
+        )
 
         # Smart model loading: try multiple sources in order of preference
-        loaded_model_path = self._find_and_load_best_model(dummy_env)
-        if loaded_model_path:
-            self.get_logger().info(f'Successfully loaded model from {loaded_model_path}')
-        else:
-            self.model = PPO("MlpPolicy", dummy_env, verbose=0)
-            self.get_logger().info('No existing model found, starting with new PPO model.')
+        # loaded_model_path = self._find_and_load_best_model()
+        # if loaded_model_path:
+        #     self.get_logger().info(f'Successfully loaded model from {loaded_model_path}')
+        # else:
+        # Create new CustomPPO model
+        self.model = CustomPPO(
+            obs_dim=obs_dim,
+            action_dim=action_dim,
+            device='cpu',  # Can be changed to 'cuda' if GPU is available
+            learning_rate=3e-4,
+            clip_range=0.2,
+            ent_coef=0.0,
+            vf_coef=0.5,
+            max_grad_norm=0.5
+        )
+        self.get_logger().info('No existing model found, starting with new CustomPPO model.')
 
         self.model_ready = True
         # If we received a state while loading, process it now
@@ -108,41 +159,26 @@ class ASVPPONode(Node):
 
         # Add after model initialization:
         if self.training_enabled:
-            # Define observation and action spaces
-            obs_dim = self.num_agents * 6  # Each agent has [x,y,yaw,vx,vy,vyaw]
-            action_dim = self.num_agents * 2  # Each agent has [vyaw_rate, acceleration]
-
-            # Create spaces matching the model's expectations
-            self.observation_space = spaces.Box(
-                low=-np.inf, high=np.inf,
-                shape=(obs_dim,),
-                dtype=np.float32
-            )
-            self.action_space = spaces.Box(
-                low=-1, high=1,
-                shape=(action_dim,),
-                dtype=np.float32
-            )
-
+            # observation_space and action_space already defined above
+            
             # Create training buffer with optimized configuration
             self.buffer_size = 200  # 2x larger for better experience diversity
             self.min_training_size = 50  # Train when 50 transitions available
             self.memory_limit = 500  # Reset buffer when it hits memory limit
 
-            self.training_buffer = RolloutBuffer(
+            self.training_buffer = CustomRolloutBuffer(
                 buffer_size=self.buffer_size,
-                observation_space=self.observation_space,
-                action_space=self.action_space,
+                obs_dim=obs_dim,
+                action_dim=action_dim,
                 device=self.model.device,
                 gamma=self.gamma,
-                gae_lambda=self.gae_lambda,
-                n_envs=1
+                gae_lambda=self.gae_lambda
             )
 
-            # Training state variables
+            # Training state variables (note: current_obs already defined above)
             self.values = []  # Store value estimates
             self.log_probs = []  # Store log probabilities
-            self.latest_obs = None  # Latest observation
+            # self.current_obs already initialized above in Runtime buffers section
             self.dones = np.zeros(1, dtype=bool)  # Episode termination flags
             self.episode_start = np.zeros(1, dtype=bool)  # Episode start flags
 
@@ -171,6 +207,11 @@ class ASVPPONode(Node):
 
         # Initialize the file with metadata
         self._initialize_rollout_file()
+        
+        # Setup signal handling for graceful shutdown and model saving
+        import signal
+        signal.signal(signal.SIGINT, self._signal_handler)
+        signal.signal(signal.SIGTERM, self._signal_handler)
 
     def state_callback(self, msg):
         try:
@@ -187,8 +228,9 @@ class ASVPPONode(Node):
             if self._agents_out_of_bounds(flat_state):
                 problematic_positions = []
                 for i in range(self.num_agents):
-                    agent_x = flat_state[i * 6]
-                    agent_y = flat_state[i * 6 + 1]
+                    # Use parameterized dimensions instead of hardcoded values
+                    agent_x = flat_state[i * self.obs_dim_per_agent]
+                    agent_y = flat_state[i * self.obs_dim_per_agent + 1]
                     problematic_positions.append([agent_x, agent_y])
 
                 self.get_logger().warn(f"Agents detected out of bounds at positions: {problematic_positions}")
@@ -209,32 +251,29 @@ class ASVPPONode(Node):
     def _predict_and_publish(self, flat_state: np.ndarray):
         """Process environment state, predict actions, and publish to ROS topics."""
         try:
-            # Format state for the model
-            agent_states = DataConverter.state_to_ppo_input(flat_state, self.num_agents)
-            self.latest_obs = agent_states.reshape(-1)  # Store for training buffer
+            # Format state for the model (returns 1D flat array for homogeneity)
+            agent_states = DataConverter.state_to_ppo_input(
+                flat_state, 
+                self.num_agents, 
+                self.obs_dim_per_agent
+            )
+            self.current_obs = agent_states  # Already flat, no need to reshape
 
-            # Get values and log_probs for rollout buffer
+            # Get actions, values, and log_probs from policy network
             with th.no_grad():
                 # Reshape to (1, -1) instead of keeping 2D
-                obs_tensor = DataConverter.numpy_to_tensor(self.latest_obs)
-                obs_tensor = obs_tensor.reshape(1, -1)  # Reshape to (1, 12) - batch of 1 with 12 features
+                obs_tensor = DataConverter.numpy_to_tensor(self.current_obs)
+                obs_tensor = obs_tensor.reshape(1, -1)  # Reshape to (1, obs_dim) - batch of 1
 
-                # Call policy and get results
+                # PPO requires all three: actions for control, values for advantage calculation, log_probs for policy gradients
                 actions, values, log_probs = self.model.policy(obs_tensor)
 
-                # Convert to numpy first
+                # Convert to numpy - PPO handles exploration through stochastic policy sampling
                 actions_np = actions.cpu().numpy()
 
-                # Calculate exploration factor that decreases over time
-                exploration_factor = max(0.1, 1.0 - (self.episode_id / 200.0))
-
-                # Add exploration noise that decreases over time
-                if self.training_enabled:
-                    noise = np.random.normal(0, exploration_factor * 0.3, actions_np.shape)
-                    actions_np = np.clip(actions_np + noise, -1, 1)
-
             # If training is enabled, add to buffer with smart memory management
-            if self.training_enabled and self.last_obs is not None and self.last_action is not None:
+            # We create transition (s_t-1, a_t-1, r_t, s_t) using prev_obs from last step
+            if self.training_enabled and self.prev_obs is not None and self.last_action is not None:
                 try:
                     buffer_size = len(self.training_buffer.observations)
 
@@ -248,20 +287,20 @@ class ASVPPONode(Node):
                     # Only add to buffer if there's space
                     if buffer_size < self.training_buffer.buffer_size:
                         with th.no_grad():
-                            # Add to rollout buffer - note that self.last_obs is already flattened
+                            # Add transition to rollout buffer using prev_obs (s_t-1)
                             self.training_buffer.add(
-                                obs=self.last_obs.reshape(1, -1),
-                                action=self.last_action.reshape(1, -1),
-                                reward=np.array([self.last_reward or 0.0]),
-                                episode_start=self.episode_start,
-                                value=self.last_values,
-                                log_prob=self.last_log_probs
+                                obs=self.prev_obs.reshape(1, -1),
+                                actions=self.last_action.reshape(1, -1),
+                                rewards=np.array([self.last_reward or 0.0]),
+                                episode_starts=self.episode_start,
+                                values=self.last_values,
+                                log_probs=self.last_log_probs
                             )
                 except Exception as e:
                     self.get_logger().error(f"Error adding to training buffer: {e}")
 
-            # Store current values for next iteration
-            self.last_obs = self.latest_obs
+            # Store current values for next iteration (shift current -> previous)
+            self.prev_obs = self.current_obs  # Current becomes previous for next step
             self.last_action = actions_np
             self.last_values = values
             self.last_log_probs = log_probs
@@ -314,7 +353,8 @@ class ASVPPONode(Node):
         """Convert flat state array to structured dictionary."""
         try:
             # Calculate indices for different parts of the state
-            agent_state_size = 6  # [x, y, yaw, vx, vy, vyaw]
+            # Use parameterized observation dimensions instead of hardcoded values
+            agent_state_size = self.obs_dim_per_agent  # [x, y, yaw, vx, vy, vyaw] by default
             agent_desired_pos_size = 2  # [desired_x, desired_y]
 
             # Start and end indices
@@ -379,7 +419,8 @@ class ASVPPONode(Node):
             action_array = action_array.flatten()
 
             for i in range(self.num_agents):
-                start_idx = i * 2
+                # Use parameterized action dimensions instead of hardcoded 2
+                start_idx = i * self.action_dim_per_agent
                 actions.append({
                     "agent_id": i,
                     "vyaw_rate": float(action_array[start_idx]),
@@ -475,24 +516,27 @@ class ASVPPONode(Node):
                 # Set done flag for current step
                 self.dones = np.ones(1, dtype=bool)
 
-                # Add final transition with terminal state
-                if self.latest_obs is not None:
+                # Add final transition with terminal state (current_obs is the terminal state)
+                if self.current_obs is not None:
                     with th.no_grad():
-                        obs_tensor = DataConverter.numpy_to_tensor(self.latest_obs)
+                        obs_tensor = DataConverter.numpy_to_tensor(self.current_obs)
                         obs_tensor = obs_tensor.reshape(1, -1)
                         _, values, _ = self.model.policy.forward(obs_tensor)
 
-                        # Use correct parameter names
+                        # Add final transition to buffer
                         self.training_buffer.add(
-                            obs=self.latest_obs.reshape(1, -1),
-                            action=self.last_action.reshape(1, -1) if self.last_action is not None
+                            obs=self.current_obs.reshape(1, -1),
+                            actions=self.last_action.reshape(1, -1) if self.last_action is not None
                                 else np.zeros((1, self.action_space.shape[0])),
-                            reward=np.array([self.last_reward or 0.0]),
-                            episode_start=self.episode_start,  # Use episode_start, not dones
-                            value=values,
-                            log_prob=self.last_log_probs if self.last_log_probs is not None
+                            rewards=np.array([self.last_reward or 0.0]),
+                            episode_starts=self.episode_start,  # Use episode_start, not dones
+                            values=values,
+                            log_probs=self.last_log_probs if self.last_log_probs is not None
                                 else th.zeros(self.action_space.shape[0], device=self.model.device)
                         )
+                        
+                        # Store terminal value for GAE computation
+                        self._terminal_value = values
 
                 # Set episode_start flag for the NEXT step
                 self.episode_start = np.ones(1, dtype=bool)
@@ -511,8 +555,10 @@ class ASVPPONode(Node):
             # Limit number of episodes if needed
             if self.episode_id >= self.max_episodes:
                 self.get_logger().info(f"Reached maximum episodes ({self.max_episodes}). Saving final model.")
-                model_path = os.path.join(self.rollout_dir, "ppo_model_final.zip")
-                self.model.save(model_path)
+                # Save final model with special naming
+                final_model_path = os.path.join(self.rollout_dir, "ppo_model_final.zip")
+                self.model.save(final_model_path)
+                self._save_model("final training completion")
                 # Could add code to shut down gracefully here
 
     def _initialize_rollout_file(self):
@@ -556,28 +602,28 @@ class ASVPPONode(Node):
         self.get_logger().info(f"Training PPO model on {buffer_size} transitions (progressive training)")
 
         try:
-            # Compute returns and advantages
-            last_values = th.zeros(1, device=self.model.device)
+            # Compute returns and advantages using proper terminal state value
+            # Use the terminal state value computed in done_callback, or zero if episode truly ended
+            if hasattr(self, '_terminal_value') and self._terminal_value is not None:
+                last_values = self._terminal_value
+                self._terminal_value = None  # Reset after use
+            else:
+                last_values = th.zeros(1, device=self.model.device)
             self.training_buffer.compute_returns_and_advantage(last_values=last_values, dones=self.dones)
 
             # Set training mode
-            self.model.policy.set_training_mode(True)
+            self.model.policy.train()
 
             # Learning rate schedule
             progress_remaining = max(0.0, 1.0 - (self.episode_id / 1000.0))
-
-            if hasattr(self.model.lr_schedule, "__call__"):
-                current_lr = self.model.lr_schedule(progress_remaining)
-            else:
-                current_lr = self.model.learning_rate
+            current_lr = self.model.learning_rate
 
             # Update optimizer learning rate
-            for param_group in self.model.policy.optimizer.param_groups:
+            for param_group in self.model.optimizer.param_groups:
                 param_group["lr"] = current_lr
 
             # Train for multiple epochs
-            clip_range = self.model.clip_range(progress_remaining)
-            clip_range_vf = self.model.clip_range_vf(progress_remaining) if self.model.clip_range_vf is not None else None
+            clip_range = self.model.clip_range
 
             for epoch in range(self.n_epochs):
                 approx_kl_divs = []
@@ -594,7 +640,7 @@ class ASVPPONode(Node):
 
                     # Normalize advantage
                     advantages = rollout_data.advantages
-                    if self.model.normalize_advantage and len(advantages) > 1:
+                    if len(advantages) > 1:
                         advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
 
                     # PPO loss
@@ -603,14 +649,8 @@ class ASVPPONode(Node):
                     policy_loss_2 = advantages * th.clamp(ratio, 1.0 - clip_range, 1.0 + clip_range)
                     policy_loss = -th.min(policy_loss_1, policy_loss_2).mean()
 
-                    # Value loss
-                    if clip_range_vf is None:
-                        values_pred = values
-                    else:
-                        values_pred = rollout_data.old_values + th.clamp(
-                            values - rollout_data.old_values, -clip_range_vf, clip_range_vf
-                        )
-                    value_loss = th.nn.functional.mse_loss(rollout_data.returns, values_pred)
+                    # Value loss (no clipping for simplicity)
+                    value_loss = th.nn.functional.mse_loss(rollout_data.returns, values)
 
                     # Entropy loss
                     if entropy is None:
@@ -622,11 +662,11 @@ class ASVPPONode(Node):
                     loss = policy_loss + self.model.ent_coef * entropy_loss + self.model.vf_coef * value_loss
 
                     # Gradient step
-                    self.model.policy.optimizer.zero_grad()
+                    self.model.optimizer.zero_grad()
                     loss.backward()
                     # Clip grad norm
                     th.nn.utils.clip_grad_norm_(self.model.policy.parameters(), self.model.max_grad_norm)
-                    self.model.policy.optimizer.step()
+                    self.model.optimizer.step()
 
                     # Log statistics
                     with th.no_grad():
@@ -659,15 +699,8 @@ class ASVPPONode(Node):
                 f"Avg buffer size: {self.training_stats['average_buffer_size_at_training']:.1f}"
             )
 
-            # Save model after training
-            model_path = os.path.join(self.rollout_dir, f"ppo_model_ep{self.episode_id}.zip")
-            self.model.save(model_path)
-            self.get_logger().info(f"Saved trained model to {model_path}")
-
-            # Also save as latest_model.zip for easy discovery
-            latest_model_path = os.path.join(self.rollout_dir, "latest_model.zip")
-            self.model.save(latest_model_path)
-            self.get_logger().info(f"Saved latest model to {latest_model_path}")
+            # Smart model saving - only save when needed
+            self._save_model_if_needed()
 
             # Smart buffer management: reset strategically
             current_buffer_size = len(self.training_buffer.observations)
@@ -731,9 +764,9 @@ class ASVPPONode(Node):
         MIN_Y, MAX_Y = -15.0, 35.0  # Wider than our clipping bounds
 
         for i in range(self.num_agents):
-            # Extract agent position (x, y)
-            agent_x = flat_state[i * 6]
-            agent_y = flat_state[i * 6 + 1]
+            # Extract agent position (x, y) - uses parameterized dimensions
+            agent_x = flat_state[i * self.obs_dim_per_agent]
+            agent_y = flat_state[i * self.obs_dim_per_agent + 1]
 
             # Check if out of bounds
             if (agent_x < MIN_X or agent_x > MAX_X or
@@ -746,16 +779,20 @@ class ASVPPONode(Node):
             self.last_position = None
             return
 
-        if self.last_position is not None and self.latest_obs is not None:
-            # Check if agents haven't moved
-            if np.allclose(self.last_position, self.latest_obs[:12], atol=0.1):
+        if self.last_position is not None and self.current_obs is not None:
+            # Check if agents haven't moved (using parameterized dimensions)
+            # Only check position data for all agents (first obs_dim_per_agent * num_agents elements)
+            obs_size = self.obs_dim_per_agent * self.num_agents
+            if np.allclose(self.last_position, self.current_obs[:obs_size], atol=0.1):
                 self.get_logger().warn("Agents appear stuck. Requesting environment reset")
                 self.reset_environment()
 
-        if self.latest_obs is not None:
-            self.last_position = self.latest_obs[:12].copy()
+        if self.current_obs is not None:
+            # Store only the position data for comparison
+            obs_size = self.obs_dim_per_agent * self.num_agents
+            self.last_position = self.current_obs[:obs_size].copy()
 
-    def _find_and_load_best_model(self, dummy_env):
+    def _find_and_load_best_model(self):
         """Smart model loading: try multiple sources in order of preference.
         
         Returns the path of the loaded model, or None if no model was loaded.
@@ -814,12 +851,42 @@ class ASVPPONode(Node):
         for model_path, description in model_candidates:
             try:
                 self.get_logger().info(f"Attempting to load model from {description}: {model_path}")
-                self.model = PPO.load(model_path, env=dummy_env)
+                # Load model without environment - we'll validate spaces separately
+                obs_dim = self.num_agents * self.obs_dim_per_agent
+                action_dim = self.num_agents * self.action_dim_per_agent
+                
+                try:
+                    # Try to load as CustomPPO first
+                    self.model = CustomPPO.load(model_path, obs_dim=obs_dim, action_dim=action_dim, device='cpu')
+                except Exception as e:
+                    # For now, create a new CustomPPO model if loading fails
+                    self.get_logger().warn(f"Could not load model from {model_path}: {e}")
+                    self.get_logger().warn("Creating new CustomPPO model - consider retraining")
+                    self.model = CustomPPO(obs_dim=obs_dim, action_dim=action_dim, device='cpu')
+                    continue  # Try next model candidate
 
-                # Verify the model loaded correctly
+                # Verify the model loaded correctly and spaces match
                 if hasattr(self.model, 'policy') and self.model.policy is not None:
-                    self.get_logger().info(f"✓ Successfully loaded and verified model from {description}")
-                    return model_path
+                    # STRICT validation: spaces must match EXACTLY for homogeneity
+                    model_obs_shape = self.model.observation_space.shape
+                    model_act_shape = self.model.action_space.shape
+                    expected_obs_shape = self.observation_space.shape
+                    expected_act_shape = self.action_space.shape
+                    
+                    # Check for EXACT match (strict homogeneity)
+                    if (model_obs_shape == expected_obs_shape and 
+                        model_act_shape == expected_act_shape):
+                        self.get_logger().info(f"✓ Model spaces match exactly: obs={model_obs_shape}, action={model_act_shape}")
+                        return model_path
+                    else:
+                        # Reject incompatible models for integrity
+                        self.get_logger().error(f"✗ INCOMPATIBLE MODEL - Space shapes don't match:")
+                        self.get_logger().error(f"  Expected: obs={expected_obs_shape}, action={expected_act_shape}")
+                        self.get_logger().error(f"  Got:      obs={model_obs_shape}, action={model_act_shape}")
+                        self.get_logger().error(f"  → Model trained with different space format")
+                        self.get_logger().error(f"  → Please retrain model or use compatible checkpoint")
+                        # Don't return this model - try next candidate
+                        continue
                 else:
                     self.get_logger().warn(f"✗ Model loaded but appears invalid from {description}")
 
@@ -829,6 +896,62 @@ class ASVPPONode(Node):
 
         # No model could be loaded
         return None
+
+    def _save_model_if_needed(self):
+        """Smart model saving based on configured criteria."""
+        should_save = False
+        save_reason = ""
+        
+        # Check if enough episodes have passed since last save
+        if (self.auto_save_enabled and 
+            self.episode_id - self.last_save_episode >= self.save_frequency):
+            should_save = True
+            save_reason = f"periodic save (every {self.save_frequency} episodes)"
+        
+        # Check if this is a performance improvement
+        if (self.save_on_improvement and 
+            len(self.episode_rewards) > 0 and
+            self.episode_rewards[-1] > self.best_episode_reward):
+            should_save = True
+            self.best_episode_reward = self.episode_rewards[-1]
+            save_reason = f"performance improvement (reward: {self.best_episode_reward:.4f})"
+        
+        if should_save:
+            self._save_model(save_reason)
+            self.last_save_episode = self.episode_id
+
+    def _save_model(self, reason: str = "manual"):
+        """Save the current model with proper logging."""
+        try:
+            # Always save as latest_model.zip for easy discovery
+            latest_model_path = os.path.join(self.rollout_dir, "latest_model.zip")
+            self.model.save(latest_model_path)
+            
+            # Save timestamped version for major milestones
+            if "improvement" in reason or "final" in reason or "interrupt" in reason:
+                timestamp_model_path = os.path.join(self.rollout_dir, f"ppo_model_ep{self.episode_id}.zip")
+                self.model.save(timestamp_model_path)
+                self.get_logger().info(f"Saved model checkpoint: {timestamp_model_path}")
+            
+            self.get_logger().info(f"Model saved ({reason}): {latest_model_path}")
+            
+        except Exception as e:
+            self.get_logger().error(f"Failed to save model: {e}")
+
+    def _signal_handler(self, signum, frame):
+        """Handle shutdown signals by saving model and cleaning up."""
+        self.get_logger().info(f"Received signal {signum}, saving model before shutdown...")
+        if hasattr(self, 'model') and self.model is not None:
+            self._save_model("interrupt/shutdown")
+        
+        # Graceful shutdown
+        if hasattr(self, 'training_timer'):
+            self.training_timer.cancel()
+        if hasattr(self, 'reset_timer'):
+            self.reset_timer.cancel()
+            
+        self.get_logger().info("Graceful shutdown complete")
+        rclpy.shutdown()
 
     def get_training_insights(self):
         """Get current training performance insights."""
@@ -844,14 +967,17 @@ class ASVPPONode(Node):
             'training_sessions': self.training_stats['total_training_sessions'],
             'total_transitions': self.training_stats['total_transitions_trained'],
             'memory_resets': self.training_stats['memory_resets'],
-            'ready_for_training': buffer_size >= (self.min_training_size if hasattr(self, 'min_training_size') else 50)
+            'ready_for_training': buffer_size >= (self.min_training_size if hasattr(self, 'min_training_size') else 50),
+            'last_save_episode': self.last_save_episode,
+            'episodes_since_save': self.episode_id - self.last_save_episode,
+            'best_reward': self.best_episode_reward if self.best_episode_reward != float('-inf') else 'N/A'
         }
 
         return insights
 
 def main(args=None):
     rclpy.init(args=args)
-    node = ASVPPONode()
+    node = PPONode()  # Updated to use renamed class (Point 8)
     rclpy.spin(node)
     node.destroy_node()
     rclpy.shutdown()

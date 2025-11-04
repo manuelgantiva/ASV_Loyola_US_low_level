@@ -66,8 +66,8 @@ def generate_launch_description():
 
     ppo_node = Node(
         package='asv_ai',
-        executable='asv_ppo_node',
-        name='asv_ppo_node',
+        executable='ppo_node',
+        name='ppo_node',
         parameters=[{
             'num_agents': num_agents,
             'model_path': model_path,

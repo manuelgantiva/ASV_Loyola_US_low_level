@@ -31,6 +31,8 @@
 
 # Python cache files
 *.pyc
+__pycache__/
+.ruff_cache/
 
 # Compiled Static libraries
 *.lai
