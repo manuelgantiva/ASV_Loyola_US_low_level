@@ -7,8 +7,9 @@
 #include <cmath>
 #include <thread>
 // #include "asv_library/curvas_sim.h"
-#include "asv_library/curvas_alamillo.h"
+// #include "asv_library/curvas_alamillo.h"
 // #include "asv_library/curvas_loyola.h"
+#include "asv_library/curvas_gelves.h"
 
 using namespace std;
 
@@ -238,35 +239,35 @@ private:
             case 1:
                 // result = curva_sim_2_6(w);
                 // result = curva_ala_1_2(w);
-                // result = curva_gel_1_3(w);
+                result = curva_gel_1_3(w);
                 // result = curva_2_i(w);
                 break;
             case 2:
                 // result = curva_sim_2_8(w);
                 // result = curva_ala_1_4(w);
-                // result = curva_gel_1_4(w);}
+                result = curva_gel_1_4(w);}
                 //result = curva_2_c(w);
                 break;
             case 3:
                 // result = curva_sim_2_10(w);
                 // result = curva_ala_1_6(w);
-                // result = curva_gel_1_6(w);
+                result = curva_gel_1_6(w);
                 // result = curva_2_d(w);
                 break;
             case 4:
                 // result = curva_sim_3_6(w);
                 // result = curva_ala_2_2(w);
-                // result = curva_gel_2_3(w);
+                result = curva_gel_2_3(w);
                 break;
             case 5:
                 // result = curva_sim_3_8(w);
                 // result = curva_ala_2_4(w);
-                // result = curva_gel_2_4(w);
+                result = curva_gel_2_4(w);
                 break;
             case 6:
                 // result = curva_sim_3_10(w);
                 // result = curva_ala_2_6(w);
-                // result = curva_gel_2_6(w);
+                result = curva_gel_2_6(w);
                 break;
             /*case 7:
                 result = curva_ala_3_1(w);
@@ -285,7 +286,7 @@ private:
                 break;
             case 12:
                 result = curva_ala_4_4(w);
-                break;*/
+                break;
             case 13:
                 result = curva_ala_5_4(w);
                 break;
@@ -295,7 +296,7 @@ private:
             case 15:
                 result = curva_ala_5_6(w);
                 break;
-            /*case 16:
+            case 16:
                 result = curva_ala_6_2(w);
                 break;
             case 17:
@@ -388,7 +389,7 @@ private:
                 }
             }
             if (param.get_name() == "path_d"){
-                if(param.as_int() >= 13 and param.as_int() <= 15){
+                if(param.as_int() >= 0 and param.as_int() <= 6){
                     RCLCPP_INFO(this->get_logger(), "changed param value");
                     path_d = param.as_int();
                 }else{
