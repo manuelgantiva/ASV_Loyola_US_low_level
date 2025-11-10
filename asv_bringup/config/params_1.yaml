@@ -133,7 +133,7 @@ ASV1:
         delta_SGLOS: 2.0
         k_u_tar: 2.0
         taud: 5.0
-        path_d: 13
+        path_d: 4
         flag: False     #True signo igual False invertido
         u_max: 1.2
         SLOS_on: True
