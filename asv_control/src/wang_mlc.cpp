@@ -245,7 +245,7 @@ private:
             case 2:
                 // result = curva_sim_2_8(w);
                 // result = curva_ala_1_4(w);
-                result = curva_gel_1_4(w);}
+                result = curva_gel_1_4(w);
                 //result = curva_2_c(w);
                 break;
             case 3:
