@@ -18,7 +18,7 @@ class ASVAgent():
         self.X = X
         self.pwm_l = 1500
         self.pwm_r = 1500
-        self.deadzone = [1450, 1550]
+        self.deadzone = [1480, 1520]
 
     
     def static_2nd_ord(self, d_avg, d_D, f_r, beta):
