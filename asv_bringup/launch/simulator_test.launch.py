@@ -304,10 +304,10 @@ def generate_launch_description():
     ##-------------------------ASVs Nodes----------------------------##
     ################################################################### 
     nodes.append(asv_simulator_node)
-    nodes.append(own_robot_state_publisher_node)
-    nodes.append(tf_map_node)
-    nodes.append(rqt_node)
-    nodes.append(rvz)
+    # nodes.append(own_robot_state_publisher_node)
+    # nodes.append(tf_map_node)
+    # nodes.append(rqt_node)
+    # nodes.append(rvz)
 
     ###################################################################
     ##--------------------Comunication Nodes-------------------------##
