@@ -316,8 +316,8 @@ private:
     float rho0 = 6.0, theta0 = 3.141592; // -2.0944;
     float rho1 = 6.0, theta1 = -1.570796; // 0;
     float rho3 = 6.0, theta3 = 1.570796; // 2.0944;
-    float rho4 = 3.0, theta4 =  0.0; // 2.0944;
-    int path_d = 0;
+    float rho4 = 6.0, theta4 =  0.0; // 2.0944;
+    int path_d = 1;
     rclcpp::Subscription<asv_interfaces::msg::ReferenceLlc>::SharedPtr subscriber_utar0;
     rclcpp::Subscription<asv_interfaces::msg::ReferenceLlc>::SharedPtr subscriber_utar1;
     rclcpp::Subscription<asv_interfaces::msg::ReferenceLlc>::SharedPtr subscriber_utar3;
