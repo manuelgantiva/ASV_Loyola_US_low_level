@@ -78,7 +78,7 @@ private:
         armed = msg->armed;
     }
 
-    bool armed = false;
+    bool armed = true;
 
     rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr subscriber_imu;
     rclcpp::Subscription<mavros_msgs::msg::State>::SharedPtr subscriber_state;
