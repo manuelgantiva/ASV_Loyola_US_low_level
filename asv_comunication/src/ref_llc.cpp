@@ -123,7 +123,7 @@ private:
         }
         // Cuantizar 6 pasos
         ref_vel = round(ref_vel / 0.1) * 0.1;
-        ref_vel = ref_vel * 2.0;
+        ref_vel = ref_vel * 1.5;
         return ref_vel;
     }
 
