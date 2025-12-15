@@ -304,7 +304,7 @@ private:
                     break;
                 case ROS:
                     RCLCPP_INFO(this->get_logger(), "ROS2 control mode");
-                    (sel_con<1400){
+                    if(sel_con<1400){
                         threads_.push_back(std::thread(std::bind(&RcHandlerNode::callSetModeMavros, this, "GUIDED")));
                         //threads_.push_back(std::thread(std::bind(&RcHandlerNode::callSetLowController, this, 
                         //                    asv_interfaces::srv::SetLlc::Request::LLC_APM)));
