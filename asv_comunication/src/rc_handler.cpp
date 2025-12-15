@@ -304,10 +304,10 @@ private:
                     break;
                 case ROS:
                     RCLCPP_INFO(this->get_logger(), "ROS2 control mode");
-                    /*if(sel_con<1400){
+                    (sel_con<1400){
                         threads_.push_back(std::thread(std::bind(&RcHandlerNode::callSetModeMavros, this, "GUIDED")));
-                        threads_.push_back(std::thread(std::bind(&RcHandlerNode::callSetLowController, this, 
-                                            asv_interfaces::srv::SetLlc::Request::LLC_APM)));
+                        //threads_.push_back(std::thread(std::bind(&RcHandlerNode::callSetLowController, this, 
+                        //                    asv_interfaces::srv::SetLlc::Request::LLC_APM)));
                         threads_.push_back(std::thread(std::bind(&RcHandlerNode::callArming, this, true)));
                     }else if(sel_con>1600){
                         threads_.push_back(std::thread(std::bind(&RcHandlerNode::callParamSetServoOut, this, 
@@ -315,8 +315,8 @@ private:
                         threads_.push_back(std::thread(std::bind(&RcHandlerNode::callParamSetServoOut, this, 
                                             "SERVO3_FUNCTION", 60)));
                         threads_.push_back(std::thread(std::bind(&RcHandlerNode::callOnOffPwm, this, true)));
-                        threads_.push_back(std::thread(std::bind(&RcHandlerNode::callSetLowController, this, 
-                                            asv_interfaces::srv::SetLlc::Request::LLC_IFAC)));
+                        //threads_.push_back(std::thread(std::bind(&RcHandlerNode::callSetLowController, this, 
+                        //                    asv_interfaces::srv::SetLlc::Request::LLC_IFAC)));
                         threads_.push_back(std::thread(std::bind(&RcHandlerNode::callArming, this, true)));
                     }else{
                         threads_.push_back(std::thread(std::bind(&RcHandlerNode::callParamSetServoOut, this, 
@@ -324,11 +324,11 @@ private:
                         threads_.push_back(std::thread(std::bind(&RcHandlerNode::callParamSetServoOut, this, 
                                             "SERVO3_FUNCTION", 60)));
                         threads_.push_back(std::thread(std::bind(&RcHandlerNode::callOnOffPwm, this, true)));
-                        threads_.push_back(std::thread(std::bind(&RcHandlerNode::callSetLowController, this, 
-                                            asv_interfaces::srv::SetLlc::Request::LLC_MPC)));
+                        //threads_.push_back(std::thread(std::bind(&RcHandlerNode::callSetLowController, this, 
+                        //                    asv_interfaces::srv::SetLlc::Request::LLC_MPC)));
                         threads_.push_back(std::thread(std::bind(&RcHandlerNode::callArming, this, true)));
                     }
-                    if(sel_obs<1400){
+                    /*if(sel_obs<1400){
                         threads_.push_back(std::thread(std::bind(&RcHandlerNode::callSetStateObserver, this, 
                                             asv_interfaces::srv::SetObs::Request::ESO_ZONO)));
                     }else if(sel_obs>1600){
