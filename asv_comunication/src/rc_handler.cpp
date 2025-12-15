@@ -338,8 +338,8 @@ private:
                         threads_.push_back(std::thread(std::bind(&RcHandlerNode::callSetStateObserver, this, 
                                             asv_interfaces::srv::SetObs::Request::ESO_BEJARANO)));
                     }*/
-                    threads_.push_back(std::thread(std::bind(&RcHandlerNode::callOnOffPwm, this, true)));
-                    threads_.push_back(std::thread(std::bind(&RcHandlerNode::callArming, this, true)));
+                    // threads_.push_back(std::thread(std::bind(&RcHandlerNode::callOnOffPwm, this, true)));
+                    // threads_.push_back(std::thread(std::bind(&RcHandlerNode::callArming, this, true)));
                     break;
                 default:
                     RCLCPP_INFO(this->get_logger(), "Unknown mode");
