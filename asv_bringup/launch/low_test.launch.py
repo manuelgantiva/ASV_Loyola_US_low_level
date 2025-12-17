@@ -189,6 +189,16 @@ def generate_launch_description():
             {'my_id': my_namespace}
         ]
     )
+    
+    imu_fix_new_node = Node(
+        package="asv_comunication",
+        executable="imu_fix_new",
+        namespace= namespace_comunication,
+        parameters = [
+            {'my_id': my_namespace}
+        ]
+    )
+    
 
     imu_ext_node = Node (
         package= "asv_comunication",
@@ -355,15 +365,16 @@ def generate_launch_description():
     ##--------------------Comunication Nodes-------------------------##
     ################################################################### 
     nodes.append(rc_handler_node)
-    nodes.append(ref_llc_node)
+    # nodes.append(ref_llc_node)
     # nodes.append(ref_mlc_node)
     # nodes.append(ref_hlc_node)
     nodes.append(apm_llc_node)
     nodes.append(imu_fix_node)
+    nodes.append(imu_fix_new_node)
     nodes.append(imu_ext_node)
     nodes.append(record)
 
-    nodes.append(transceiver_xbee_node)
+    # nodes.append(transceiver_xbee_node)
     # nodes.append(xbee_master_node)
     # nodes.append(xbee_slave_node)
 
@@ -382,7 +393,7 @@ def generate_launch_description():
     # nodes.append(filter_hlc_node)
     nodes.append(pwm_mapper_node)
     # nodes.append(mpc_llc_node)
-    nodes.append(ifac_llc_node)
+    # nodes.append(ifac_llc_node)
     nodes.append(mux_llc_node)
     #nodes.append(wang_mlc_node)
     # nodes.append(mpc_hlc_node)
