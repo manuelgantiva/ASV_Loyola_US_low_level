@@ -76,10 +76,10 @@ ASV1:
         Ts: 100.0         #ms
         N_p: 30
         T_mlc: 100.0      #ms #Periodo MLC
-        Q: [5.0, 0.0, 50.0, 0.0] 
+        Q: [10.0, 0.0, 50.0, 0.0] 
         R: [0.0, 0.0]
-        Rd: [25.0, 5.0]
-        u_max: 3.0
+        Rd: [20.0, 5.0]
+        u_max: 1.5
         u_min: 0.0
         v_max: 1.5
         v_min: -1.5
@@ -132,7 +132,7 @@ ASV1:
         Delta_r_ref_max: 0.005
         Xv_bar: [1.4101, -0.2668, 0.3139, -0.2000, -1.0258, -0.7086, -0.1860, 0.3999]
         Eps: 0.0958
-        path_d: 1
+        path_d: 0
   simulator:
     simulator_asv_wrapper:
       ros__parameters:

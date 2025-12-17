@@ -67,10 +67,10 @@ def pf_model():
     n_inputs = disturbances.size(1)
 
     # Definir la dinámica
-    dx     = coef[0]*sin(w) + coef[2]# 30*sin(w) # coef[0] si x = -30*cos(w)
-    dy     = coef[1]*cos(w) + coef[3]# 30*cos(w) # coef[1] si y = 30*sin(w)
-    ddx    = coef[0]*cos(w)  # 30*cos(w) # 0
-    ddy    = -coef[1]*sin(w) # -30*sin(w) # 0
+    dx     = -coef[0]*sin(w) + coef[2]# -30*sin(w) # coef[0] si x = 30*cos(w)
+    dy     = -coef[1]*cos(w) + coef[3]# -30*cos(w) # coef[1] si y = -30*sin(w)
+    ddx    = -coef[0]*cos(w)  # -30*cos(w) # 0
+    ddy    =  coef[1]*sin(w)  #  30*sin(w) # 0
     phi    = atan2(dy, dx)
 
     F = sqrt(dx*dx + dy*dy)

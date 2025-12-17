@@ -586,10 +586,10 @@ private:
         p_values_map["Eps_"] = std::vector{Eps_};
         switch(path_d) {
             case 0:
-                p_values_map["coef"] = std::vector{0.0, 0.0, 1.0, 0.0};  //  a y b Circulo c y d Lineal
+                p_values_map["coef"] = std::vector{0.0, 0.0, -1.0, 0.0};  //  a y b Circulo c y d Lineal
                 break;
             case 1:
-                p_values_map["coef"] = std::vector{30.0, 30.0, 0.0, 0.0};  //  a y b Circulo c y d Lineal
+                p_values_map["coef"] = std::vector{15.0, 15.0, 0.0, 0.0};  //  a y b Circulo c y d Lineal
                 break;
         }
 
@@ -651,16 +651,16 @@ private:
         float x_p, y_p, dx, dy;
         switch(path_d) {
             case 0:
-                x_p  = w + 5;  // 
-                y_p  = w + 5;    // 
-                dx   = 1;     // 
+                x_p  = -w;  // 
+                y_p  = 0;  // 
+                dx   = -1;     // 
                 dy   = 0;     //
                 break;
             case 1:
-                x_p  = 35-30*cos(w);  
-                y_p  = 5+30*sin(w);     
-                dx   = 30*sin(w);     
-                dy   = 30*cos(w);    
+                x_p  =-15+15*cos(w);  // sin (w + pi/2)
+                y_p  =-4 -15*sin(w);  // cos (w + pi/2)
+                dx   =-15*sin(w);     
+                dy   =-15*cos(w);    
                 break;
         }
         float phi  = atan2(dy, dx);
