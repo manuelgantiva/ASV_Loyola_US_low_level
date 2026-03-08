@@ -104,7 +104,7 @@ Target line_south(double w)
 {
     Target tar_p;
     tar_p.xp  = -w;
-    tar_p.yp  = -1.0;
+    tar_p.yp  = 0.0;
     tar_p.dxp = -1.0;
     tar_p.dyp = 0.0;
     const double dxp2 = 0.0;

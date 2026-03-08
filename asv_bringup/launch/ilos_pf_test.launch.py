@@ -94,15 +94,15 @@ def generate_launch_description():
     ###################################################################
     ##--------------------Get Config id File ------------------------##
     ################################################################### 
+
+    config_ilos = os.path.join(get_package_share_directory('asv_bringup'),
+        'config',
+        'params_ilos.yaml'
+    )
     
     config_gen = os.path.join(get_package_share_directory('asv_bringup'),
         'config',
         'params_gen.yaml'
-    )
-
-    config_mpcpf = os.path.join(get_package_share_directory('asv_bringup'),
-        'config',
-        'params_mpc_pf.yaml'
     )
 
     ###################################################################
@@ -115,7 +115,7 @@ def generate_launch_description():
         namespace= namespace_comunication,
         parameters = [
             {'my_id': my_id},
-            {'controller_tag': 'mpcpf'}
+            {'controller_tag': 'ilos'}
         ],
         condition=IfCondition(rec)
     )
@@ -168,13 +168,13 @@ def generate_launch_description():
             {'my_id': my_namespace},
         ]
     )
-
+    
     ifac_llc_node = Node(
         package="asv_control",
         executable="ifac_llc",
         namespace= namespace_control,
         parameters = [{'my_id': my_namespace},
-            config_mpcpf],
+            config_ilos],
         remappings=[
             (PythonExpression(["'/ASV' + str(", my_id, ") + '/control/pwm_value_ifac'"]),
                  PythonExpression(["'/ASV' + str(", my_id, ") + '/control/pwm_values'"]))
@@ -187,20 +187,19 @@ def generate_launch_description():
         name="mpc_llc",
         namespace= namespace_control,
         parameters = [{'my_id': my_namespace},
-            config_mpcpf],
+            config_ilos],
         remappings=[
             (PythonExpression(["'/ASV' + str(", my_id, ") + '/control/pwm_value_mpc'"]),
                  PythonExpression(["'/ASV' + str(", my_id, ") + '/control/pwm_values'"]))
         ]
     )
 
-    mpc_mlc_pf_rt_node = Node(
-        package="asv_acados",
-        executable="mpc_mlc_pf_rt",
-        name="mpc_mlc_pf",
+    ilos_mlc_node = Node(
+        package="asv_control",
+        executable="ilos_mlc",
         namespace= namespace_control,
         parameters = [{'my_id': my_namespace},
-            config_mpcpf]
+                config_ilos],
     )
 
     ###################################################################
@@ -214,7 +213,7 @@ def generate_launch_description():
         namespace=namespace_observer,
         parameters=[
             {'my_id': my_namespace},
-            config_mpcpf
+            config_ilos
         ]
     )
 
@@ -225,7 +224,7 @@ def generate_launch_description():
         namespace=namespace_observer,
         parameters=[
             {'my_id': my_namespace},
-            config_mpcpf
+            config_ilos
         ]
     )
 
@@ -236,7 +235,7 @@ def generate_launch_description():
         namespace=namespace_observer,
         parameters=[
             {'my_id': my_namespace},
-            config_mpcpf
+            config_ilos
         ],
     )
 
@@ -247,7 +246,7 @@ def generate_launch_description():
         namespace=namespace_observer,
         parameters=[
             {'my_id': my_namespace},
-            config_mpcpf
+            config_ilos
         ],
         remappings=[
             (PythonExpression(["'/ASV' + str(", my_id, ") + '/observer/state_observer_zono'"]),
@@ -269,9 +268,11 @@ def generate_launch_description():
     nodes.append(imu_ext_node)
     nodes.append(record)
 
+    
     ###################################################################
     ##-----------------------Observer Nodes--------------------------##
     ################################################################### 
+    # nodes.append(mux_obs_node)
     nodes.append(observer_core)
     # nodes.append(observer_bejarano)
     # nodes.append(observer_liu)
@@ -284,7 +285,7 @@ def generate_launch_description():
     nodes.append(pwm_mapper_node)
     nodes.append(mpc_llc_rt_node)
     # nodes.append(ifac_llc_node)
-    nodes.append(mpc_mlc_pf_rt_node)
+    nodes.append(ilos_mlc_node)
     
     return LaunchDescription(
         [arg_my_id, arg_rec,

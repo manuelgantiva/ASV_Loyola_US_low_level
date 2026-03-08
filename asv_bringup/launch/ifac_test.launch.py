@@ -79,20 +79,6 @@ def generate_launch_description():
         ]
     )
 
-    # neighbor_description = ParameterValue(Command(['xacro ', urdf_path, ' id:=n', ' own:=false']),
-    #                                       value_type=str)
-    # neighbor_robot_state_publisher_node = Node(
-    #     package="robot_state_publisher",
-    #     executable="robot_state_publisher",
-    #     name="neighbor_robot_state_publisher",
-    #     namespace=my_namespace,
-    #     parameters=[{'robot_description': neighbor_description},
-    #                 {'publish_frequency': 10.0}],
-    #     remappings=[
-    #         ("/robot_description", "/neighbor_description")
-    #     ]
-    # )
-
     ###################################################################
     ## ------------------------Mavros Launch-------------------------##
     ###################################################################
@@ -108,18 +94,15 @@ def generate_launch_description():
     ###################################################################
     ##--------------------Get Config id File ------------------------##
     ################################################################### 
-
-    param_id = DeclareLaunchArgument('param_id', default_value=[
-                                     'params_', my_id, '.yaml'])
-    config = PathJoinSubstitution([
-        get_package_share_directory('asv_bringup'),
-        'config',
-        LaunchConfiguration('param_id')
-    ])
     
     config_gen = os.path.join(get_package_share_directory('asv_bringup'),
         'config',
         'params_gen.yaml'
+    )
+
+    config_ifac = os.path.join(get_package_share_directory('asv_bringup'),
+        'config',
+        'params_ifac.yaml'
     )
 
     ###################################################################
@@ -131,7 +114,8 @@ def generate_launch_description():
         executable="bag_record",
         namespace= namespace_comunication,
         parameters = [
-            {'my_id': my_id}
+            {'my_id': my_id},
+            {'controller_tag': 'ifac'}
         ],
         condition=IfCondition(rec)
     )
@@ -154,48 +138,12 @@ def generate_launch_description():
             config_gen]
     )
 
-    ref_mlc_node = Node(
-        package="asv_comunication",
-        executable="ref_mlc",
-        namespace= namespace_comunication,
-        parameters = [
-            {'my_id': my_namespace},
-            config_gen]
-    )
-
-    apm_llc_node = Node(
-        package="asv_comunication",
-        executable="apm_llc",
-        namespace= namespace_comunication,
-        parameters = [
-            {'my_id': my_namespace}
-        ]
-    )
-
-    imu_fix_node = Node(
-        package="asv_comunication",
-        executable="imu_fix",
-        namespace= namespace_comunication,
-        parameters = [
-            {'my_id': my_namespace}
-        ]
-    )
-
     imu_ext_node = Node (
         package= "asv_comunication",
         executable= "imu_driver.py",
         namespace= namespace_comunication,
         parameters = [
             {'my_id': my_namespace}
-        ]
-    )
-
-    transceiver_xbee_node = Node(
-        package="asv_comunication",
-        executable="transceiver_xbee.py",
-        namespace= namespace_comunication,
-        parameters = [
-            {'my_id': my_namespace},
         ]
     )
 
@@ -220,57 +168,22 @@ def generate_launch_description():
             {'my_id': my_namespace},
         ]
     )
-    
-    mux_llc_node = Node(
-        package="asv_control",
-        executable="mux_llc",
-        namespace= namespace_control,
-        parameters = [
-            {'my_id': my_namespace},
-        ]
-    )
 
     ifac_llc_node = Node(
         package="asv_control",
         executable="ifac_llc",
         namespace= namespace_control,
         parameters = [{'my_id': my_namespace},
-            config],
+            config_ifac],
         remappings=[
             (PythonExpression(["'/ASV' + str(", my_id, ") + '/control/pwm_value_ifac'"]),
                  PythonExpression(["'/ASV' + str(", my_id, ") + '/control/pwm_values'"]))
         ]
     )
 
-    mpc_llc_rt_node = Node(
-        package="asv_acados",
-        executable="mpc_llc_rt",
-        name="mpc_llc",
-        namespace= namespace_control,
-        parameters = [{'my_id': my_namespace},
-            config],
-    )
-
-    wang_mlc_node = Node(
-        package="asv_control",
-        executable="wang_mlc",
-        namespace= namespace_control,
-        parameters = [{'my_id': my_namespace},
-                config],
-    )
-
     ###################################################################
     ## -----------------------Observer Nodes--------------------------##
     ###################################################################
-
-    mux_obs_node = Node(
-        package="asv_observer",
-        executable="mux_obs",
-        namespace=namespace_observer,
-        parameters=[
-            {'my_id': my_namespace},
-        ]
-    )
     
     observer_core = Node(
         package="asv_observer",
@@ -279,7 +192,7 @@ def generate_launch_description():
         namespace=namespace_observer,
         parameters=[
             {'my_id': my_namespace},
-            config
+            config_ifac
         ]
     )
 
@@ -290,7 +203,7 @@ def generate_launch_description():
         namespace=namespace_observer,
         parameters=[
             {'my_id': my_namespace},
-            config
+            config_ifac
         ]
     )
 
@@ -301,7 +214,7 @@ def generate_launch_description():
         namespace=namespace_observer,
         parameters=[
             {'my_id': my_namespace},
-            config
+            config_ifac
         ],
     )
 
@@ -312,7 +225,7 @@ def generate_launch_description():
         namespace=namespace_observer,
         parameters=[
             {'my_id': my_namespace},
-            config
+            config_ifac
         ],
         remappings=[
             (PythonExpression(["'/ASV' + str(", my_id, ") + '/observer/state_observer_zono'"]),
@@ -324,7 +237,6 @@ def generate_launch_description():
     ##-------------------------ASVs Nodes----------------------------##
     ################################################################### 
     nodes.append(Mavros_launch)
-    # nodes.append(neighbor_robot_state_publisher_node)
     # nodes.append(own_robot_state_publisher_node)
 
     ###################################################################
@@ -332,18 +244,12 @@ def generate_launch_description():
     ################################################################### 
     nodes.append(rc_handler_node)
     nodes.append(ref_llc_node)
-    # nodes.append(ref_mlc_node)
-    nodes.append(apm_llc_node)
-    # nodes.append(imu_fix_node)
     nodes.append(imu_ext_node)
     nodes.append(record)
-
-    # nodes.append(transceiver_xbee_node)
     
     ###################################################################
     ##-----------------------Observer Nodes--------------------------##
     ################################################################### 
-    # nodes.append(mux_obs_node)
     nodes.append(observer_core)
     # nodes.append(observer_bejarano)
     # nodes.append(observer_liu)
@@ -354,12 +260,9 @@ def generate_launch_description():
     ################################################################### 
     # nodes.append(asv_tf_broadcast_node)
     nodes.append(pwm_mapper_node)
-    # nodes.append(mpc_llc_rt_node)
     nodes.append(ifac_llc_node)
-    # nodes.append(mux_llc_node)
-    #nodes.append(wang_mlc_node)
     
     return LaunchDescription(
-        [arg_my_id, arg_rec, param_id,
+        [arg_my_id, arg_rec,
             *nodes]
     )
