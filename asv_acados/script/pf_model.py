@@ -56,8 +56,12 @@ def pf_model():
     d_r_ref = MX.sym('d_r_ref')
     controls = vertcat(d_u_ref, d_u_tar, d_r_ref)
 
+    x_e = MX.sym("x_e")
+    y_e = MX.sym("y_e")
+    output = vertcat(x_e, y_e)
+
     # Variables del path
-    coef = MX.sym('coef', 4)  # coef = [a, b, c , d]
+    coef = MX.sym('coef', 6)  # coef = [a, b, c , d, e, f]
 
     disturbances = vertcat(coef)
 
@@ -65,12 +69,13 @@ def pf_model():
     n_states = states.size(1) 
     n_controls = controls.size(1)
     n_inputs = disturbances.size(1)
+    n_oututs = output.size(1)
 
     # Definir la dinámica
-    dx     = -coef[0]*sin(w) + coef[2]# -30*sin(w) # coef[0] si x = 30*cos(w)
-    dy     = -coef[1]*cos(w) + coef[3]# -30*cos(w) # coef[1] si y = -30*sin(w)
-    ddx    = -coef[0]*cos(w)  # -30*cos(w) # 0
-    ddy    =  coef[1]*sin(w)  #  30*sin(w) # 0
+    dx     = -coef[0]*sin(w) + coef[2] + 2*coef[4]*cos(2*w)  #  x = coef[0]*cos(w)
+    dy     =  coef[1]*cos(w) + coef[3] + coef[5]*cos(w+pi/2) #  y = coef[1]*sin(w)
+    ddx    = -coef[0]*cos(w) - 4*coef[4]*sin(2*w)
+    ddy    = -coef[1]*sin(w) - coef[5]*sin(w+pi/2)
     phi    = atan2(dy, dx)
 
     F = sqrt(dx*dx + dy*dy)
@@ -91,13 +96,21 @@ def pf_model():
     x_dot[6] = d_u_tar
     x_dot[7] = d_r_ref
 
+    # algebraic variables
+    # z Outputs algebraico
+    z_exp = MX.zeros(n_oututs)
+    z_exp[0] = x_e_bar - Eps_*cos(psi - phi)
+    z_exp[1] = y_e_bar - Eps_*sin(psi - phi)
+
     # Modelo dinámico final
     f_expl = x_dot  # Aquí usas la dinámica que definimos
 
-    f_impl = xdot - f_expl
-   
+    # f_impl = xdot - f_expl
+    f_impl = vertcat( xdot - f_expl, output - z_exp)
+
     # algebraic variables
-    z = vertcat([])
+    # z = vertcat([])
+    z = output
 
     # parameters
     p = vertcat(

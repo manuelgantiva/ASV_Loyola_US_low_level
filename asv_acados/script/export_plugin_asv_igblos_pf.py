@@ -5,7 +5,7 @@ import sys
 
 from acados_solver_plugins import SolverPluginGenerator
 
-from generate_ocp_pf import export_asv_pf_ocp
+from generate_ocp_iblos_pf import export_asv_pf_ocp
 
 
 def main() -> int:
@@ -19,9 +19,6 @@ def main() -> int:
         'psi': [2],
         'w': [3],
         'v_bar': [4],
-        'u_ref': [5],
-        'u_tar': [6],
-        'r_ref': [7],
     }
     z_index_map = {
         'x_e': [0],
@@ -30,12 +27,12 @@ def main() -> int:
     p_index_map = {
         'Xv_bar': [0,1,2,3,4,5,6,7],
         'Eps_': [8],
-        'coef': [9,10,11,12,13,14],
+        'coef': [9, 10, 11, 12, 13, 14],
     }
     u_index_map = {
-        'd_u_ref': [0],
-        'd_u_tar': [1],
-        'd_r_ref': [2],
+        'u_ref': [0],
+        'u_tar': [1],
+        'r_ref': [2],
     }
 
     # Instantiate plugin generator
@@ -49,8 +46,8 @@ def main() -> int:
 
     solver_plugin_generator.generate_solver_plugin(
         acados_ocp,
-        plugin_class_name='PfAsvAcadosSolver',
-        solver_description='This solver contains the Path Following ASV model.',  # noqa: E501
+        plugin_class_name='IgblosAcados',
+        solver_description='This solver contains the Path Following ASV model IGBLOS.',  # noqa: E501
         x_index_map=x_index_map,
         z_index_map=z_index_map,
         p_index_map=p_index_map,

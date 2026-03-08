@@ -35,14 +35,29 @@ public:
     {
         // Obtener la fecha y hora actual
         this-> declare_parameter("my_id", 0);
+        this->declare_parameter<std::string>("controller_tag", "");
+
         my_id = std::to_string(this->get_parameter("my_id").as_int());
-        name_id =  "ASV" + my_id;
+        std::string controller_tag = this->get_parameter("controller_tag").as_string();
+
+        name_id = "ASV" + my_id;
         std::time_t now = std::time(0);
         std::tm *local_time = std::localtime(&now);
-        int day = local_time->tm_mday;   // Día del mes (1-31)
-        int month = local_time->tm_mon + 1;  // Mes (0-11, agregamos 1 para obtener el mes real)
-        prefix = "ASV" + my_id + "-" + std::to_string(day) + "-" + std::to_string(month) + "-bag" + "-";
-        RCLCPP_INFO(this->get_logger(), "Current day: %s", prefix.c_str());
+
+        int day = local_time->tm_mday;
+        int month = local_time->tm_mon + 1;
+
+        // Si quieres dos dígitos: 05, 06, etc.
+        std::string day_str = (day < 10 ? "0" : "") + std::to_string(day);
+        std::string month_str = (month < 10 ? "0" : "") + std::to_string(month);
+
+        if (controller_tag.empty()) {
+            prefix = "ASV" + my_id + "-" + day_str + "-" + month_str + "-bag-";
+        } else {
+            prefix = "ASV" + my_id + "-" + day_str + "-" + month_str + "-" + controller_tag + "-bag-";
+        }
+
+        RCLCPP_INFO(this->get_logger(), "Bag prefix: %s", prefix.c_str());
 
         subscriber_param_obs = this-> create_subscription<std_msgs::msg::Float32MultiArray>("/" + name_id + "/observer/observer_param",rclcpp::SensorDataQoS(),
                 std::bind(&BagRecordNode::callbackParamObs, this, std::placeholders::_1));

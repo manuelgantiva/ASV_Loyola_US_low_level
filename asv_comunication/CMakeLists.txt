@@ -45,14 +45,7 @@ ament_target_dependencies(apm_llc rclcpp geometry_msgs mavros_msgs asv_interface
 add_executable(imu_fix src/imu_fix.cpp)
 ament_target_dependencies(imu_fix rclcpp std_msgs geometry_msgs sensor_msgs mavros_msgs)
 
-add_executable(mlc_target src/mlc_target.cpp)
-ament_target_dependencies(mlc_target rclcpp tf2 tf2_ros geometry_msgs mavros_msgs asv_interfaces)
 
-add_executable(mlc_mod_target src/mlc_mod_target.cpp)
-ament_target_dependencies(mlc_mod_target rclcpp tf2 tf2_ros geometry_msgs mavros_msgs asv_interfaces)
-
-add_executable(mlc_coor_target src/mlc_coor_target.cpp)
-ament_target_dependencies(mlc_coor_target rclcpp tf2 tf2_ros geometry_msgs mavros_msgs asv_interfaces)
 
 # Install Targets
 install(TARGETS
@@ -62,9 +55,6 @@ install(TARGETS
   ref_mlc
   apm_llc
   imu_fix
-  mlc_target
-  mlc_mod_target
-  mlc_coor_target
 DESTINATION lib/${PROJECT_NAME})
 
 # Install Scripts python

@@ -190,15 +190,6 @@ def generate_launch_description():
         ]
     )
 
-    mlc_target_node = Node(
-        package="asv_comunication",
-        executable="mlc_target",
-        namespace= namespace_comunication,
-        parameters = [
-            {'my_id': my_namespace}
-        ]
-    )
-
     transceiver_xbee_node = Node(
         package="asv_comunication",
         executable="transceiver_xbee.py",
@@ -254,6 +245,10 @@ def generate_launch_description():
         namespace= namespace_control,
         parameters = [{'my_id': my_namespace},
             config],
+        remappings=[
+            (PythonExpression(["'/ASV' + str(", my_id, ") + '/control/pwm_value_mpc'"]),
+                 PythonExpression(["'/ASV' + str(", my_id, ") + '/control/pwm_values'"]))
+        ]
     )
 
     wang_mlc_node = Node(
@@ -264,15 +259,30 @@ def generate_launch_description():
                 config],
     )
 
-    mpc_mlc_pf_rt_node = Node(
-        package="asv_acados",
-        executable="mpc_mlc_pf_rt",
-        name="mpc_mlc_pf",
+    ilos_mlc_node = Node(
+        package="asv_control",
+        executable="ilos_mlc",
         namespace= namespace_control,
         parameters = [{'my_id': my_namespace},
-            config],
+                config],
     )
 
+    iblos_mlc_node = Node(
+        package="asv_control",
+        executable="iblos_mlc",
+        namespace= namespace_control,
+        parameters = [{'my_id': my_namespace},
+                config],
+    )
+
+    iblosmp_mlc_pf_node = Node(
+        package="asv_acados",
+        executable="iblosmp_mlc_pf",
+        name="iblosmp_mlc",
+        namespace= namespace_control,
+        parameters = [{'my_id': my_namespace},
+            config]
+    )
 
     ###################################################################
     ## -----------------------Observer Nodes--------------------------##
@@ -328,13 +338,17 @@ def generate_launch_description():
         parameters=[
             {'my_id': my_namespace},
             config
+        ],
+        remappings=[
+            (PythonExpression(["'/ASV' + str(", my_id, ") + '/observer/state_observer_zono'"]),
+                 PythonExpression(["'/ASV' + str(", my_id, ") + '/observer/state_observer'"]))
         ]
     )
 
     ###################################################################
     ##-------------------------ASVs Nodes----------------------------##
     ################################################################### 
-    # nodes.append(Mavros_launch)
+    nodes.append(Mavros_launch)
     # nodes.append(neighbor_robot_state_publisher_node)
     # nodes.append(own_robot_state_publisher_node)
 
@@ -346,16 +360,15 @@ def generate_launch_description():
     nodes.append(ref_mlc_node)
     # nodes.append(apm_llc_node)
     # nodes.append(imu_fix_node)
-    # nodes.append(imu_ext_node)
+    nodes.append(imu_ext_node)
     nodes.append(record)
 
     # nodes.append(transceiver_xbee_node)
-    # nodes.append(mlc_target_node)
-
+    
     ###################################################################
     ##-----------------------Observer Nodes--------------------------##
     ################################################################### 
-    nodes.append(mux_obs_node)
+    # nodes.append(mux_obs_node)
     nodes.append(observer_core)
     # nodes.append(observer_bejarano)
     # nodes.append(observer_liu)
@@ -364,15 +377,16 @@ def generate_launch_description():
     ###################################################################
     ##-----------------------Control Nodes---------------------------##
     ################################################################### 
-    nodes.append(asv_tf_broadcast_node)
+    # nodes.append(asv_tf_broadcast_node)
     nodes.append(pwm_mapper_node)
-    # nodes.append(ifac_llc_node)
     nodes.append(mpc_llc_rt_node)
-    nodes.append(mux_llc_node)
-    # nodes.append(wang_mlc_node)
-    nodes.append(mpc_mlc_pf_rt_node)
-    
-    
+    # nodes.append(ifac_llc_node)
+    # nodes.append(mux_llc_node)
+    nodes.append(wang_mlc_node)
+    # nodes.append(ilos_mlc_node)
+    # nodes.append(iblos_mlc_node)
+    # nodes.append(iblosmp_mlc_pf_node)
+
     
     return LaunchDescription(
         [arg_my_id, arg_rec, param_id,

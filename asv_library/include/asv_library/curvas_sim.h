@@ -7,32 +7,15 @@ struct Target {   // Declare target struct type
     float yp;
     float dxp;
     float dyp;
+    float phip;
+    float dphip;
     float f_c;
 };
 
-void recta(float w, Target* px, float ax, float by, float mx, float my);
-void arco(float w, Target* px, float ax, float by, float r, bool sig) ;
+void recta(double w, Target* px, double ax, double by, double mx, double my);
+void arco(double w, Target* px, double ax, double by, double r, bool sig);
 
-
-// Closed quarter radius 6, straight line 30
-Target curva_sim_1_6(float w);
-// Closed quarter radius 4, straight line 30
-Target curva_sim_1_4(float w);
-// Closed quarter radius 2, straight line 30
-Target curva_sim_1_2(float w);
-
-// Closed semicircle radius 6, straight line 50
-Target curva_sim_2_6(float w);
-// Closed semicircle radius 8, straight line 50
-Target curva_sim_2_8(float w);
-// Closed semicircle radius 10, straight line 50
-Target curva_sim_2_10(float w);
-
-// Closed quarter radius 6, straight line 50
-Target curva_sim_3_6(float w);
-// Closed quarter radius 8, straight line 50
-Target curva_sim_3_8(float w);
-// Closed quarter radius 10, straight line 50
-Target curva_sim_3_10(float w);
+Target circle_30m(double w);
+Target line_northeast(double w);
 
 #endif

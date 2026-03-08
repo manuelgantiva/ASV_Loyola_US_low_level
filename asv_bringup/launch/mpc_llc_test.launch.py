@@ -325,7 +325,7 @@ def generate_launch_description():
     ################################################################### 
     nodes.append(Mavros_launch)
     # nodes.append(neighbor_robot_state_publisher_node)
-    nodes.append(own_robot_state_publisher_node)
+    # nodes.append(own_robot_state_publisher_node)
 
     ###################################################################
     ##--------------------Comunication Nodes-------------------------##
@@ -352,7 +352,7 @@ def generate_launch_description():
     ###################################################################
     ##-----------------------Control Nodes---------------------------##
     ################################################################### 
-    nodes.append(asv_tf_broadcast_node)
+    # nodes.append(asv_tf_broadcast_node)
     nodes.append(pwm_mapper_node)
     nodes.append(mpc_llc_rt_node)
     # nodes.append(ifac_llc_node)

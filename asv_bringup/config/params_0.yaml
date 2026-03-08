@@ -75,16 +75,17 @@ ASV0:
       ros__parameters:
         Ts: 100.0         #ms
         N_p: 30
-        T_mlc: 500.0      #ms
-        Q: [5.0, 0.0, 50.0, 0.0] 
+        T_mlc: 200.0      #ms
+        # Q: [5.0, 0.0, 10.0, 1.0] 
+        Q: [5.0, 0.0, 1.0, 20.0] 
         R: [0.0, 0.0]
-        Rd: [25.0, 5.0]
+        Rd: [25.0, 3.0]
         u_max: 3.0
         u_min: 0.0
         v_max: 1.5
         v_min: -1.5
-        r_max: 0.5
-        r_min: -0.5
+        r_max: 1.0
+        r_min: -1.0
         Delta_mean_min: -0.5
         Delta_diff_min: -0.5
         Delta_mean_max: 1.0
@@ -96,22 +97,74 @@ ASV0:
         Dz_down: -0.001
     wang_mlc:
       ros__parameters:
-        Ts: 500.0         #ms
-        delta_SGLOS: 2.5
+        Ts: 200.0         #ms
+        delta_SGLOS: 3.0
         k_u_tar: 1.0
         taud: 7.0
-        path_d: 0
+        path_d: 2
         flag: False     #True signo igual False invertido  
         u_max: 2.0
+        r_ref_max: 0.4
+        r_ref_min: -0.4
         SLOS_on: True
+    ilos_mlc:
+      ros__parameters:
+        Ts: 200.0         #ms
+        delta_LOS: 4.0
+        k_u_tar: 1.0
+        taud: 7.0
+        k_b: 0.05
+        Beta_c: 0.2352875
+        r_ref_max: 0.4
+        r_ref_min: -0.4
+        beta_bar_dot_max: 0.01
+        path_d: 1
+    iblos_mlc:
+      ros__parameters:
+        Ts: 200.0         #ms
+        delta_LOS: 4.0
+        SLOS_on: True
+        k_u_tar: 1.0
+        taud: 7.0
+        k_b: 0.08
+        u_max: 2.0
+        r_ref_max: 0.4
+        r_ref_min: -0.4
+        beta_bar_dot_max: 0.03
+        Xv_bar: [0.7247758, -0.2352875, -0.0178921]
+        path_d: 2
+    iblosmp_mlc:
+      ros__parameters:
+        Ts: 200.0         #ms
+        N_p: 20         # 80
+        T_p: 3.0
+        delta_LOS: 4.0
+        k_u_tar: 3.0
+        taud: 7.0
+        k_b: 0.1
+        k_psi: 0.1
+        u_ref_max: 2.0
+        u_ref_min: 0.3
+        u_tar_max: 3.0
+        u_tar_min: 0.0
+        r_ref_max: 0.4
+        r_ref_min: -0.4
+        Delta_u_ref_min: -0.1
+        Delta_u_ref_max: 0.1
+        Delta_r_ref_min: -0.01
+        Delta_r_ref_max: 0.01
+        beta_bar_dot_max: 0.03
+        Xv_bar: [-0.2503897, -0.0321815, 0.0028707, 0.0211998, -0.0066645, 0.7247758, -0.2352875, -0.0178921]
+        Eps: 0.2488
+        path_d: 5
     mpc_mlc_pf:
       ros__parameters:
-        Ts: 500.0         #ms
-        N_p: 60         # 80
+        Ts: 400.0         #ms
+        N_p: 80         # 80
         T_p: 3.0
-        Q: [5.0, 0.5, 0.0, 0.0, 150.0]
-        R: [0.0, 80.0, 50.0] 
-        Rd: [10.0, 0.0, 300.0] 
+        Q: [5.0, 0.7, 0.0, 0.0, 200.0]              # Q: [5.0, 0.5, 0.0, 0.0, 150.0] # Recta
+        R: [1.0, 80.0, 5.0]                        # R: [1.0, 80.0, 50.0] 
+        Rd: [5.0, 10.0, 30.0]                       # Rd: [5.0, 10.0, 150.0] 
         x_e_bar_max: 100.0
         x_e_bar_min: -100.0
         y_e_bar_max: 100.0
@@ -121,18 +174,18 @@ ASV0:
         u_ref_max: 2.0
         u_ref_min: 0.3
         u_tar_max: 3.0
-        u_tar_min: 0.3
+        u_tar_min: 0.0
         r_ref_max: 0.3
         r_ref_min: -0.3
         Delta_u_ref_min: -0.01
         Delta_u_ref_max: 0.01
-        Delta_u_tar_min: -0.1
-        Delta_u_tar_max: 0.1
+        Delta_u_tar_min: -0.2
+        Delta_u_tar_max: 0.2
         Delta_r_ref_min: -0.005
         Delta_r_ref_max: 0.005
         Xv_bar: [-0.2503897, -0.0321815, 0.0028707, 0.0211998, -0.0066645, 0.7247758, -0.2352875, -0.0178921]
         Eps: 0.2488
-        path_d: 1
+        path_d: 2
     mpc_mlc_pf_mod:
       ros__parameters:
         Ts: 500.0         #ms

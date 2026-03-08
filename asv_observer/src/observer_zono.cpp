@@ -541,10 +541,6 @@ private:
                 RCLCPP_INFO(this->get_logger(), "changed param value");
                 Sig_on = this->get_parameter("Sig_on").as_bool();
             }
-            if (param.get_name() == "Pub_sig"){
-                RCLCPP_INFO(this->get_logger(), "changed param value");
-                pub_sig = static_cast<float>(this->get_parameter("Pub_sig").as_bool());
-            }
         }
         result.successful = true;
         result.reason = "Success";
