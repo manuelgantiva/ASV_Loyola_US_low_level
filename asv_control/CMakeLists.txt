@@ -34,6 +34,9 @@ link_directories(${GUROBI_ROOT}/lib)
 add_executable(pwm_mapper src/pwm_mapper.cpp)
 ament_target_dependencies(pwm_mapper rclcpp example_interfaces mavros_msgs asv_interfaces)
 
+add_executable(ol_pwm_mapper src/open_loop_pwm_mapper.cpp)
+ament_target_dependencies(ol_pwm_mapper rclcpp example_interfaces mavros_msgs asv_interfaces)
+
 add_executable(mux_llc src/mux_llc.cpp)
 ament_target_dependencies(mux_llc rclcpp example_interfaces mavros_msgs asv_interfaces)
 
