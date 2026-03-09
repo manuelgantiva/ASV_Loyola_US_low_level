@@ -18,6 +18,7 @@
   <depend>mavros_msgs</depend>
   <depend>geometry_msgs</depend>
   <depend>asv_interfaces</depend>
+  <depend>asv_library</depend>
 
   <exec_depend>acados_solver_plugins</exec_depend>
 
