@@ -21,7 +21,7 @@ ASV1:
     observer_zono:
       ros__parameters:
         Ts: 100.0         #ms
-        Max_n_psi: 0.1
+        Max_n_psi: 0.05
         Max_n_r: 0.01
         Max_n_p: 0.2
         Max_w_r: 0.03
@@ -94,7 +94,7 @@ ASV1:
         taud: 7.0
         k_b: 0.1
         k_psi: 0.1
-        u_ref_max: 2.0
+        u_ref_max: 1.2
         u_ref_min: 0.3
         u_tar_max: 3.0
         u_tar_min: 0.0
