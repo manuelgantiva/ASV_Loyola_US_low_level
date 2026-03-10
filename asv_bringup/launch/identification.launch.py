@@ -262,6 +262,7 @@ def generate_launch_description():
         namespace= namespace_control,
         parameters = [
             {'my_id': my_namespace},
+            config]
         ]
     )
     
