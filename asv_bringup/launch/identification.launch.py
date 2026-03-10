@@ -258,7 +258,7 @@ def generate_launch_description():
     )
     ident_mapper_node = Node(
         package="asv_control",
-        executable="ol_pwm_mapper",
+        executable="open_loop_pwm_mapper",
         namespace= namespace_control,
         parameters = [
             {'my_id': my_namespace},
