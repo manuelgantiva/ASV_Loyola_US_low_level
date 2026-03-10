@@ -13,7 +13,7 @@ using std::placeholders::_2;
 class PwmMapperNode : public rclcpp::Node 
 {
 public:
-    PwmMapperNode() : Node("pwm_mapper_node"), current_time_(0.0)
+    PwmMapperNode() : Node("open_loop_mapper_node"), current_time_(0.0)
     {
         // --- Declare and Get Parameters ---
         this->declare_parameter("my_id", "ASV0");
