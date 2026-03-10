@@ -212,7 +212,7 @@ private:
     std::vector<std::vector<double>> zz_rand_mults_, ms_freqs_, ms_phases_;
     rclcpp::Publisher<mavros_msgs::msg::OverrideRCIn>::SharedPtr publisher_;
     rclcpp::Service<example_interfaces::srv::SetBool>::SharedPtr server_;
-    rclcpp::Subscription<asv_interfaces::msg::PwmValues>::SharedPtr subscriber_;
+    rclcpp::Subscription<mavros_msgs::msg::RCIn>::SharedPtr subscriber_;
 };
 
 int main(int argc, char **argv) {
