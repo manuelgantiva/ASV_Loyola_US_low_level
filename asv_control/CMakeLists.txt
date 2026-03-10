@@ -66,6 +66,7 @@ ament_target_dependencies(filter_hlc rclcpp std_msgs mavros_msgs geometry_msgs)
 # Install Targets
 install(TARGETS
   pwm_mapper
+  open_loop_pwm_mapper
   mux_llc
   asv_tf2_broadcaster
   ifac_llc
