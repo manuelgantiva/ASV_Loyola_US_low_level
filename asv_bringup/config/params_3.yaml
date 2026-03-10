@@ -66,6 +66,83 @@ ASV3:
         Xv: [-0.207711, -0.00536, -0.13951, 0.002781, -0.13396, -0.067458, 0.087307, -0.012853]
         Xr: [-0.04124, 0.19121, -0.248341, 0.115163, -0.14668, -0.177834, 0.081113, -0.759512]
   control:
+    pwm_mapper_node:
+      ros__parameters:
+        dt: 0.1
+        interval_duration: 10.0
+        fwd_dz: 1542.0
+        rev_dz: 1466.0
+        # --- Secuencia de 35 fases (5 por cada una de las 7 categorías) ---
+        phase_types: [
+          # 1. Avance constante (Velocidades incrementales)
+          1, 1, 1, 1, 1,
+          # 2. Avance variable (Variaciones de velocidad con onda senoidal)
+          4, 4, 4, 4, 4,
+          # 3. Zig-zag (Amplitudes incrementales)
+          3, 3, 3, 3, 3,
+          # 4. Giro sin avance (Izquierda y derecha, de suaves a agresivos)
+          2, 2, 2, 2, 2,
+          # 5. Giro con avance constante (Arcos izquierda y derecha)
+          2, 2, 2, 2, 2,
+          # 6. Giro variable con avance constante (Mismo avance base, más amplitud)
+          4, 4, 4, 4, 4,
+          # 7. Giro constante con avance variable (Amplitud constante, distinta base)
+          4, 4, 4, 4, 4
+        ]
+        
+        # Parámetro 1: Velocidad base (PWM L en giros, base general en los demás)
+        phase_params1: [
+          # 1. Avance constante
+          1550.0, 1600.0, 1650.0, 1700.0, 1750.0,
+          # 2. Avance variable
+          1550.0, 1600.0, 1650.0, 1700.0, 1750.0,
+          # 3. Zig-zag
+          1550.0, 1600.0, 1650.0, 1700.0, 1750.0,
+          # 4. Giro sin avance (L: Positivo y negativo alternado)
+          1600.0, 1400.0, 1700.0, 1300.0, 1800.0,
+          # 5. Giro con avance constante (L: Distintas velocidades base)
+          1600.0, 1700.0, 1650.0, 1800.0, 1750.0,
+          # 6. Giro variable con avance constante (Base de avance fija de 1650)
+          1650.0, 1650.0, 1650.0, 1650.0, 1650.0,
+          # 7. Giro constante con avance variable (Base de avance incremental)
+          1550.0, 1600.0, 1650.0, 1700.0, 1750.0
+        ]
+        
+        # Parámetro 2: PWM motor opuesto (giros) o Amplitud (ZigZag/Senoidal)
+        phase_params2: [
+          # 1. Avance constante (p2 se ignora en este tipo, se usa 0.0)
+          0.0, 0.0, 0.0, 0.0, 0.0,
+          # 2. Avance variable (Distintas amplitudes de oscilación senoidal)
+          50.0, 100.0, 150.0, 100.0, 50.0,
+          # 3. Zig-zag (Amplitudes de zig-zag cada vez más anchas)
+          100.0, 125.0, 150.0, 175.0, 200.0,
+          # 4. Giro sin avance (R: Inverso a L para rotar sobre el eje)
+          1400.0, 1600.0, 1300.0, 1700.0, 1200.0,
+          # 5. Giro con avance constante (R: Diferente a L para crear arco)
+          1550.0, 1600.0, 1750.0, 1650.0, 1850.0,
+          # 6. Giro variable con avance constante (Amplitudes de oscilación incrementales)
+          50.0, 100.0, 150.0, 200.0, 250.0,
+          # 7. Giro constante con avance variable (Amplitud fija de 100)
+          100.0, 100.0, 100.0, 100.0, 100.0
+        ]
+        
+        # Duraciones en segundos (Sub-tiempos calculados para cuadrar los totales)
+        phase_durations: [
+          # 1. Total: 420s (7 min) -> 5 x 84s
+          84.0, 84.0, 84.0, 84.0, 84.0,
+          # 2. Total: 420s (7 min) -> 5 x 84s
+          84.0, 84.0, 84.0, 84.0, 84.0,
+          # 3. Total: 600s (10 min) -> 5 x 120s
+          120.0, 120.0, 120.0, 120.0, 120.0,
+          # 4. Total: 120s (2 min) -> 5 x 24s
+          24.0, 24.0, 24.0, 24.0, 24.0,
+          # 5. Total: 120s (2 min) -> 5 x 24s
+          24.0, 24.0, 24.0, 24.0, 24.0,
+          # 6. Total: 300s (5 min) -> 5 x 60s
+          60.0, 60.0, 60.0, 60.0, 60.0,
+          # 7. Total: 300s (5 min) -> 5 x 60s
+          60.0, 60.0, 60.0, 60.0, 60.0
+        ]
     ifac_llc:
       ros__parameters:
         Ts: 100.0         #ms
