@@ -156,7 +156,7 @@ private:
 
         double L, R;
 
-        if (msg->channels[4] < fwd_dz_ || msg->channels[4] > rev_dz_) {
+        if (msg->channels[0] < fwd_dz_ || msg->channels[0] > rev_dz_) {
             // --- MODE: INTERNAL SEQUENCE ---
             calculate_next_pwm(L, R);
             current_time_ += dt_;
@@ -165,7 +165,7 @@ private:
         } else {
             // --- MODE: MANUAL PASS-THROUGH (SKID STEERING MIXER) ---
             double steering_pwm = static_cast<double>(msg->channels[0]);
-            double throttle_pwm = static_cast<double>(msg->channels[4]);
+            double throttle_pwm = static_cast<double>(msg->channels[2]);
 
             // 1. Normalize inputs to a [-1.0, 1.0] range around the 1500 center
             double steering_norm = (steering_pwm - 1500.0) / 400.0;
