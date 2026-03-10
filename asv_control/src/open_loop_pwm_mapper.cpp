@@ -42,7 +42,7 @@ public:
         server_ = this->create_service<example_interfaces::srv::SetBool>(
                 "/" + my_id_ + "/control/on_off_pwm", std::bind(&PwmMapperNode::callbackOnOffPwm, this, _1, _2));
 // Subscribed to RC_IN instead of /control/pwm_values
-        subscriber_rc_in_ = this->create_subscription<mavros_msgs::msg::RCIn>(
+        subscriber_ = this->create_subscription<mavros_msgs::msg::RCIn>(
             "/" + my_id_ + "/mavros/rc/in", 10, std::bind(&PwmMapperNode::callbackRcIn, this, _1));
 
         RCLCPP_INFO(this->get_logger(), "Pwm Mapper loaded with %zu phases. Ready.", phase_types_.size());
@@ -73,7 +73,7 @@ private:
     }
 
     double applyDeadzone(double pwm) {
-        if (pwm > 1500.0 && pwm < fwd_dz_ || pwm < 1500.0 && pwm > rev_dz_) {
+        if ((pwm > 1500.0 && pwm < fwd_dz_) || (pwm < 1500.0 && pwm > rev_dz_)) {
             return 1500.0;
         }
         return pwm;
