@@ -22,7 +22,7 @@ public:
         this->declare_parameter("phase_params1", std::vector<double>{});
         this->declare_parameter("phase_params2", std::vector<double>{});
         this->declare_parameter("phase_durations", std::vector<double>{});
-        this->declare_parameter("interval_duration", 5);
+        this->declare_parameter("interval_duration", 5.0);
         this->declare_parameter("fwd_dz", 1542.0);
         this->declare_parameter("rev_dz", 1466.0);
         
