@@ -70,7 +70,7 @@ ASV1:
         R: [0.0, 0.0]
         Rd: [20.0, 5.0]
         u_max: 2.0
-        u_min: 0.0
+        u_min: -0.5
         v_max: 1.5
         v_min: -1.5
         r_max: 1.0
@@ -87,10 +87,10 @@ ASV1:
     wang_mlc:
       ros__parameters:
         Ts: 200.0         #ms
-        delta_SGLOS: 1.0
+        delta_SGLOS: 2.0
         k_u_tar: 2.0
-        taud: 5.0
-        path_d: 1
+        taud: 7.0
+        path_d: 2
         flag: False     #True signo igual False invertido  
         u_max: 1.2
         r_ref_max: 0.4
