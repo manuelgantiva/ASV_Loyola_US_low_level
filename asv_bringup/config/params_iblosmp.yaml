@@ -90,10 +90,10 @@ ASV1:
         N_p: 20         # 80
         T_p: 3.0
         delta_LOS: 2.0
-        k_u_tar: 2.0
+        k_u_tar: 0.5
         taud: 7.0
         k_b: 0.1
-        k_psi: 0.1
+        k_psi: 0.01
         u_ref_max: 1.2
         u_ref_min: 0.3
         u_tar_max: 3.0

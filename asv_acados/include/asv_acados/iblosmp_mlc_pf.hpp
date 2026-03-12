@@ -123,6 +123,7 @@ public:
         publisher_llc = this-> create_publisher<asv_interfaces::msg::ReferenceLlc>("/" + my_id + "/control/reference_llc",1);
         publisher_error = this-> create_publisher<geometry_msgs::msg::Vector3>("/" + my_id + "/control/error_mlc",1);
         publisher_mpc_state = this-> create_publisher<geometry_msgs::msg::Vector3>("/" + my_id + "/control/mpc_state_mlc",1);
+        publisher_los_state = this-> create_publisher<geometry_msgs::msg::Vector3>("/" + my_id + "/control/los_state_mlc",1);
         
     	RCLCPP_INFO(this->get_logger(), "IBLOS MP MLC Path Following Real Time Node has been started.");
     }
@@ -153,13 +154,14 @@ private:
                 v_hat = 0.0;
                 r_hat = 0.0;
                 psi_hat = 0.0;
-                u_tar_ant = 0.5;
+                u_tar_ant = 0.0;
                 u_d = 0.8;
             }
         }else{
             auto start = std::chrono::high_resolution_clock::now();
             auto msg = asv_interfaces::msg::ReferenceLlc();
             auto msg_e = geometry_msgs::msg::Vector3();
+            auto msg_los = geometry_msgs::msg::Vector3();
             if(count > 4){
                 double x_hat_i;
                 double y_hat_i;
@@ -300,6 +302,10 @@ private:
                         psi_d_1_ant = psi_d_1_ant_j;
                         psi_d_dot1_ant = psi_d_dot1_ant_j;
                         u_tar_ant = u_tar;
+                        
+                        msg_los.x = beta_bar;
+                        msg_los.y = beta_ff;
+                        msg_los.z = beta_bar_dot;
                     }
                     r_ref_ant = r_ref;
                     u_ref_ant = u_ref;
@@ -351,6 +357,7 @@ private:
 
                 publisher_llc->publish(msg);
                 publisher_error->publish(msg_e);
+                publisher_los_state->publish(msg_los);
 
                 auto end = std::chrono::high_resolution_clock::now();
                 std::chrono::duration<double> elapsed = end - start;
@@ -420,8 +427,10 @@ private:
         xe_bar = R11*(x + Eps_*cos(psi) - xp) + R12*(y + Eps_*sin(psi) - yp);
         ye_bar = R21*(x + Eps_*cos(psi) - xp) + R22*(y + Eps_*sin(psi) - yp);
 
-        xe = xe_bar - Eps_*cos(psi-phip);
-        ye = ye_bar - Eps_*sin(psi-phip);
+        // xe = xe_bar - Eps_*cos(psi-phip);
+        // ye = ye_bar - Eps_*sin(psi-phip);
+        xe = R11*(x - xp) + R12*(y - yp);
+        ye = R21*(x - xp) + R22*(y - yp);
         v_bar = v + Eps_*r;
     }
 
@@ -767,7 +776,7 @@ private:
 
     double beta_bar = 0,  v_bar_ff = 0, psi_d_1_ant = 0, psi_d_dot1_ant = 0, psi_ant = 0;
 
-    double u_tar_ant = 0.5, u_ref_ant = 0.0, r_ref_ant = 0.0;
+    double u_tar_ant = 0.0, u_ref_ant = 0.0, r_ref_ant = 0.0;
     int count=0, laps = 0;
     //------Params-------//
     double Ts, T_p;
@@ -798,6 +807,7 @@ private:
     rclcpp::Publisher<asv_interfaces::msg::ReferenceLlc>::SharedPtr publisher_llc;
     rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr publisher_error;
     rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr publisher_mpc_state;
+    rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr publisher_los_state;
     rclcpp::TimerBase::SharedPtr timer_;
 
     rclcpp::Subscription<geometry_msgs::msg::TwistStamped>::SharedPtr subscriber_vel_;

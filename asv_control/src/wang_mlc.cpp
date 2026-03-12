@@ -76,6 +76,7 @@ public:
                 std::bind(&WangMlcNode::callbackStateData, this, std::placeholders::_1), options_sensors_);
         publisher_llc = this-> create_publisher<asv_interfaces::msg::ReferenceLlc>("/" + my_id + "/control/reference_llc",1);
         publisher_error = this-> create_publisher<geometry_msgs::msg::Vector3>("/" + my_id + "/control/error_mlc",1);
+        publisher_los_state = this-> create_publisher<geometry_msgs::msg::Vector3>("/" + my_id + "/control/los_state_mlc",1);
 
         timer_ = this -> create_wall_timer(std::chrono::milliseconds(int(Ts*1000.0)),
                 std::bind(&WangMlcNode::calculateMidLevelController, this), cb_group_obs_);
@@ -99,9 +100,10 @@ private:
             w=0.0;
             laps=0;
         }else{
-            if(count > 2){
+            if(count > 4){
                 //auto start = std::chrono::high_resolution_clock::now();
                 auto msg_e = geometry_msgs::msg::Vector3();
+                auto msg_los = geometry_msgs::msg::Vector3();
 
                 double x_hat_i;
                 double y_hat_i;
@@ -149,6 +151,8 @@ private:
                 double u_tar = k_u_tar*xe + U_ref*cos(psi_hat_i-psip_i+b_ref);
                 double w_dot = u_tar / (std::sqrt(dxp_i*dxp_i + dyp_i*dyp_i));
 
+                msg_los.x = b_ref;
+
                 w += Ts*w_dot;
                 // Corrijo el angulo de referencia teniendo en cuenta las vueltas sobre la trayectoria
                 if(psi_ref<0){
@@ -186,6 +190,7 @@ private:
                 msg_ref.u_tar.data = u_tar;
                 publisher_llc->publish(msg_ref);
                 publisher_error->publish(msg_e);
+                publisher_los_state->publish(msg_los);
                 armed_act = true;
                 // auto end = std::chrono::high_resolution_clock::now();
                 // std::chrono::duration<double> elapsed = end - start;
@@ -450,6 +455,7 @@ private:
     rclcpp::Subscription<mavros_msgs::msg::State>::SharedPtr subscriber_state;
     rclcpp::Publisher<asv_interfaces::msg::ReferenceLlc>::SharedPtr publisher_llc;
     rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr publisher_error;
+    rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr publisher_los_state;
     rclcpp::TimerBase::SharedPtr timer_;
 
     // mutex callback group: 

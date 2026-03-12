@@ -89,7 +89,7 @@ ASV1:
         Ts: 200.0         #ms
         delta_LOS: 2.0
         SLOS_on: True
-        k_u_tar: 2.0
+        k_u_tar: 1.0
         taud: 7.0
         k_b: 0.08
         u_max: 1.2

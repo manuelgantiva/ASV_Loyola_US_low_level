@@ -88,7 +88,7 @@ ASV1:
       ros__parameters:
         Ts: 200.0         #ms
         delta_SGLOS: 2.0
-        k_u_tar: 2.0
+        k_u_tar: 1.0
         taud: 7.0
         path_d: 2
         flag: False     #True signo igual False invertido  
