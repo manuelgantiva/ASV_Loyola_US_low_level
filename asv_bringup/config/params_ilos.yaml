@@ -88,11 +88,11 @@ ASV1:
       ros__parameters:
         Ts: 200.0         #ms
         delta_LOS: 2.0
-        k_u_tar: 1.0
+        k_u_tar: 0.25
         taud: 7.0
         k_b: 0.05
         Beta_c: 0.0844027
         r_ref_max: 0.4
         r_ref_min: -0.4
-        beta_bar_dot_max: 0.01
+        beta_bar_dot_max: 0.03
         path_d: 2
