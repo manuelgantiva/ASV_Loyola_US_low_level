@@ -97,4 +97,4 @@ ASV1:
         r_ref_min: -0.4
         beta_bar_dot_max: 0.03
         Xv_bar: [-0.1521128, -0.0844027, 0.0398443]
-        path_d: 3
+        path_d: 5
