@@ -188,7 +188,7 @@ private:
                
                 get_inicial_values(x_hat_i, y_hat_i, psi_hat_i, v_hat_i, r_hat_i, xe_bar_i, ye_bar_i, v_bar_i, xe_i, ye_i);                
 
-                yref_buf_ << 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, u_d_i, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0;
+                yref_buf_ << 0.0, 0.0, 0.0, 0.0, 0.0, u_d_i, u_d_i, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0;
 
                 for (int j = 0; j < N_p; j++){
                     if (true != acados::utils::set_cost_y_ref(*acados_solver_, j, yref_buf_)) {
