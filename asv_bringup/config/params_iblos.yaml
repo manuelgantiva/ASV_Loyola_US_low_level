@@ -88,7 +88,7 @@ ASV1:
       ros__parameters:
         Ts: 200.0         #ms
         delta_LOS: 2.0
-        SLOS_on: True
+        SLOS_on: False
         k_u_tar: 0.25
         taud: 7.0
         k_b: 0.08
@@ -97,4 +97,4 @@ ASV1:
         r_ref_min: -0.4
         beta_bar_dot_max: 0.03
         Xv_bar: [-0.1521128, -0.0844027, 0.0398443]
-        path_d: 5
+        path_d: 3
