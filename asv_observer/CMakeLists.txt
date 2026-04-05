@@ -19,9 +19,9 @@ find_package(std_msgs REQUIRED)           # msgs and srv to basis comunication
 find_package(mavros_msgs REQUIRED)        # msgs to comunicate with mavros
 find_package(rcl_interfaces REQUIRED)     # interface to use param with aardupilot and mavors
 find_package(sensor_msgs REQUIRED)        # interface to use navio2's sensors
-find_package(tf2 REQUIRED)        # interface to use navio2's sensors
-find_package(tf2_ros REQUIRED)        # interface to use navio2's sensors
-find_package(nav_msgs REQUIRED)        # interface to use navio2's sensors
+find_package(tf2 REQUIRED)                # interface to use navio2's sensors, and also in the ukf node
+find_package(tf2_ros REQUIRED)            # interface to use navio2's sensors
+find_package(nav_msgs REQUIRED)           # interface to use navio2's sensors
 
 include_directories(SYSTEM ${EIGEN3_INCLUDE_DIRS})
 
@@ -44,10 +44,9 @@ add_executable(observer_core src/observer_core.cpp)
 ament_target_dependencies(observer_core rclcpp std_msgs sensor_msgs mavros_msgs asv_interfaces geometry_msgs nav_msgs)
 
 # Adding executable of the multi_rate, I am not sure about this yet ---> ukf ament_target_dependencies(ukf_multi_rate_node rclcpp std_msgs sensor_msgs mavros_msgs asv_interfaces geometry_msgs nav_msgs)
-
 add_executable(ukf_multi_rate_node src/ukf_multi_rate_node.cpp)
-ament_target_dependencies(ukf_multi_rate_node rclcpp std_msgs sensor_msgs mavros_msgs asv_interfaces geometry_msgs nav_msgs)
 ament_target_dependencies(ukf_multi_rate_node rclcpp std_msgs sensor_msgs mavros_msgs tf2)
+
 # Install Targets
 install(TARGETS
   mux_obs
