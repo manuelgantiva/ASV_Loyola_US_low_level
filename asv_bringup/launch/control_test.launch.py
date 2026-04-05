@@ -330,6 +330,16 @@ def generate_launch_description():
             config
         ]
     )
+    observer_liu = Node(
+        package="asv_observer",
+        executable="ukf_multi_rate_node",
+        name="ukf_multi_rate_node",
+        namespace=namespace_observer,
+        parameters=[
+            {'my_id': my_namespace},
+            config
+        ],
+    )
 
     ###################################################################
     ##-------------------------ASVs Nodes----------------------------##
