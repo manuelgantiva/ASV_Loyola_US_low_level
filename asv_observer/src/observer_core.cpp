@@ -70,6 +70,8 @@ private:
                 Yp.setZero();
                 delta_diff=0;
                 delta_mean=0;
+                delta_l=0;
+                delta_r=0;
                 beta=0;
                 psi = 0.0;
                 r = 0.0;
@@ -81,6 +83,8 @@ private:
                 Vector <double, 2> Yr_i;
                 float delta_diff_i;
                 float delta_mean_i;
+                float delta_l_i;
+                float delta_r_i;
                 int beta_i;
                 {
                     std::lock_guard<std::mutex> lock(mutex_);
@@ -89,12 +93,14 @@ private:
                     Yp_i = Yp;
                     delta_diff_i = delta_diff;
                     delta_mean_i = delta_mean;
+                    delta_l_i    = delta_l;
+                    delta_r_i    = delta_r;
                     beta_i=beta;
                 }
 
                 auto message = std_msgs::msg::Float32MultiArray();
 
-                message.data = {float(Yp_i[0]), float(Yp_i[1]), float(Yr_i[0]), float(Yr_i[1]), delta_diff_i, delta_mean_i, float(beta_i)};
+                message.data = {float(Yp_i[0]), float(Yp_i[1]), float(Yr_i[0]), float(Yr_i[1]), delta_diff_i, delta_mean_i,delta_l_i,delta_r_i, float(beta_i)};
                 publisher_data->publish(message);
                 
             }else{
@@ -196,6 +202,8 @@ private:
                 std::lock_guard<std::mutex> lock(mutex_);
                 delta_diff = delta_left-delta_right;
                 delta_mean = (delta_left+delta_right)/2.0;
+                delta_l    = delta_left;
+                delta_r    = delta_right;
                 beta=beta_a;
             }
         }
@@ -232,6 +240,8 @@ private:
 
     float delta_diff;
     float delta_mean;
+    float delta_l;
+    float delta_r;
     int beta, count=0;
 
     Vector <double, 2> Yp;
