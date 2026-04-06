@@ -524,26 +524,49 @@ private:
   CALLBACK: ARMED / DISARMED STATE and resetting the filter after disarming
   ============================================================================
   */
- void callbackStateData(const mavros_msgs::msg::State::SharedPtr msg)
-  {
+    void callbackStateData(const mavros_msgs::msg::State::SharedPtr msg)
+    {
     const bool was_armed = armed_;
     armed_ = msg->armed;
-  
+
     if (was_armed && !armed_) {
-      std::lock_guard<std::mutex> lock(data_mutex_);
-  
-      initialized_ = false;
-      x_hat_ = Eigen::VectorXd::Zero(NX);
-      x_posterior_ = Eigen::VectorXd::Zero(NX);
-      P_ = P_init_;
-  
-      have_fresh_low_rate_ = false;
-      low_rate_update_this_cycle_ = false;
-  
-      observer_latest_ = ObserverData{};
-      observer_cycle_ = ObserverData{};
+        std::lock_guard<std::mutex> lock(data_mutex_);
+
+        initialized_ = false;
+        x_hat_ = Eigen::VectorXd::Zero(NX);
+        x_posterior_ = Eigen::VectorXd::Zero(NX);
+        P_ = P_init_;
+
+        have_fresh_low_rate_ = false;
+        low_rate_update_this_cycle_ = false;
+
+        observer_latest_.x = 0.0;
+        observer_latest_.y = 0.0;
+        observer_latest_.psi = 0.0;
+        observer_latest_.r_low = 0.0;
+        observer_latest_.delta_diff = 0.0;
+        observer_latest_.delta_mean = 0.0;
+        observer_latest_.delta_left = 0.0;
+        observer_latest_.delta_right = 0.0;
+        observer_latest_.beta = 0.0;
+        observer_latest_.region = REGION_FF;
+        observer_latest_.valid = false;
+        observer_latest_.stamp = rclcpp::Time(0, 0, RCL_ROS_TIME);
+
+        observer_cycle_.x = 0.0;
+        observer_cycle_.y = 0.0;
+        observer_cycle_.psi = 0.0;
+        observer_cycle_.r_low = 0.0;
+        observer_cycle_.delta_diff = 0.0;
+        observer_cycle_.delta_mean = 0.0;
+        observer_cycle_.delta_left = 0.0;
+        observer_cycle_.delta_right = 0.0;
+        observer_cycle_.beta = 0.0;
+        observer_cycle_.region = REGION_FF;
+        observer_cycle_.valid = false;
+        observer_cycle_.stamp = rclcpp::Time(0, 0, RCL_ROS_TIME);
     }
-  }
+    }
 
   /*
   ============================================================================
