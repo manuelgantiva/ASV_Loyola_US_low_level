@@ -775,17 +775,10 @@ private:
     // ------------------------------------------------------------------------
     // 2) IMU-ONLY UPDATE
     // ------------------------------------------------------------------------
-    Eigen::VectorXd z_imu(NZ_IMU);
-    z_imu << imu_local.ax_body,
-             imu_local.ay_body,
-             imu_local.r_body;
-
-    updateStep(z_imu, false);
-
-    // ------------------------------------------------------------------------
-    // 3) FULL UPDATE ONLY IF LOW-RATE PACKET IS NEW
-    // ------------------------------------------------------------------------
+    // 2) UPDATE: use only one measurement set per IMU cycle
     if (low_rate_update_this_cycle_ && observer_cycle_.valid) {
+      // Fresh low-rate packet is available:
+      // use the full measurement [x, y, psi, ax, ay, r]
       Eigen::VectorXd z_full(NZ_FULL);
       z_full << observer_cycle_.x,
                 observer_cycle_.y,
@@ -793,10 +786,19 @@ private:
                 imu_local.ax_body,
                 imu_local.ay_body,
                 imu_local.r_body;
-
+    
       updateStep(z_full, true);
+      
+    } else {
+      // No fresh low-rate packet:
+      // use only the IMU measurement [ax, ay, r]
+      Eigen::VectorXd z_imu(NZ_IMU);
+      z_imu << imu_local.ax_body,
+               imu_local.ay_body,
+               imu_local.r_body;
+    
+      updateStep(z_imu, false);
     }
-
     // ------------------------------------------------------------------------
     // 4) STORE CORRECTED STATE FOR PUBLISHING
     // ------------------------------------------------------------------------
@@ -1018,8 +1020,8 @@ private:
       z_imu = [ax, ay, r]^T
 
   The acceleration-level model is:
-      ax_model = u_dot + b_ax
-      ay_model = v_dot + b_ay
+      ax_model = u_dot - r*v + b_ax what the IMU is measuring and -r*v is the vector product.  
+      ay_model = v_dot + r*u + b_ay what the IMU is measuring and +r*u is the vector product.
       r_model  = r + b_gr
   */
   Eigen::VectorXd measurementModel(const Eigen::VectorXd & x, bool use_full) const
@@ -1027,9 +1029,14 @@ private:
     Eigen::Vector3d Gm;
     Eigen::Vector3d sigma_m;
     computeInputGainAndDisturbances(x, Gm, sigma_m);
-
+    // It is still doubltfull to see the effect 
+    /*
     const double ax_model = Gm(0) + sigma_m(0) + x(IDX_SEU) + x(IDX_BAX);
     const double ay_model = Gm(1) + sigma_m(1) + x(IDX_SEV) + x(IDX_BAY);
+    const double r_model  = x(IDX_R) + x(IDX_BGR);
+    */
+    const double ax_model = Gm(0) + sigma_m(0) + x(IDX_SEU) - x(IDX_R) * x(IDX_V) + x(IDX_BAX);
+    const double ay_model = Gm(1) + sigma_m(1) + x(IDX_SEV) + x(IDX_R) * x(IDX_U)+ x(IDX_BAY);
     const double r_model  = x(IDX_R) + x(IDX_BGR);
 
     if (use_full) {
