@@ -521,12 +521,22 @@ private:
 
   /*
   ============================================================================
-  CALLBACK: ARMED / DISARMED STATE
+  CALLBACK: ARMED / DISARMED STATE and resetting the filter after disarming
   ============================================================================
   */
-  void callbackStateData(const mavros_msgs::msg::State::SharedPtr msg)
+ void callbackStateData(const mavros_msgs::msg::State::SharedPtr msg)
   {
+    const bool was_armed = armed_;
     armed_ = msg->armed;
+  
+    if (was_armed && !armed_) {
+      initialized_ = false;
+      x_hat_ = Eigen::VectorXd::Zero(NX);
+      x_posterior_ = Eigen::VectorXd::Zero(NX);
+      P_ = P_init_;
+      have_fresh_low_rate_ = false;
+      low_rate_update_this_cycle_ = false;
+    }
   }
 
   /*
