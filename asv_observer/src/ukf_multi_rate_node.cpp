@@ -203,17 +203,10 @@ public:
 
     // Convert milliseconds -> seconds
     dt_ = Ts_ms_ / 1000.0;
-    if (dt_ <= 0.0) {
-      throw std::runtime_error("Parameter Ts must be > 0.");
-    }
 
     Xu_ = get_parameter("Xu").as_double_array();
     Xv_ = get_parameter("Xv").as_double_array();
     Xr_ = get_parameter("Xr").as_double_array();
-
-    if (Xu_.size() != 6 || Xv_.size() != 12 || Xr_.size() != 12) {
-      throw std::runtime_error("Xu must have 6 values, Xv and Xr must have 12 values.");
-    }
 
     const auto P_flat = get_parameter("P_init").as_double_array();
     const auto Q_flat = get_parameter("Q").as_double_array();
@@ -228,10 +221,6 @@ public:
     beta_  = get_parameter("beta").as_double();
     kappa_ = get_parameter("kappa").as_double();
 
-    if (alpha_ <= 0.0) {
-      throw std::runtime_error("UKF parameter alpha must be > 0.");
-    }
-
     // ------------------------------------------------------------------------
     // 3) INITIALIZE UKF STORAGE
     // ------------------------------------------------------------------------
@@ -241,6 +230,7 @@ public:
     x_posterior_ = latest corrected state that we publish
     P_           = current covariance
     */
+    
     x_hat_       = Eigen::VectorXd::Zero(NX);
     x_posterior_ = Eigen::VectorXd::Zero(NX);
     P_           = P_init_;
@@ -352,7 +342,7 @@ private:
     double delta_left = 0.0;
     double delta_right = 0.0;
 
-    // Extra information
+    // This is also showing the region of Operation based on the signs of delta_left and delta_right
     double beta = 0.0;
 
     // Computed region based on delta_left and delta_right
@@ -364,7 +354,7 @@ private:
 
   /*
   ============================================================================
-  STRUCT: IMU DATA AFTER COMPENSATION
+  STRUCT: IMU DATA AFTER GRAVITY COMPENSATION
   ============================================================================
   */
   struct ImuData
@@ -456,19 +446,21 @@ private:
 
   The sigma points are:
   X0      = x
-  Xi      = x + gamma * column_i(sqrt(P))
-  Xi+n    = x - gamma * column_i(sqrt(P))
+  Xi      = x + gamma * column_i(sqrt(P))   Right side of the Mean
+  Xi+n    = x - gamma * column_i(sqrt(P))   Left side of the Mean 
 
   Then mean and covariance are reconstructed using weights Wm and Wc.
   */
   void computeUnscentedWeights()
   {
     lambda_ = alpha_ * alpha_ * (NX + kappa_) - NX;
-
+    
+  /*
     if ((NX + lambda_) <= 0.0) {
       throw std::runtime_error("Invalid UKF parameters: NX + lambda must be positive.");
     }
-
+  */ 
+    
     gamma_ = std::sqrt(NX + lambda_);
 
     Wm_ = Eigen::VectorXd::Constant(2 * NX + 1, 1.0 / (2.0 * (NX + lambda_)));
@@ -483,7 +475,8 @@ private:
   MATRIX SQUARE ROOT
   ============================================================================
   The UKF needs sqrt(P). We try Cholesky first, and if that fails due to
-  numerical issues, we use eigenvalue decomposition.
+  numerical issues, we use eigenvalue decomposition. Maybe this is gonna be a problem as far as the idea of 
+  the UKF is using the Cholesky decomposition to compute the square root of the covariance matrix P. 
   */
   Eigen::MatrixXd computeMatrixSquareRoot(const Eigen::MatrixXd & P_in) const
   {
@@ -604,8 +597,16 @@ private:
   then we compute:
       a_true ≈ a_meas - g_projection
 
-  The exact sign convention here follows the convention you already had in
-  your previous implementation.
+  So the compensateImu function takes a raw IMU message and processes it to extract the true linear acceleration and
+   angular velocity of the vehicle, compensating for the effects of gravity.
+  Here's a step-by-step explanation of how it works:
+  1. **Extract Quaternion**: The function first extracts the orientation of the IMU in quaternion form (qx, qy, qz, qw) from the incoming IMU message. This quaternion represents the rotation from the body frame to the world frame.
+  2. **Normalize Quaternion**: It calculates the norm of the quaternion and normalizes it to ensure that it represents a valid rotation. If the norm is very close to zero, it throws an error to prevent invalid calculations.
+  3. **Convert to RPY**: The normalized quaternion is then converted to roll, pitch, and yaw angles using the tf2 library. These angles represent the orientation of the IMU in the world frame.
+  4. **Apply Sign Conventions**: The function applies specific sign conventions to the linear acceleration and angular velocity measurements based on the existing implementation. This ensures that the measurements are consistent with the expected coordinate system.
+  5. **Gravity Compensation**: The function calculates the projection of gravity in the body frame using the roll and pitch angles. This is done because the IMU measures both the true acceleration and the acceleration due to gravity, so we need to subtract the gravity component to get the true acceleration.
+  6. **Output**: Finally, the function outputs the compensated linear acceleration in the body frame (ax_body, ay_body) and the yaw rate (r_body), along with the roll, pitch, and yaw angles for reference. The output is stored in an ImuData structure that can be used in the UKF update step.
+  
   */
   ImuData compensateImu(const sensor_msgs::msg::Imu::SharedPtr msg) const
   {
