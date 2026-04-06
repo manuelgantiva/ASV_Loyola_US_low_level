@@ -530,12 +530,18 @@ private:
     armed_ = msg->armed;
   
     if (was_armed && !armed_) {
+      std::lock_guard<std::mutex> lock(data_mutex_);
+  
       initialized_ = false;
       x_hat_ = Eigen::VectorXd::Zero(NX);
       x_posterior_ = Eigen::VectorXd::Zero(NX);
       P_ = P_init_;
+  
       have_fresh_low_rate_ = false;
       low_rate_update_this_cycle_ = false;
+  
+      observer_latest_ = ObserverData{};
+      observer_cycle_ = ObserverData{};
     }
   }
 
@@ -727,20 +733,19 @@ private:
     if (initialized_) {
       return;
     }
-
-    x_hat_.setZero();
-
-    {
-      std::lock_guard<std::mutex> lock(data_mutex_);
-
-      if (observer_latest_.valid) {
-        x_hat_(IDX_X)   = observer_latest_.x;
-        x_hat_(IDX_Y)   = observer_latest_.y;
-        x_hat_(IDX_PSI) = observer_latest_.psi;
-        x_hat_(IDX_R)   = observer_latest_.r_low;
-      }
+  
+    std::lock_guard<std::mutex> lock(data_mutex_);
+  
+    if (!observer_latest_.valid || !have_fresh_low_rate_) {
+      return;
     }
-
+  
+    x_hat_ = Eigen::VectorXd::Zero(NX);
+    x_hat_(IDX_X)   = observer_latest_.x;
+    x_hat_(IDX_Y)   = observer_latest_.y;
+    x_hat_(IDX_PSI) = observer_latest_.psi;
+    x_hat_(IDX_R)   = observer_latest_.r_low;
+  
     P_ = P_init_;
     x_posterior_ = x_hat_;
     initialized_ = true;
