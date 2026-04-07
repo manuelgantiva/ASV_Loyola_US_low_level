@@ -218,6 +218,8 @@ private:
                 IGp(3,0) = (Xv[8]*sum_1*(1-beta_i)*sig)+(Xv[9]*delta_mean_i*delta_diff_i)+(Xv[10]*delta_mean_i*(1-beta_i)*sig)+(Xv[11]*delta_diff_i/2.0);
                 IGr(1,0) = (Xr[8]*sum_1*(1-beta_i)*sig)+(Xr[9]*delta_mean_i*delta_diff_i)+(Xr[10]*delta_mean_i*(1-beta_i)*sig)+(Xr[11]*delta_diff_i/2.0);
 
+                RCLCPP_INFO(this->get_logger(), "Gu: %f, Gv %f, Gr %f ", IGp(2,0), IGp(3,0), IGr(1,0));
+
                 if(Sig_on){
                     Sigmas(0) = (Xu[0] * Zp_next.c(2) * std::abs(Zp_next.c(2)) + Xu[1] * Zp_next.c(3) * Zr_next.c(1) + Xu[2] * Zr_next.c(1) * Zr_next.c(1)
                                 + Xu[3] * Zp_next.c(2));

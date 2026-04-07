@@ -18,6 +18,11 @@ public:
             10, std::bind(&MuxLlcNode::callbackPwmValueMpc, this, std::placeholders::_1));
         subscriber_pwm_ifac_ = this-> create_subscription<asv_interfaces::msg::PwmValues>("/" + my_id + "/control/pwm_value_ifac",
             10, std::bind(&MuxLlcNode::callbackPwmValueIfac, this, std::placeholders::_1));
+            
+        // Subscription tp l_theta smc
+        subscriber_pwm_l_theta_ = this-> create_subscription<asv_interfaces::msg::PwmValues>("/" + my_id + "/control/pwm_value_l_theta",
+            10, std::bind(&MuxLlcNode::callbackPwmValueLtheta, this, std::placeholders::_1));
+        //
         publisher_pwm_ = this-> create_publisher<asv_interfaces::msg::PwmValues>("/" + my_id + "/control/pwm_values", 10);
         server_set_llc_ = this-> create_service<asv_interfaces::srv::SetLlc>(
                 "/" + my_id + "/control/set_llc", std::bind(&MuxLlcNode::callbackSetLowLevelControl, this, _1, _2));  
@@ -47,6 +52,17 @@ private:
         }
     }
 
+    // Callback for l_theta smc
+    void callbackPwmValueLtheta(const asv_interfaces::msg::PwmValues::SharedPtr msg)
+    {
+        if(l_theta_enable){
+            auto msg_p = asv_interfaces::msg::PwmValues();
+            msg_p.t_left = msg->t_left;
+            msg_p.t_righ = msg->t_righ;
+            publisher_pwm_ ->publish(msg_p);
+        }
+    }
+
     void callbackSetLowLevelControl(const asv_interfaces::srv::SetLlc::Request::SharedPtr request,
                             const asv_interfaces::srv::SetLlc::Response::SharedPtr response)
     {
@@ -56,6 +72,7 @@ private:
             apm_enable = true;
             mpc_enable = false;
             ifac_enable = false;
+            l_theta_enable = false;
             response->success= true;
             break;
         case asv_interfaces::srv::SetLlc::Request::LLC_MPC:
@@ -63,6 +80,7 @@ private:
             apm_enable = false;
             mpc_enable = true;
             ifac_enable = false;
+            l_theta_enable = false;
             response->success= true;
             break;
         case asv_interfaces::srv::SetLlc::Request::LLC_IFAC:
@@ -70,6 +88,15 @@ private:
             apm_enable = false;
             mpc_enable = false;
             ifac_enable = true;
+            l_theta_enable = false;
+            response->success= true;
+            break;
+        case asv_interfaces::srv::SetLlc::Request::LLC_LTHETA:
+            RCLCPP_INFO(this-> get_logger(), "L_Theta controller enable");
+            apm_enable = false;
+            mpc_enable = false;
+            ifac_enable = false;
+            l_theta_enable = true;
             response->success= true;
             break;
         default:
@@ -85,6 +112,7 @@ private:
             apm_enable = false;
             mpc_enable = false;
             ifac_enable = false;
+            l_theta_enable = false;
         }
         armed= msg->armed;
     }
@@ -96,8 +124,9 @@ private:
     rclcpp::Service<asv_interfaces::srv::SetLlc>::SharedPtr server_set_llc_;
     rclcpp::Subscription<asv_interfaces::msg::PwmValues>::SharedPtr subscriber_pwm_mpc_;
     rclcpp::Subscription<asv_interfaces::msg::PwmValues>::SharedPtr subscriber_pwm_ifac_;
+    rclcpp::Subscription<asv_interfaces::msg::PwmValues>::SharedPtr subscriber_pwm_l_theta_;
     rclcpp::Publisher<asv_interfaces::msg::PwmValues>::SharedPtr publisher_pwm_;
-    bool apm_enable = false, mpc_enable = false, ifac_enable = false;
+    bool apm_enable = false, mpc_enable = false, ifac_enable = false, l_theta_enable = false;
 
 };
 

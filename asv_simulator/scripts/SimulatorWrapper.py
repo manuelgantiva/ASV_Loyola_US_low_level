@@ -209,7 +209,7 @@ class SimulatorASVWrapper(Node):
         msg_rc_in = RCIn()
 
         msg_rc_in.header.stamp = stamp_time
-        self.in_channel_vals[1] = 1700  #  APM  < 1400 <   MPC  < 1600 < IFAC
+        self.in_channel_vals[1] = 1700  #  APM  < 1400 <   LTHETHA  < 1600 < IFAC
         self.in_channel_vals[2] = 1700  #  ref vel
         
         self.in_channel_vals[3] = 1200  #  ZONO < 1400 < GUILLE < 1600 < LIU

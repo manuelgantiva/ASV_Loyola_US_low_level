@@ -15,7 +15,7 @@
 #include "asv_interfaces/msg/pwm_values.hpp"        //Interface pwm values override
 #include "geometry_msgs/msg/twist.hpp"              //Interface accel computed
 #include "nav_msgs/msg/odometry.hpp"                //Interface gps global local data
-
+#include "std_msgs/msg/float64_multi_array.hpp"       //for lthetha controller
 
 #include <rosbag2_cpp/writer.hpp>
 #include <filesystem>
@@ -119,12 +119,27 @@ public:
                 std::bind(&BagRecordNode::callbackAcceleration, this, std::placeholders::_1));
         subscriber_accel_ext = this-> create_subscription<geometry_msgs::msg::Twist>("/" + name_id + "/control/accel_imu_ext",1,
                 std::bind(&BagRecordNode::callbackAccelerationExt, this, std::placeholders::_1));
-
         subscriber_hlc_ = this-> create_subscription<asv_interfaces::msg::StateObserver>("/" + name_id + "/control/output_hlc",
             rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackHLCReference,this, std::placeholders::_1));
-        
 
-    	RCLCPP_INFO(this->get_logger(), "Bag Record Node has been started.");
+        // Create a writer for the bag file for L_Theta SMC
+        subscriber_F2T2 = this-> create_subscription<geometry_msgs::msg::Vector3>("/" + name_id + "/control/control_commands",rclcpp::SensorDataQoS(),
+                std::bind(&BagRecordNode::callbackControlCommands, this, std::placeholders::_1));
+
+        subscriber_formation_values = this-> create_subscription<std_msgs::msg::Float64MultiArray>("/" + name_id + "/control/formation_values",rclcpp::SensorDataQoS(),
+                std::bind(&BagRecordNode::callbackFormationValues, this, std::placeholders::_1));
+        subscriber_l_theta_error = this-> create_subscription<std_msgs::msg::Float64MultiArray>("/" + name_id + "/control/l_theta_error", rclcpp::SensorDataQoS(),
+                std::bind(&BagRecordNode::callbackLThetaError, this, std::placeholders::_1));        
+        subscriber_sliding_surfaces = this-> create_subscription<std_msgs::msg::Float64MultiArray>("/" + name_id + "/control/sliding_surfaces", rclcpp::SensorDataQoS(),
+                std::bind(&BagRecordNode::callbackSlidingSurfaces, this, std::placeholders::_1));
+        subscriber_wave_disturbances = this-> create_subscription<std_msgs::msg::Float64MultiArray>("/" + name_id + "/control/wave_disturbances", rclcpp::SensorDataQoS(),
+                std::bind(&BagRecordNode::callbackWaveDisturbances, this, std::placeholders::_1));
+        subscriber_w_effect = this-> create_subscription<std_msgs::msg::Float64MultiArray>("/" + name_id + "/control/w_effect", rclcpp::SensorDataQoS(),
+                std::bind(&BagRecordNode::callbackW, this, std::placeholders::_1));
+        subscriber_ltheta_pwm = this-> create_subscription<asv_interfaces::msg::PwmValues>("/" + name_id + "/control/pwm_value_l_theta",10,
+                std::bind(&BagRecordNode::callbackLThetaPwm, this, std::placeholders::_1));
+        subscriber_IG_LTheta = this-> create_subscription<geometry_msgs::msg::Vector3>("/" + name_id + "/control/input_gains",rclcpp::SensorDataQoS(),
+                std::bind(&BagRecordNode::callbackIG_LTheta, this, std::placeholders::_1));
     }
 
 private:
@@ -477,6 +492,65 @@ private:
         }
     }
 
+    // THESE CALLBACKS ARE FOR THE L_THETA SMC
+    void callbackControlCommands(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
+    {
+        if(armed==true){
+            rclcpp::Time time_stamp = this->now();
+            writer_->write(msg, "/" + name_id + "/control/control_commands", "geometry_msgs/msg/Vector3", time_stamp);
+        }
+    }
+    void callbackFormationValues(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
+    {
+        if(armed==true){
+            rclcpp::Time time_stamp = this->now();
+            writer_->write(msg, "/" + name_id + "/control/formation_values", "std_msgs/msg/Float64MultiArray", time_stamp);
+        }
+    }
+    void callbackLThetaError(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
+    {
+        if(armed==true){
+            rclcpp::Time time_stamp = this->now();
+            writer_->write(msg, "/" + name_id + "/control/l_theta_error", "std_msgs/msg/Float64MultiArray", time_stamp);
+        }
+    }
+    void callbackSlidingSurfaces(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
+    {
+        if(armed==true){
+            rclcpp::Time time_stamp = this->now();
+            writer_->write(msg, "/" + name_id + "/control/sliding_surfaces", "std_msgs/msg/Float64MultiArray", time_stamp);
+        }
+    }
+    void callbackWaveDisturbances(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
+    {
+        if(armed==true){
+            rclcpp::Time time_stamp = this->now();
+            writer_->write(msg, "/" + name_id + "/control/wave_disturbances", "std_msgs/msg/Float64MultiArray", time_stamp);
+        }
+    }
+    void callbackW(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
+    {
+        if(armed==true){
+            rclcpp::Time time_stamp = this->now();
+            writer_->write(msg, "/" + name_id + "/control/w_effect", "std_msgs/msg/Float64MultiArray", time_stamp);
+        }
+    }
+    void callbackLThetaPwm(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
+    {
+        if(armed==true){
+            rclcpp::Time time_stamp = this->now();
+            writer_->write(msg, "/" + name_id + "/control/pwm_value_l_theta", "asv_interfaces/msg/PwmValues", time_stamp);
+        }
+    }
+
+    void callbackIG_LTheta(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
+    {
+        if(armed==true){
+            rclcpp::Time time_stamp = this->now();
+            writer_->write(msg, "/" + name_id + "/control/IG_LTheta", "geometry_msgs/msg/Vector3", time_stamp);
+        }
+
+    }
     std::string my_id, name_id;
     std::string name_bag;
     bool armed = false;
@@ -524,7 +598,15 @@ private:
     rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr subscriber_accel;
     rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr subscriber_accel_ext;
     rclcpp::Subscription<asv_interfaces::msg::StateObserver>::SharedPtr subscriber_hlc_;
-    
+    // Create a writer for the bag file for L_Theta SMC
+    rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr subscriber_F2T2;
+    rclcpp::Subscription<std_msgs::msg::Float64MultiArray>::SharedPtr subscriber_formation_values;
+    rclcpp::Subscription<std_msgs::msg::Float64MultiArray>::SharedPtr subscriber_l_theta_error;
+    rclcpp::Subscription<std_msgs::msg::Float64MultiArray>::SharedPtr subscriber_sliding_surfaces;
+    rclcpp::Subscription<std_msgs::msg::Float64MultiArray>::SharedPtr subscriber_wave_disturbances;
+    rclcpp::Subscription<std_msgs::msg::Float64MultiArray>::SharedPtr subscriber_w_effect;
+    rclcpp::Subscription<asv_interfaces::msg::PwmValues>::SharedPtr subscriber_ltheta_pwm;
+    rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr subscriber_IG_LTheta;
 };
 
 int main(int argc, char **argv)

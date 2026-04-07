@@ -61,8 +61,15 @@ ament_target_dependencies(morel_hlc rclcpp geometry_msgs mavros_msgs asv_interfa
 
 add_executable(mod_wang_mlc src/mod_wang_mlc.cpp)
 ament_target_dependencies(mod_wang_mlc rclcpp geometry_msgs mavros_msgs asv_interfaces std_msgs asv_library)
+
 add_executable(filter_hlc src/filter_hlc.cpp)
 ament_target_dependencies(filter_hlc rclcpp std_msgs mavros_msgs geometry_msgs)
+
+# Add the executable for the l_theta_smc_formation node
+# This node is used to control the formation of the ASV using the l_theta_smc algorithm
+add_executable(l_theta_smc_formation src/l_theta_smc_formation.cpp)
+ament_target_dependencies(l_theta_smc_formation rclcpp geometry_msgs mavros_msgs asv_interfaces std_msgs asv_library Eigen3)
+
 
 # Install Targets
 install(TARGETS
@@ -76,6 +83,7 @@ install(TARGETS
   mod_wang_mlc
   mpc_hlc
   filter_hlc
+  l_theta_smc_formation
 DESTINATION lib/${PROJECT_NAME})
 
 # Install Scripts python

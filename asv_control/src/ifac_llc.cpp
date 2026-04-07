@@ -316,7 +316,10 @@ private:
                 // Publish pwms
 
                 msg.t_left = denormalizationPwm(L, PWM_left_ant);
-                msg.t_righ = denormalizationPwm(R, PWM_right_ant);;
+                msg.t_righ = denormalizationPwm(R, PWM_right_ant);
+
+                msg.t_left= 1700;
+                msg.t_righ= 1700; 
 
                 msg_Ig.x = IG_u;
                 msg_Ig.y = IG_r;

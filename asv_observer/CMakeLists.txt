@@ -43,6 +43,10 @@ ament_target_dependencies(observer_param rclcpp std_msgs sensor_msgs mavros_msgs
 add_executable(observer_core src/observer_core.cpp)
 ament_target_dependencies(observer_core rclcpp std_msgs sensor_msgs mavros_msgs asv_interfaces geometry_msgs nav_msgs)
 
+# Add UKF Executable
+add_executable(ukf_multi_rate src/ukf_multi_rate_node.cpp)
+ament_target_dependencies(ukf_multi_rate rclcpp std_msgs sensor_msgs mavros_msgs tf2 Eigen3)
+
 # Install Targets
 install(TARGETS
   mux_obs
@@ -51,6 +55,7 @@ install(TARGETS
   observer_zono
   observer_param
   observer_core
+  ukf_multi_rate
 DESTINATION lib/${PROJECT_NAME})
 
 # Install Scripts python

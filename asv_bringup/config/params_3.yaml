@@ -56,6 +56,33 @@ ASV3:
         # Xu: [-0.521648, 0.441872, 0.160667, 0.328484, 0.0038,0.7610]
         # Xv: [0.131553, -0.710651, -0.023687, -0.014935, -0.356188, 0.009392, 0.481985, 0.056729 , 0.0155,0.0254,-0.0539,-0.1391]
         # Xr: [0.679118, -0.588546, 0.490816, -0.131400, -0.895668, -0.516992, 1.033364, -0.418539, -0.3203,-0.1650,0.3090,1.2462]
+    ukf_multi_rate:
+      ros__parameters:
+        Ts: 10.0          # ms -> 100 Hz IMU / UKF loop
+        gravity: 9.81
+
+        # Identified model parameters used by the UKF node
+        Xu: [-0.377927, 0.46066, -0.081357, -0.11284, -0.267035, 1.167053]
+        Xv: [-0.207711, -0.00536, -0.13951, 0.002781, -0.13396, -0.067458, 0.087307, -0.012853, -0.01666, 0.046912, 0.006088, 0.03846]
+        Xr: [-0.04124, 0.19121, -0.248341, 0.115163, -0.14668, -0.177834, 0.081113, -0.759512, -0.0204, 0.16815, 0.00635, 0.88019]
+
+        # P_init, Q, R are flattened row-major matrices
+        # P_init = diag([0.1, 0.1, (5*pi/180)^2, 0.1, 0.1, (5*pi/180)^2,
+        #                0.001, 0.001, (0.01*pi/180)^2, 0.1, 0.1, (5*pi/180)^2])
+        P_init: [0.1, 0.1, 0.00761543549467, 0.1, 0.1, 0.00761543549467, 0.001, 0.001, 3.04617419787e-08, 0.1, 0.1, 0.00761543549467]
+            
+
+        # Q = diag([sig_X^2, sig_Y^2, sig_psi^2, sig_u^2, sig_v^2, sig_r^2,
+        #           sig_bax^2, sig_bay^2, sig_bg^2, sig_eu^2, sig_ev^2, sig_er^2]) * dt_imu
+        Q: [1e-06, 1e-06, 3.04617419787e-06, 1e-08, 1e-08, 1.21846967915e-05, 2.5e-09, 1e-10, 1e-06, 0.000169, 2.25e-06, 4e-06]
+
+        # R = diag([GPSx, GPSy, psi, ax, ay, gyro_r])
+        R: [0.8, 0.3,6.5076e-05, 8.5979e-05, 0.00011529, 0.00057149]
+
+        alpha: 0.001
+        beta: 2.0
+        kappa: -2.0
+
     observer_param:
       ros__parameters:
         Ts: 100.0         #ms
@@ -187,11 +214,87 @@ ASV3:
         K2: 100.0
         taud: 30.0
         u_max: 1.45
+    l_theta_smc_formation:
+      ros__parameters:
+        # Vessel Mass and Damping
+        # Vessel Mass and Damping
+        # Surge inertia term: m11 = m - X_udot (kg)
+        # MAX value (27.88 kg) computed using m = 25.73 kg, X_udot = -2.15 kg
+        #M11: 27.88 # [kg] (Range: 24.00-27.88 kg)
+        M11: 7.8 
+        # Sway inertia term: m22 = m - Y_vdot (kg)
+        # MAX value (48.32 kg) using Y_vdot = -22.59 kg
+        #M22: 48.32 # [kg] (Range: 27.32-48.32 kg)
+        M22: 8.4
+        # MAX value (7.16 kg·m²) using I_z = 2.81 kg·m², N_rdot = -4.35 kg·m²
+        #M33: 7.16 # [kg·m²] (Range: 4.81-7.16 kg·m²)
+        M33: 0.4
+        # Sway-Yaw coupling term: m32 = m*x_g (kg·m)
+        # NOTE: Sign convention mismatch - technical report specifies NOMINAL = -0.478 kg·m
+        # This value (0.527 kg·m) appears to use |MAX| magnitude with positive sign
+        #M32 = 0.527  # [kg·m] (Reported range: -0.527 to -0.443 kg·m)
+
+        # Surge linear damping: Xu (kg)
+        # MAX (least damping): -0.27 kg (Range: -2.15 to -0.27 kg)
+        #D11: -0.27
+        D11: 20.7
+        # Sway linear damping: Yv (kg) 
+        # MAX (least damping): -3.59 kg (Range: -22.59 to -3.59 kg)
+        #D22: -3.59
+        D22: 26.5
+        #D33: -3.74
+        D33: 2.2
+        # Formation and Vessel Geometry
+        L12_d: 4.0
+        Theta12_d: 1.5707963267948966  # (M_PI/2)
+        d_vessel: 0.5
+
+        # SMC Controller Gains
+        phi1: 0.05
+        phi2: 0.05
+        K1: 0.9
+        K2: 0.9
+        Lambda1: 0.8
+        Lambda2: 0.8
+        
+        # Polynomial Coeficients
+        mf0: 0.009491
+        mf1: 0.77704
+        mf2: 0.0
+        mf3: 0.33656 
+        mf4: 0.0
+        mf5: 0.26716
+        mr0: -0.0015329
+        mr1: 0.87392
+        mr2: 0.015394
+        mr3: 0.1662
+        mr4: -0.059705
+        mr5: 0.26861
+        df0: 0.0
+        df1: 0.0
+        df2: 2.24
+        df3: 0.0
+        df4: -0.67152 
+        df5: 0.0
+        dr0: -0.010348
+        dr1: -0.034124
+        dr2: 2.377
+        dr3: 0.069282
+        dr4: -0.65798
+        dr5: -0.24216
+        IGumax_ff: 0.85104
+        IGumax_rf: 0.42552
+        IGumin_rf: -0.64985
+        IGrmax_ff: 0.47902
+        IGrmax_rf: 0.79540
+        Dz_up: 0.0750
+        Dz_down: -0.08    
+        
   simulator:
     simulator_asv_wrapper:
       ros__parameters:
         Ts: 100.0
-        eta_nu_0: [-15.0, -15.0, 3.0, 0.0, 0.1, 0.0]
+        eta_nu_0: [0.0, 0.0,1.0472, 0.0, 0.0, 0.0]
         Xu: [-0.377927, 0.46066, -0.081357, -0.11284, -0.267035, 1.167053, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
         Xv: [-0.207711, -0.00536, -0.13951, 0.002781, -0.13396, -0.067458, 0.087307, -0.012853, -0.01666, 0.046912, 0.006088, 0.03846, 0.0]
         Xr: [-0.04124, 0.19121, -0.248341, 0.115163, -0.14668, -0.177834, 0.081113, -0.759512, -0.0204, 0.16815, 0.00635, 0.88019, 0.0]

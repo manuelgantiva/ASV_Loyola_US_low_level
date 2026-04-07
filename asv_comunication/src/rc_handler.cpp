@@ -325,7 +325,7 @@ private:
                                             "SERVO3_FUNCTION", 60)));
                         threads_.push_back(std::thread(std::bind(&RcHandlerNode::callOnOffPwm, this, true)));
                         threads_.push_back(std::thread(std::bind(&RcHandlerNode::callSetLowController, this, 
-                                            asv_interfaces::srv::SetLlc::Request::LLC_MPC)));
+                                            asv_interfaces::srv::SetLlc::Request::LLC_LTHETA                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    )));
                         threads_.push_back(std::thread(std::bind(&RcHandlerNode::callArming, this, true)));
                     }
                     if(sel_obs<1400){

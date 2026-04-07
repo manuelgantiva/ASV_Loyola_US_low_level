@@ -73,6 +73,8 @@ install(PROGRAMS
   scripts/imu_driver.py 
   scripts/transceiver_simulator.py 
   scripts/xbee_transceiver_DSG.py 
+  scripts/simulator_follower.py
+  scripts/simulator_leader.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

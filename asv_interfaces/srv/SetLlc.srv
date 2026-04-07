@@ -6,6 +6,7 @@
 uint8 LLC_APM	    = 1
 uint8 LLC_IFAC	    = 2
 uint8 LLC_MPC		= 3
+uint8 LLC_LTHETA    = 4
 
 uint8 llc_mode		# filled by LLC_MODE enum value
 ---
