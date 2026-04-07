@@ -183,6 +183,8 @@ public:
     P_init : 12x12 -> 144 values
     Q      : 12x12 -> 144 values
     R      :  6x6  -> 36 values
+    Considering the at ROS2 parameters will not consider the matrix structure, so the yaml file is gonna be a a vector of 12 values, and here insider the node we will change it to a 12x12 matrix, the same for the Q and R matrices.
+
     */
     declare_parameter<std::vector<double>>("P_init", makeFlattenedIdentity(NX));
     declare_parameter<std::vector<double>>("Q",      makeFlattenedIdentity(NX));
@@ -203,19 +205,32 @@ public:
 
     // Convert milliseconds -> seconds
     dt_ = Ts_ms_ / 1000.0;
-
+    
     Xu_ = get_parameter("Xu").as_double_array();
     Xv_ = get_parameter("Xv").as_double_array();
     Xr_ = get_parameter("Xr").as_double_array();
 
+    /*
     const auto P_flat = get_parameter("P_init").as_double_array();
     const auto Q_flat = get_parameter("Q").as_double_array();
     const auto R_flat = get_parameter("R").as_double_array();
 
     // Convert flattened parameter arrays into Eigen matrices
+    
     P_init_ = vectorToMatrix(P_flat, NX, NX);
     Q_      = vectorToMatrix(Q_flat, NX, NX);
     R_full_ = vectorToMatrix(R_flat, NZ_FULL, NZ_FULL);
+    */
+
+    const auto P_diag = get_parameter("P_init").as_double_array();
+    const auto Q_diag = get_parameter("Q").as_double_array();
+    const auto R_diag = get_parameter("R").as_double_array();
+
+    // Convert flattened parameter arrays into Eigen matrices
+    
+    P_init_ = vectorToDiagonalMatrix(P_diag, NX);
+    Q_      = vectorToDiagonalMatrix(Q_diag, NX);
+    R_full_ = vectorToDiagonalMatrix(R_diag, NZ_FULL);
 
     alpha_ = get_parameter("alpha").as_double();
     beta_  = get_parameter("beta").as_double();
@@ -406,6 +421,20 @@ private:
     return M;
   }
 
+  static Eigen::MatrixXd vectorToDiagonalMatrix(const std::vector<double> & data, int size)
+  {
+    if (static_cast<int>(data.size()) != size) {
+      throw std::runtime_error("Diagonal matrix parameter has wrong size.");
+    }
+
+    Eigen::MatrixXd M = Eigen::MatrixXd::Zero(size, size);
+    for (int i = 0; i < size; ++i) {
+      M(i, i) = data[static_cast<std::size_t>(i)];
+    }
+
+    return M;
+  }
+
   /*
   ============================================================================
   HELPER: WRAP ANGLE TO [-pi, pi]
@@ -526,6 +555,7 @@ private:
   */
     void callbackStateData(const mavros_msgs::msg::State::SharedPtr msg)
     {
+      RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 2000, "Received armed state: %s", msg->armed ? "ARMED" : "DISARMED");
     const bool was_armed = armed_;
     armed_ = msg->armed;
 
@@ -579,9 +609,9 @@ private:
     [3] r_low
     [4] delta_diff
     [5] delta_mean
-    [6] delta_left
-    [7] delta_right
-    [8] beta
+    [6] beta
+    [7] delta_left
+    [8] delta_right
 
   Important:
   ----------
@@ -597,6 +627,8 @@ private:
         "observer/data_sensores must contain at least 9 values");
       return;
     }
+    RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 1000,"Received low-rate observer packet with x=%.2f, y=%.2f, psi=%.2f, r_low=%.2f, delta_mean=%.2f, delta_diff=%.2f, beta=%.2f, delta_left=%.2f, delta_right=%.2f",
+      msg->data[0], msg->data[1], msg->data[2], msg->data[3], msg->data[4], msg->data[5], msg->data[6], msg->data[7], msg->data[8]);
 
     std::lock_guard<std::mutex> lock(data_mutex_);
 
@@ -607,10 +639,9 @@ private:
 
     observer_latest_.delta_diff  = static_cast<double>(msg->data[4]);
     observer_latest_.delta_mean  = static_cast<double>(msg->data[5]);
-    observer_latest_.delta_left  = static_cast<double>(msg->data[6]);
-    observer_latest_.delta_right = static_cast<double>(msg->data[7]);
-
-    observer_latest_.beta        = static_cast<double>(msg->data[8]);
+    observer_latest_.beta        = static_cast<double>(msg->data[6]);
+    observer_latest_.delta_left  = static_cast<double>(msg->data[7]);
+    observer_latest_.delta_right = static_cast<double>(msg->data[8]);
 
     observer_latest_.region = determineRegion(
       observer_latest_.delta_left,
@@ -732,6 +763,11 @@ private:
       RCLCPP_ERROR_THROTTLE(
         get_logger(), *get_clock(), 2000,
         "IMU compensation failed: %s", e.what());
+      
+      RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 1000, "IMU compenstaion is done: ax=%.2f, ay=%.2f, r=%.2f, roll=%.2f, pitch=%.2f, yaw=%.2f",
+        imu_local.ax_body, imu_local.ay_body, imu_local.r_body,
+        imu_local.roll, imu_local.pitch, imu_local.yaw);
+
       return;
     }
 
@@ -760,6 +796,11 @@ private:
     std::lock_guard<std::mutex> lock(data_mutex_);
   
     if (!observer_latest_.valid || !have_fresh_low_rate_) {
+      RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 2000,
+        "UKF not initilized yet. Obseerver_valid=%s, have_fresh_low_rate=%s",
+        observer_latest_.valid ? "true" : "false",
+        have_fresh_low_rate_ ? "true" : "false");
+
       return;
     }
   
@@ -772,6 +813,11 @@ private:
     P_ = P_init_;
     x_posterior_ = x_hat_;
     initialized_ = true;
+
+    RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 2000,
+      "UKF initialized with x=%.2f, y=%.2f, psi=%.2f, r=%.2f",
+      x_hat_(IDX_X), x_hat_(IDX_Y), x_hat_(IDX_PSI), x_hat_(IDX_R));
+
   }
 
   /*
@@ -815,6 +861,7 @@ private:
     // ------------------------------------------------------------------------
     // 2) UPDATE: use only one measurement set per IMU cycle
     if (low_rate_update_this_cycle_ && observer_cycle_.valid) {
+      RCLCPP_INFO_THROTTLE(get_logger(),*get_clock(), 1000, "Running UKF update with FULL measurement [x y psi ax ay r]");
       // Fresh low-rate packet is available:
       // use the full measurement [x, y, psi, ax, ay, r]
       Eigen::VectorXd z_full(NZ_FULL);
@@ -828,6 +875,7 @@ private:
       updateStep(z_full, true);
       
     } else {
+      RCLCPP_INFO_THROTTLE(get_logger(),*get_clock(), 1000, "Running UKF update with only IMU measurements [ax ay r]");
       // No fresh low-rate packet:
       // use only the IMU measurement [ax, ay, r]
       Eigen::VectorXd z_imu(NZ_IMU);
@@ -1246,6 +1294,9 @@ private:
       msg.data[static_cast<std::size_t>(i)] = x_posterior_(i);
     }
 
+    RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 1000, "Publishing state estimate: x=%.2f, y=%.2f, psi=%.2f, r=%.2f",
+      x_posterior_(IDX_X), x_posterior_(IDX_Y), x_posterior_(IDX_PSI), x_posterior_(IDX_R));
+      
     publisher_state_estimate_->publish(msg);
   }
 
