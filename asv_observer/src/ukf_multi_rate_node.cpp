@@ -386,7 +386,6 @@ public:
    RCLCPP_INFO(get_logger(), "UKF output is published at IMU rate");
  }
 
-
 private:
  /*
  ============================================================================
