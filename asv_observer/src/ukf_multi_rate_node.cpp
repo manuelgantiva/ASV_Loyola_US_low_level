@@ -1332,7 +1332,7 @@ private:
     // Custom observer message
     asv_interfaces::msg::StateObserver obs_msg;
     obs_msg.header.stamp = now();
-    obs_msg.header.frame_id = "map";
+    obs_msg.header.frame_id = my_id_;
 
 
     obs_msg.point.x = x_posterior_(IDX_X);
