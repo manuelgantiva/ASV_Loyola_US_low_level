@@ -100,7 +100,7 @@ private:
 
                 auto message = std_msgs::msg::Float32MultiArray();
 
-                message.data = {float(Yp_i[0]), float(Yp_i[1]), float(Yr_i[0]), float(Yr_i[1]), delta_diff_i, delta_mean_i,delta_l_i,delta_r_i, float(beta_i)};
+                message.data = {float(Yp_i[0]), float(Yp_i[1]), float(Yr_i[0]), float(Yr_i[1]), delta_diff_i, delta_mean_i,float(beta_i),delta_l_i,delta_r_i};
                 publisher_data->publish(message);
                 
             }else{
