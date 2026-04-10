@@ -3,11 +3,10 @@
 #include "mavros_msgs/msg/state.hpp"            // Armed/disarmed state
 #include "std_msgs/msg/float32_multi_array.hpp" // observer/data_sensores
 #include "std_msgs/msg/float64_multi_array.hpp" // UKF output state vector
-
+#include "asv_interfaces/msg/state_observer.hpp"    //Interface state observer
 
 #include <tf2/LinearMath/Quaternion.h>          // Quaternion utilities
 #include <tf2/LinearMath/Matrix3x3.h>           // Quaternion -> roll, pitch, yaw
-
 
 #include <Eigen/Dense>                          // Matrix and vector operations
 #include <Eigen/Cholesky>
@@ -25,6 +24,17 @@
 
 
 using std::placeholders::_1;
+
+/* Before adding the #include "asv_interfaces/msg/state_observer.hpp" , we were using FLOAT_MULTI_64 to publish the state vector, but now we are using a custom message specially designed for the state observer with
+// this structure :
+# this is a message used to communicate the results of the state observer
+# If you want to embed it in another message.
+
+std_msgs/Header header
+geometry_msgs/Point point
+geometry_msgs/Vector3 velocity
+geometry_msgs/Vector3 disturbances
+*/
 
 
 /*
@@ -330,10 +340,16 @@ public:
      std::bind(&UnscentedKalmanFilter::callbackObserverData, this, _1));
 
 
-   // UKF estimated state output
-   publisher_state_estimate_ = create_publisher<std_msgs::msg::Float64MultiArray>(
-     "/" + my_id_ + "/observer/ukf_state",
+   // UKF estimated state output with state observer msg
+   publisher_state_estimate_ = create_publisher<asv_interfaces::msg::StateObserver >(
+     "/" + my_id_ + "/observer/state_observer_ukf",
      rclcpp::QoS(10));
+  
+   // Publishing the Estimated state completely
+   publih_state_ = create_publisher<std_msgs::msg::Float64MultiArray>(
+    "/" + my_id_ + "/observer/state_ukf",
+    rclcpp::SensorDataQoS());
+   
 
 
    RCLCPP_INFO(get_logger(), "UKF started for vehicle: %s", my_id_.c_str());
@@ -1488,22 +1504,45 @@ private:
  PUBLISH STATE
  ============================================================================
  We publish the latest corrected state x_posterior_ at IMU rate.
+ Right now we shoould use 2 different publishers :
+ 1_ this publisher is gonna publish the data based on the custom message of the state observer  a vector of 9 elements [x_hat, y_hat, psi_hat, u_hat, v_hat, r_hat,sigma_u, sigma_v, sigma_r] which contains the state estimates and the unmodeled disturbance estimates. 
+ 2_ this publisher is gonna publish the data based on the Float64MultiArray message type. This publisher is gonna publish all the state estimates in the x_posterior_ vector, including the estimated biases and unmodeled disturbances, so it will publish a vector of 12 elements [x_hat, y_hat, psi_hat, u_hat, v_hat, r_hat, b_ax_hat, b_ay_hat, b_gr_hat, sigma_u, sigma_v, sigma_r].
+ # this is a message used to communicate the results of the state observer
+  # If you want to embed it in another message.
+
+  std_msgs/Header header
+  geometry_msgs/Point point
+  geometry_msgs/Vector3 velocity
+  geometry_msgs/Vector3 disturbances
  */
  void publishStateEstimate()
- {
-   std_msgs::msg::Float64MultiArray msg;
-   msg.data.resize(NX);
-
-
+ {  
+   // Message for Float64MultiArray (all 12 states)
+   std_msgs::msg::Float64MultiArray msg_array;
+   msg_array.data.resize(NX);
    for (int i = 0; i < NX; ++i) {
-     msg.data[static_cast<std::size_t>(i)] = x_posterior_(i);
+     msg_array.data[static_cast<std::size_t>(i)] = x_posterior_(i);
    }
 
+   // Message for StateObserver (9 selected states)
+   asv_interfaces::msg::StateObserver msg_observer;
+   msg_observer.header.stamp = now();
+   msg_observer.header.frame_id = my_id_;
+   msg_observer.point.x = x_posterior_(IDX_X);
+   msg_observer.point.y = x_posterior_(IDX_Y);
+   msg_observer.point.z = x_posterior_(IDX_PSI);
+   msg_observer.velocity.x = x_posterior_(IDX_U);
+   msg_observer.velocity.y = x_posterior_(IDX_V);
+   msg_observer.velocity.z = x_posterior_(IDX_R);
+   msg_observer.disturbances.x = x_posterior_(IDX_SEU);
+   msg_observer.disturbances.y = x_posterior_(IDX_SEV);
+   msg_observer.disturbances.z = x_posterior_(IDX_SER);
 
    RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 1000, "Publishing state estimate: x=%.2f, y=%.2f, psi=%.2f, r=%.2f",
      x_posterior_(IDX_X), x_posterior_(IDX_Y), x_posterior_(IDX_PSI), x_posterior_(IDX_R));
     
-   publisher_state_estimate_->publish(msg);
+   publisher_state_estimate_->publish(msg_observer);
+   publih_state_->publish(msg_array);
  }
 
 
@@ -1587,7 +1626,8 @@ private:
  rclcpp::Subscription<mavros_msgs::msg::State>::SharedPtr subscriber_state_;
  rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr subscriber_imu_;
  rclcpp::Subscription<std_msgs::msg::Float32MultiArray>::SharedPtr subscriber_observer_data_;
- rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr publisher_state_estimate_;
+ rclcpp::Publisher<asv_interfaces::msg::StateObserver>::SharedPtr publisher_state_estimate_;
+ rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr publih_state_;
 };
 
 
