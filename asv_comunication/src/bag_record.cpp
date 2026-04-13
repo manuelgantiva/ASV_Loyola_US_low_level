@@ -289,13 +289,6 @@ private:
         }
     }
 
-    void callbackStateZonoData(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
-    {
-        if(armed==true){
-            rclcpp::Time time_stamp = this->now();
-            writer_->write(msg, "/" + name_id + "/observer/state_observer_zono", "asv_interfaces/msg/StateObserver", time_stamp);
-        }
-    }
     void callbackStateZonoMinData(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
     {
         if(armed==true){
