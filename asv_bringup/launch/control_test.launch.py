@@ -345,19 +345,19 @@ def generate_launch_description():
     ###################################################################
     ##-------------------------ASVs Nodes----------------------------##
     ################################################################### 
-    # nodes.append(Mavros_launch)
+    nodes.append(Mavros_launch)
     # nodes.append(neighbor_robot_state_publisher_node)
     # nodes.append(own_robot_state_publisher_node)
 
     ###################################################################
     ##--------------------Comunication Nodes-------------------------##
     ################################################################### 
-    # nodes.append(rc_handler_node)
+    nodes.append(rc_handler_node)
     # nodes.append(ref_llc_node)
     # nodes.append(ref_mlc_node)
     # nodes.append(apm_llc_node)
     # nodes.append(imu_fix_node)
-    # nodes.append(imu_ext_node)
+    nodes.append(imu_ext_node)
     nodes.append(record)
 
     # nodes.append(transceiver_xbee_node)

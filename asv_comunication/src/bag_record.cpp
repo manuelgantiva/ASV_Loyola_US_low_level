@@ -20,6 +20,8 @@
 #include "std_msgs/msg/bool.hpp"                    //Interface armed data
 #include "std_msgs/msg/float32_multi_array.hpp"     //Interface data core
 #include "asv_interfaces/msg/reference_llc.hpp"     //Interface vector reference_llc x->u y->r z->psi
+#include "std_msgs/msg/float64_multi_array.hpp"     // UKF output state vector
+
 
 
 #include <rosbag2_cpp/writer.hpp>
@@ -126,6 +128,10 @@ public:
                 std::bind(&BagRecordNode::callbackAccelerationExt, this, std::placeholders::_1));
         subscriber_w_pred = this-> create_subscription<std_msgs::msg::Float32MultiArray>("/" + name_id + "/control/w_pred",1,
                 std::bind(&BagRecordNode::callbackWPred, this, std::placeholders::_1));
+        subscriber_observer_state_ukf = this-> create_subscription<asv_interfaces::msg::StateObserver>("/" + name_id + "/observer/state_observer_ukf",1,
+                std::bind(&BagRecordNode::callbackObserverStateUkf, this, std::placeholders::_1));
+        subscriber_state_estimate_ukf = this-> create_subscription<std_msgs::msg::Float64MultiArray>("/" + name_id + "/observer/state_ukf",1,
+                std::bind(&BagRecordNode::callbackStateUkf, this, std::placeholders::_1));
 
     	RCLCPP_INFO(this->get_logger(), "Bag Record Node has been started.");
     }
@@ -265,6 +271,31 @@ private:
         }
     }
 
+    // callback of ukf state observer, which is a StateObserver message
+    void callbackObserverStateUkf(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
+    {
+        if(armed==true){
+            rclcpp::Time time_stamp = this->now();
+            writer_->write(msg, "/" + name_id + "/observer/state_observer_ukf", "asv_interfaces/msg/StateObserver", time_stamp);
+        }
+    }
+
+    // Callback of ukf state vector, which is a Float64MultiArray with the 12 states of the system
+    void callbackStateUkf(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
+    {
+        if(armed==true){
+            rclcpp::Time time_stamp = this->now();
+            writer_->write(msg, "/" + name_id + "/observer/state_ukf", "std_msgs/msg/Float64MultiArray", time_stamp);
+        }
+    }
+
+    void callbackStateZonoData(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
+    {
+        if(armed==true){
+            rclcpp::Time time_stamp = this->now();
+            writer_->write(msg, "/" + name_id + "/observer/state_observer_zono", "asv_interfaces/msg/StateObserver", time_stamp);
+        }
+    }
     void callbackStateZonoMinData(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
     {
         if(armed==true){
@@ -527,7 +558,8 @@ private:
     rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr subscriber_accel;
     rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr subscriber_accel_ext;
     rclcpp::Subscription<std_msgs::msg::Float32MultiArray>::SharedPtr subscriber_w_pred;
-    
+    rclcpp::Subscription<asv_interfaces::msg::StateObserver>::SharedPtr subscriber_observer_state_ukf;
+    rclcpp::Subscription<std_msgs::msg::Float64MultiArray>::SharedPtr subscriber_state_estimate_ukf;
 };
 
 int main(int argc, char **argv)
