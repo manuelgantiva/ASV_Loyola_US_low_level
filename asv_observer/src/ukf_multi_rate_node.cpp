@@ -318,7 +318,7 @@ public:
     // UKF estimated state output with custom state observer message
     publisher_state_estimate_ = create_publisher<asv_interfaces::msg::StateObserver>(
       "/" + my_id_ + "/observer/state_observer_ukf",
-      rclcpp::QoS(10));
+      rclcpp::rclcpp::SensorDataQoS());
 
 
     // Full estimated state vector
