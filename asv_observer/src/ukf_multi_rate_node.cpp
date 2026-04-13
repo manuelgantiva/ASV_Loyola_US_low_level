@@ -230,7 +230,7 @@ public:
 
 
     // UKF sigma point tuning parameters
-    declare_parameter<double>("alpha", 1e-3);
+    declare_parameter<double>("alpha", 0.001);
     declare_parameter<double>("beta",  2.0);
     declare_parameter<double>("kappa", -2.0);
 
