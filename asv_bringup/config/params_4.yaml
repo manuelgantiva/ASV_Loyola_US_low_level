@@ -54,9 +54,11 @@ ASV4:
         # R = diag([GPSx, GPSy, psi, ax, ay, gyro_r])
        R: [0.8, 0.3, 6.5076e-05, 8.5979e-05, 0.00011529, 0.00057149]
 
-
-       # Q = diag([sig_X^2, sig_Y^2, sig_psi^2, sig_u^2, sig_v^2, sig_r^2,
-       #           sig_bax^2, sig_bay^2, sig_bg^2, sig_eu^2, sig_ev^2, sig_er^2]) * dt_imu
+        # Identified model parameters for UKF state prediction
+       Xu: [-0.53913, 0.40143, 0.03464, 0.39852, 0.08817, 0.61094]
+       Xv: [0.05503, -0.13683, 0.16409, -0.02773, -0.1279, 0.03299, 0.17807, 0.09622, 0.08015, 0.03371, -0.05484, -0.21225]
+       Xr: [0.10127, -1.25134, -0.53258, -0.15183, -0.23523, -0.47602, 0.59883, -0.32431, -0.49434, -0.20793, 0.33822, 1.30912]
+        # UKF tuning parameters
        alpha: 0.001
        beta: 2.0
        kappa: -2.0
