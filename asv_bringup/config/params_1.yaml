@@ -21,7 +21,7 @@ ASV1:
     observer_zono:
       ros__parameters:
         Ts: 100.0         #ms
-        Max_n_psi: 0.1
+        Max_n_psi: 0.05
         Max_n_r: 0.01
         Max_n_p: 0.2
         Max_w_r: 0.03
@@ -59,7 +59,7 @@ ASV1:
         kr: 0.8
         taud: 200
         Sat: 0.3
-        delta_pwm: 250
+        delta_pwm: 200
         mf: [0.00089913, 1.6273, 0.0, -0.16126, 0.0, -0.045607]
         mr: [-0.0046653 , 1.6544, 0.037844, -0.28268, 0.0065246, -0.10214]
         df: [0.0, 0.0, 1.3187, 0.0, 1.102, 0.0]
@@ -75,13 +75,12 @@ ASV1:
       ros__parameters:
         Ts: 100.0         #ms
         N_p: 30
-        T_mlc: 100.0      #ms #Periodo MLC
-        Q: [5.0, 0.0, 10.0, 1.0] 
-        # Q: [5.0, 0.0, 1.0, 20.0] 
+        T_mlc: 100.0      #ms #Ts mlc
+        Q: [5.0, 0.0, 50.0, 10.0]       # Q: [5.0, 0.0, 1.0, 20.0] LOS Q: [5.0, 0.0, 50.0, 10.0] MPC
         R: [0.0, 0.0]
         Rd: [20.0, 5.0]
         u_max: 2.0
-        u_min: 0.0
+        u_min: -0.5
         v_max: 1.5
         v_min: -1.5
         r_max: 1.0
@@ -98,9 +97,9 @@ ASV1:
     wang_mlc:
       ros__parameters:
         Ts: 200.0         #ms
-        delta_SGLOS: 1.0
-        k_u_tar: 2.0
-        taud: 5.0
+        delta_SGLOS: 2.0
+        k_u_tar: 1.0
+        taud: 7.0
         path_d: 1
         flag: False     #True signo igual False invertido  
         u_max: 1.2
@@ -110,40 +109,41 @@ ASV1:
     ilos_mlc:
       ros__parameters:
         Ts: 200.0         #ms
-        delta_LOS: 4.0
-        k_u_tar: 1.0
+        delta_LOS: 2.0
+        k_u_tar: 0.25
         taud: 7.0
         k_b: 0.05
         Beta_c: 0.0844027
         r_ref_max: 0.4
         r_ref_min: -0.4
-        beta_bar_dot_max: 0.01
+        beta_bar_dot_max: 0.03
         path_d: 1
     iblos_mlc:
       ros__parameters:
         Ts: 200.0         #ms
-        delta_LOS: 4.0
-        SLOS_on: True
-        k_u_tar: 1.0
+        delta_LOS: 2.0
+        SLOS_on: False
+        k_u_tar: 0.25
         taud: 7.0
         k_b: 0.08
-        u_max: 2.0
+        u_max: 1.2
         r_ref_max: 0.4
         r_ref_min: -0.4
         beta_bar_dot_max: 0.03
         Xv_bar: [-0.1521128, -0.0844027, 0.0398443]
-        path_d: 2
+        Eps: 0.2009
+        path_d: 1
     iblosmp_mlc:
       ros__parameters:
         Ts: 200.0         #ms
         N_p: 20         # 80
         T_p: 3.0
-        delta_LOS: 4.0
-        k_u_tar: 3.0
+        delta_LOS: 2.0
+        k_u_tar: 0.25
         taud: 7.0
         k_b: 0.1
-        k_psi: 0.1
-        u_ref_max: 2.0
+        k_psi: 0.01
+        u_ref_max: 1.2
         u_ref_min: 0.3
         u_tar_max: 3.0
         u_tar_min: 0.0
@@ -156,15 +156,15 @@ ASV1:
         beta_bar_dot_max: 0.03
         Xv_bar: [0.5345843, -0.0834746, 0.2236763, -0.0386581, -0.2077052, -0.1521128, -0.0844027, 0.0398443]   
         Eps: 0.2009
-        path_d: 5
+        path_d: 1
     mpc_mlc_pf:
       ros__parameters:
         Ts: 400.0         #ms
-        N_p: 80         # 80
+        N_p: 60         # 80
         T_p: 3.0
-        Q: [5.0, 0.7, 0.0, 0.0, 200.0]             # Q: [5.0, 0.5, 0.0, 0.0, 150.0] # Recta
-        R: [1.0, 80.0, 5.0]                        # R: [1.0, 80.0, 50.0] 
-        Rd: [5.0, 10.0, 30.0]                      # Rd: [5.0, 10.0, 150.0] 
+        Q: [5.0, 40.0, 0.0, 0.0, 1.0]               # Q: [5.0, 0.5, 0.0, 0.0, 150.0] # Recta
+        R: [15.0, 2.0, 0.0]                         # R: [1.0, 80.0, 50.0] 
+        Rd: [30.0, 30.0, 10.0]                      # Rd: [5.0, 10.0, 150.0] 
         x_e_bar_max: 100.0
         x_e_bar_min: -100.0
         y_e_bar_max: 100.0
@@ -181,11 +181,11 @@ ASV1:
         Delta_u_ref_max: 0.01
         Delta_u_tar_min: -0.2
         Delta_u_tar_max: 0.2
-        Delta_r_ref_min: -0.005
-        Delta_r_ref_max: 0.005
+        Delta_r_ref_min: -0.01
+        Delta_r_ref_max: 0.01
         Xv_bar: [0.5345843, -0.0834746, 0.2236763, -0.0386581, -0.2077052, -0.1521128, -0.0844027, 0.0398443]  
         Eps: 0.2009
-        path_d: 2
+        path_d: 1
   simulator:
     simulator_asv_wrapper:
       ros__parameters:

@@ -95,6 +95,8 @@ public:
                 std::bind(&BagRecordNode::callbackMpcStateLlc, this, std::placeholders::_1));
         subscriber_mpc_state_mlc= this-> create_subscription<geometry_msgs::msg::Vector3>("/" + name_id + "/control/mpc_state_mlc",1,
                 std::bind(&BagRecordNode::callbackMpcStateMlc, this, std::placeholders::_1));
+        subscriber_los_state_mlc= this-> create_subscription<geometry_msgs::msg::Vector3>("/" + name_id + "/control/los_state_mlc",1,
+                std::bind(&BagRecordNode::callbackLosStateMlc, this, std::placeholders::_1));
         subscriber_data_core= this-> create_subscription<std_msgs::msg::Float32MultiArray>("/" + name_id + "/observer/data_sensors",
                 rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackDataCore, this, std::placeholders::_1));       
         subscriber_state_bejarano= this-> create_subscription<asv_interfaces::msg::StateObserver>("/" + name_id + "/observer/state_observer_bejarano",
@@ -400,6 +402,14 @@ private:
         }
     }
 
+    void callbackLosStateMlc(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
+    {
+        if(armed==true){
+            rclcpp::Time time_stamp = this->now();
+            writer_->write(msg, "/" + name_id + "/control/los_state_mlc", "geometry_msgs/msg/Vector3", time_stamp);
+        }
+    }
+
     void callbackImuData(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
     {
         if(armed==true){
@@ -519,6 +529,7 @@ private:
     rclcpp::Subscription<asv_interfaces::msg::PwmValues>::SharedPtr subscriber_pwm;
     rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr subscriber_mpc_state_llc;
     rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr subscriber_mpc_state_mlc;
+    rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr subscriber_los_state_mlc;
     rclcpp::Subscription<asv_interfaces::msg::StateObserver>::SharedPtr subscriber_states;
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr subscriber_pose_liu;
     rclcpp::Subscription<asv_interfaces::msg::StateObserver>::SharedPtr subscriber_state_liu;

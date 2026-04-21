@@ -172,36 +172,9 @@ def generate_launch_description():
         ]
     )
 
-    imu_fix_node = Node(
-        package="asv_comunication",
-        executable="imu_fix",
-        namespace= namespace_comunication,
-        parameters = [
-            {'my_id': my_namespace}
-        ]
-    )
-
     imu_ext_node = Node (
         package= "asv_comunication",
         executable= "imu_driver.py",
-        namespace= namespace_comunication,
-        parameters = [
-            {'my_id': my_namespace}
-        ]
-    )
-
-    mlc_target_node = Node(
-        package="asv_comunication",
-        executable="mlc_target",
-        namespace= namespace_comunication,
-        parameters = [
-            {'my_id': my_namespace}
-        ]
-    )
-
-    mlc_mod_target_node = Node(
-        package="asv_comunication",
-        executable="mlc_mod_target",
         namespace= namespace_comunication,
         parameters = [
             {'my_id': my_namespace}
@@ -269,14 +242,6 @@ def generate_launch_description():
         ]
     )
 
-    wang_mlc_node = Node(
-        package="asv_control",
-        executable="wang_mlc",
-        namespace= namespace_control,
-        parameters = [{'my_id': my_namespace},
-                config],
-    )
-
     mpc_mlc_pf_rt_node = Node(
         package="asv_acados",
         executable="mpc_mlc_pf_rt",
@@ -285,26 +250,6 @@ def generate_launch_description():
         parameters = [{'my_id': my_namespace},
             config]
     )
-
-    mpc_mlc_pf_mod_rt_node = Node(
-        package="asv_acados",
-        executable="mpc_mlc_pf_mod_rt",
-        name="mpc_mlc_pf_mod",
-        namespace= namespace_control,
-        parameters = [{'my_id': my_namespace},
-            config]
-    )
-
-    mpc_mlc_pf_coor_rt_node = Node(
-        package="asv_acados",
-        executable="mpc_mlc_pf_coor_rt",
-        name="mpc_mlc_pf_coor",
-        namespace= namespace_control,
-        parameters = [{'my_id': my_namespace},
-            config]
-    )
-
-
 
     ###################################################################
     ## -----------------------Observer Nodes--------------------------##
@@ -381,13 +326,10 @@ def generate_launch_description():
     # nodes.append(ref_llc_node)
     nodes.append(ref_mlc_node)
     # nodes.append(apm_llc_node)
-    # nodes.append(imu_fix_node)
     nodes.append(imu_ext_node)
     nodes.append(record)
 
     # nodes.append(transceiver_xbee_node)
-    # nodes.append(mlc_target_node)
-    # nodes.append(mlc_mod_target_node)
     
     ###################################################################
     ##-----------------------Observer Nodes--------------------------##
@@ -406,13 +348,7 @@ def generate_launch_description():
     nodes.append(mpc_llc_rt_node)
     # nodes.append(ifac_llc_node)
     # nodes.append(mux_llc_node)
-    # nodes.append(wang_mlc_node)
     nodes.append(mpc_mlc_pf_rt_node)
-    # nodes.append(mpc_mlc_pf_mod_rt_node)
-    # nodes.append(mpc_mlc_pf_coor_rt_node)
-
-    
-    
     
     return LaunchDescription(
         [arg_my_id, arg_rec, param_id,

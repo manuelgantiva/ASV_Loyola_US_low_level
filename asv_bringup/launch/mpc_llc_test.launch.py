@@ -172,15 +172,6 @@ def generate_launch_description():
         ]
     )
 
-    imu_fix_node = Node(
-        package="asv_comunication",
-        executable="imu_fix",
-        namespace= namespace_comunication,
-        parameters = [
-            {'my_id': my_namespace}
-        ]
-    )
-
     imu_ext_node = Node (
         package= "asv_comunication",
         executable= "imu_driver.py",
@@ -334,7 +325,6 @@ def generate_launch_description():
     nodes.append(ref_llc_node)
     # nodes.append(ref_mlc_node)
     # nodes.append(apm_llc_node)
-    # nodes.append(imu_fix_node)
     nodes.append(imu_ext_node)
     nodes.append(record)
 
