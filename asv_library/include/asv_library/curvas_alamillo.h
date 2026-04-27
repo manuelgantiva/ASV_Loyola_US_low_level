@@ -29,5 +29,6 @@ Target circle_10m(double w);
 Target circle_8m(double w);
 Target lissajous_10m(double w);
 Target lissajous_5m(double w);
+Target line_southwest(double w);
 
 #endif

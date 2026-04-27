@@ -637,7 +637,7 @@ private:
             }
             if (param.get_name() == "path_d") {
                 if (param.get_type() == rclcpp::ParameterType::PARAMETER_INTEGER &&
-                    param.as_int() >= 0 && param.as_int() <= 5) {
+                    param.as_int() >= 0 && param.as_int() <= 6) {
                     RCLCPP_INFO(this->get_logger(), "changed param value");
                     path_d = param.as_int();
                     need_precompile = true;
@@ -683,6 +683,9 @@ private:
                 break;
             case 5:
                 result = lissajous_5m(w);
+                break;
+            case 6:
+                result = line_southwest(w);
                 break;
         }
         return result;
@@ -736,6 +739,9 @@ private:
                 break;
             case 5:
                 p_values_map["coef"] = std::vector{0.0, 0.0, 0.0, 0.0, 5.0, 15.0};  //  a y b Circulo c y d Lineal e y f lissa
+                break;
+            case 6:
+                p_values_map["coef"] = std::vector{0.0, 0.0, -1.0, -1.0, 0.0, 0.0};  //  a y b Circulo c y d Lineal e y f lissa
                 break;
         }
 

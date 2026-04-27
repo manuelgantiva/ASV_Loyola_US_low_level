@@ -182,4 +182,20 @@ Target lissajous_5m(double w)
     return tar_p;
 }
 
+Target line_southwest(double w)
+{
+    Target tar_p;
+    tar_p.xp  = -w;
+    tar_p.yp  = 12.0-w;
+    tar_p.dxp = -1.0;
+    tar_p.dyp = -1.0;
+    const double dxp2 = 0.0;
+    const double dyp2 = 0.0;
+    tar_p.phip = std::atan2(tar_p.dyp, tar_p.dxp);
+    const double denom = tar_p.dxp * tar_p.dxp + tar_p.dyp * tar_p.dyp;
+    tar_p.dphip = (denom > 0.0) ? (tar_p.dxp * dyp2 - tar_p.dyp * dxp2) / denom : 0.0;
+    tar_p.f_c = std::sqrt(denom);
+    return tar_p;
+}
+
 
