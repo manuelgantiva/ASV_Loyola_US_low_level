@@ -311,6 +311,16 @@ def generate_launch_description():
         ]
     )
 
+    ukf_multi_rate_node = Node(
+        package="asv_observer",
+        executable="ukf_multi_rate_node",
+        name="ukf_multi_rate",
+        namespace=namespace_observer,
+        parameters=[
+            {'my_id': my_namespace},
+            config
+        ]
+    )
     ###################################################################
     ##-------------------------ASVs Nodes----------------------------##
     ################################################################### 
@@ -338,6 +348,7 @@ def generate_launch_description():
     # nodes.append(observer_bejarano)
     # nodes.append(observer_liu)
     nodes.append(observer_zono)
+    nodes.append(ukf_multi_rate_node)
 
     ###################################################################
     ##-----------------------Control Nodes---------------------------##
