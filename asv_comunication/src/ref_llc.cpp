@@ -128,27 +128,31 @@ private:
     }
 
     float normalizePwmYaw(uint16_t PWM){
+        float pwm_adj;
         float ref_vel;
-        if(PWM <= 1550 && PWM >= 1450){
-            PWM = 1500;
-            ref_vel = 0.0;
-        }else if(PWM > 1550){
-            PWM = PWM - 50;
-        }else if(PWM < 1450){
-            PWM = PWM + 50;
+        if (PWM >= 1450 && PWM <= 1550) {
+            pwm_adj = 1500.0f;
+        } else if (PWM > 1550) {
+            pwm_adj = static_cast<float>(PWM) - 50.0f;
+        } else {
+            pwm_adj = static_cast<float>(PWM) + 50.0f;
         }
-        PWM = PWM - 1150;
-        ref_vel = ((PWM*3.0/1750.0)-0.6);     
-        if(ref_vel>0.6){
-            ref_vel = 0.6;
-        }else if (ref_vel<=-0.6)
-        {
-            ref_vel = -0.6;
+        // Mapear el rango útil [1150, 1850] a [-0.5, 0.5]
+        ref_vel = ((pwm_adj - 1150.0f) / 700.0f) - 0.5f;
+        // Saturación
+        if (ref_vel > 0.5f) {
+            ref_vel = 0.5f;
+        } else if (ref_vel < -0.5f) {
+            ref_vel = -0.5f;
         }
-
-        // Cuantizar 16 pasos
-        ref_vel = round(ref_vel / 0.08) * 0.08;
-        //ref_vel = ref_vel * 0.6;
+        // Cuantizar en pasos de 0.1
+        ref_vel = std::round(ref_vel / 0.1f) * 0.1f;
+        // Saturar otra vez por seguridad
+        if (ref_vel > 0.5f) {
+            ref_vel = 0.5f;
+        } else if (ref_vel < -0.5f) {
+            ref_vel = -0.5f;
+        }
         return ref_vel;
     }
 

@@ -5,17 +5,16 @@
 #include "asv_interfaces/msg/state_observer.hpp"    //Interface state observer
 #include "asv_interfaces/msg/reference_llc.hpp"
 
-
 #include <pluginlib/class_loader.hpp>
 #include "acados_solver_base/acados_solver.hpp"
 #include "acados_solver_base/acados_solver_utils.hpp"
 
 #include <cmath>
-#include <thread>
 #include <vector>
-#include <Eigen/Dense>
+#include <array>
 
 using std::placeholders::_1;
+using Refsize = std::array<double, 8>;
 
 class MpcLlcRtNode : public rclcpp::Node 
 {
@@ -77,7 +76,7 @@ public:
         Dz_up  = this->get_parameter("Dz_up").as_double();
         Dz_down = this->get_parameter("Dz_down").as_double();
 
-        float T_mlc = this->get_parameter("T_mlc").as_double()/1000.0;
+        T_mlc = this->get_parameter("T_mlc").as_double()/1000.0;
         N_r = static_cast<int>(T_mlc / Ts);
 
         std::string solver_plugin_name = "asv_acados/AsvAcadosSolver";
@@ -86,9 +85,10 @@ public:
         std::cout << "Loading solver plugin \"" << solver_plugin_name << "\"" << std::endl;
 
         Precompile();
+        init_hist();
 
         cb_group_sensors_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
-        cb_group_obs_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+        cb_group_obs_ = this->get_node_base_interface()->get_default_callback_group();
         auto options_sensors_ = rclcpp::SubscriptionOptions();
         options_sensors_.callback_group=cb_group_sensors_;
 
@@ -116,8 +116,21 @@ private:
 
     void calculateLowLevelController()
     {
-        if(armed==false){
+        bool armed_loc;
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            armed_loc= armed;
+        }
+        if(armed_loc==false){
             count=0;
+            mean_ant   = 0.0;
+            diff_ant   = 0.0;
+            d_mean_ant = 0.0;
+            d_diff_ant = 0.0;
+            is_first_itr_ = true;
+
+            init_hist();
+
             {
                 std::lock_guard<std::mutex> lock(mutex_);
                 u_hat = 0.0;
@@ -127,22 +140,7 @@ private:
                 sig_u = 0.0;
                 sig_v = 0.0;
                 sig_r = 0.0;
-                count_faild = 0;
                 flag_ref = false;
-                mean_ant = 0.0;
-                diff_ant = 0.0;
-                d_mean_ant = 0.0;
-                d_diff_ant = 0.0;
-                u_hist.clear();
-                u_hist.shrink_to_fit();
-                acados::ValueMap u_def;
-                u_def["d_mean"] = {0.001/Ts};
-                u_def["d_diff"] = std::vector{0.0};
-                // Get optimal control input
-                for (int k = 0; k < N_p; ++k) {
-                    u_hist.emplace_back(u_def); 
-                }     
-                is_first_itr_= true; 
                 flag_iter = false;
             }
         }else{
@@ -156,8 +154,8 @@ private:
                 double sig_u_i;
                 double sig_v_i;
                 double sig_r_i;
-                std::vector<Eigen::VectorXd> y_ref_i;
-                y_ref_i.reserve(N_p);
+                std::vector<Refsize> y_ref_i;
+                y_ref_i.reserve(static_cast<size_t>(N_p));
                 {
                     std::lock_guard<std::mutex> lock(mutex_);
                     u_hat_i= u_hat;
@@ -168,7 +166,7 @@ private:
                     sig_v_i=sig_v;
                     sig_r_i=sig_r;
                     if(!flag_ref){
-                        initRefereces(psi_hat);
+                        initRefereces_unsafe(psi_hat_i);
                     }    
                     if (flag_iter) {
                         y_ref_i.assign(y_refs_.begin(), y_refs_.end());
@@ -180,7 +178,10 @@ private:
                 }
 
                 for (int j = 0; j < N_p; j++){
-                    if (true != acados::utils::set_cost_y_ref(*acados_solver_, j, y_ref_i[j])) {
+                    for (int i = 0; i < 8; ++i) {
+                        yref_buf_[i] = y_ref_i[j][static_cast<size_t>(i)];
+                    }
+                    if (true != acados::utils::set_cost_y_ref(*acados_solver_, j, yref_buf_)) {
                         RCLCPP_ERROR(this->get_logger(), "Failed to set NMPC references!");
                     } 
                     if(j<N_p-1){
@@ -193,35 +194,35 @@ private:
                         } 
                     }
                 }
-                Eigen::VectorXd y_ref_e = y_ref_i.back().head(6);
-                if (true != acados::utils::set_cost_y_ref(*acados_solver_, N_p, y_ref_e)) {
+                for (int i = 0; i < 6; ++i) {
+                    yref_e_buf_[i] = y_ref_i.back()[static_cast<size_t>(i)];
+                }
+                if (true != acados::utils::set_cost_y_ref(*acados_solver_, N_p, yref_e_buf_)) {
                     RCLCPP_ERROR(this->get_logger(), "Failed to set NMPC final reference!");
                 }   
                 
-                acados::ValueMap x_values_map;
-                x_values_map["u"] = std::vector{static_cast<double>(u_hat_i)};
-                x_values_map["v"] = std::vector{static_cast<double>(v_hat_i)};
-                x_values_map["r"] = std::vector{static_cast<double>(r_hat_i)};
-                x_values_map["psi"] = std::vector{static_cast<double>(psi_hat_i)};
-                x_values_map["mean"] = std::vector{static_cast<double>(mean_ant)};
-                x_values_map["diff"] =  std::vector{static_cast<double>(diff_ant)};
+                x_values_map["u"][0]    = u_hat_i;
+                x_values_map["v"][0]    = v_hat_i;
+                x_values_map["r"][0]    = r_hat_i;
+                x_values_map["psi"][0]  = psi_hat_i;
+                x_values_map["mean"][0] = mean_ant;
+                x_values_map["diff"][0] = diff_ant;
 
-                acados::ValueVector x_values;
-                acados::AcadosSolver::fill_vector_from_map(acados_solver_->x_index_map(), x_values_map, 6, x_values);
-
+                // acados::ValueVector x_values;
+                // acados::AcadosSolver::fill_vector_from_map(acados_solver_->x_index_map(), x_values_map, 6, x_values);
 
                 if (is_first_itr_) {  // this is the first iteration
                     // Set initial state values for all stages of the NMPC problem
-                    (0 == acados_solver_->initialize_state_values(x_values));
+                    (0 == acados_solver_->initialize_state_values(x_values_map));
                     // Update the first iteration flag
                     is_first_itr_ = false;
                 }
                 //Set initial state values for the first stage of the NMPC problem
-                (0 == acados_solver_->set_initial_state_values(x_values));               
+                (0 == acados_solver_->set_initial_state_values(x_values_map));               
 
-                p_values_map["se_u"] = std::vector{static_cast<double>(sig_u_i)};
-                p_values_map["se_v"] = std::vector{static_cast<double>(sig_v_i)};
-                p_values_map["se_r"] = std::vector{static_cast<double>(sig_r_i)};
+                p_values_map["se_u"][0] = sig_u_i;
+                p_values_map["se_v"][0] = sig_v_i;
+                p_values_map["se_r"][0] = sig_r_i;
 
                 if (0 != acados_solver_->set_runtime_parameters(p_values_map)) {
                     RCLCPP_ERROR(this->get_logger(), "Failed to set NMPC runtime parameters!");
@@ -245,14 +246,11 @@ private:
                     diff_ant = diff_ant + Ts*d_diff_ant;
 
                     // RCLCPP_ERROR(this->get_logger(), "D_mean: %f y D_diff: %f",d_mean_ant, d_diff_ant);
-                    const auto last = u_hist.back();                       // copia para duplicar
-                    std::move(u_hist.begin() + 1, u_hist.end(), u_hist.begin()); // corre a la izquierda
-                    u_hist.back() = last;                                  // último duplicado
-                    //acados_solver_->reset();
+                    std::move(u_hist.begin() + 1, u_hist.end(), u_hist.begin());
+                    u_hist.back() = u_hist[u_hist.size() - 2];   // copia del penúltimo al último
+
                     Precompile();
                 } else {
-                    u_hist.clear();
-                    u_hist.shrink_to_fit();
                     // Get optimal control input
                     for (int k = 0; k < N_p; ++k) {
                         acados::ValueMap u_values_map = acados_solver_->get_control_values_as_map(k);
@@ -261,7 +259,7 @@ private:
                             d_mean_ant = u_values_map["d_mean"][0];
                             d_diff_ant = u_values_map["d_diff"][0];
                         }
-                        u_hist.emplace_back(u_values_map); 
+                        u_hist[k] = u_values_map; 
                     }                    
                     //RCLCPP_ERROR(this->get_logger(), "Solucion viable D_mean: %f y D_diff: %f",d_mean_ant, d_diff_ant);
 
@@ -346,45 +344,50 @@ private:
         }
     }
 
-    void callbackVelReference(const asv_interfaces::msg::ReferenceLlc::SharedPtr msg)
-    {
-        int Np_i;
+    void callbackVelReference(const asv_interfaces::msg::ReferenceLlc::SharedPtr msg){
+        int Np_i, Nr_i;
         {
             std::lock_guard<std::mutex> lock(mutex_);
             Np_i = N_p;
+            Nr_i = N_r; 
         }
-        const auto &refs = msg->references;
-        const std::size_t n_total = refs.size() * static_cast<std::size_t>(N_r);
-        const std::size_t limit = std::min<std::size_t>(Np_i, n_total);
 
-        std::vector<Eigen::VectorXd> out;
-        out.reserve(limit);
+        const auto &refs = msg->references;
+        const std::size_t n_total = refs.size() * static_cast<std::size_t>(Nr_i);
+        const std::size_t limit = std::min<std::size_t>(static_cast<std::size_t>(Np_i), n_total);
+
+        std::vector<Refsize> out;
+        out.reserve(Np_i);
+
+        auto make_ref8 = [](const geometry_msgs::msg::Vector3 &v) -> Refsize {
+            return Refsize{{static_cast<double>(v.x), 0.0, static_cast<double>(v.y), static_cast<double>(v.z), 0.0, 0.0, 0.0, 0.0
+            }};
+        };
 
         if (refs.size() == 1) {
-            const auto &vec = refs[0];
+            const auto r = make_ref8(refs[0]);
             for (int i = 0; i < Np_i; ++i) {
-                Eigen::VectorXd y_ref(8);
-                y_ref << vec.x, 0.0, vec.y, vec.z, 0.0, 0.0, 0.0, 0.0;
-                out.emplace_back(std::move(y_ref));
+                out.push_back(r);
             }
         } else {
             std::size_t produced = 0;
-            for (const auto &vec : refs) {
-                for (int k = 0; k < N_r; ++k) {
+            for (const auto &v : refs) {
+                const auto r = make_ref8(v);
+                for (int k = 0; k < Nr_i; ++k) {
                     if (produced >= limit) break;
-
-                    Eigen::VectorXd y_ref(8);
-                    y_ref << vec.x, 0.0, vec.y, vec.z, 0.0, 0.0, 0.0, 0.0;
-
-                    out.emplace_back(std::move(y_ref));
+                    out.push_back(r);
                     ++produced;
                 }
                 if (produced >= limit) break;
             }
         }
+
+        if (out.size() < static_cast<size_t>(Np_i)) {
+            out.resize(static_cast<size_t>(Np_i), out.back());
+        }
+
         {
             std::lock_guard<std::mutex> lock(mutex_);
-            y_refs_.clear();
             y_refs_.swap(out);
             flag_ref = true;
             flag_iter = true;
@@ -393,120 +396,174 @@ private:
 
     void callbackStateData(const mavros_msgs::msg::State::SharedPtr msg)
     {
-        armed= msg->armed;
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            armed= msg->armed;
+        }
     }
 
-    void initRefereces(float psi_act){
-        std::vector<Eigen::VectorXd> out;
-        out.reserve(N_p);
+    void initRefereces_unsafe(float psi_act){
+        std::vector<Refsize> out;
+        out.reserve(static_cast<size_t>(N_p));
+
+        const double psi = static_cast<double>(psi_act);
+
         for (int i = 0; i < N_p; ++i) {
-            Eigen::VectorXd y_ref(8);
-            y_ref << 0.5, 0.0, 0.0, psi_act, 0.0, 0.0, 0.0, 0.0;
-            out.emplace_back(std::move(y_ref));
+            out.push_back(Refsize{{
+                0.5, 0.0, 0.0, psi,
+                0.0, 0.0, 0.0, 0.0
+            }});
         }
+
         y_refs_.swap(out);
     }
 
     rcl_interfaces::msg::SetParametersResult param_callback(const std::vector<rclcpp::Parameter> &params){
         rcl_interfaces::msg::SetParametersResult result;
+        bool armed_local;
+        bool need_precompile = false;
+
+        auto reject = [&](const std::string &log_msg, const std::string &reason_msg) {
+            RCLCPP_INFO(this->get_logger(), "%s", log_msg.c_str());
+            result.successful = false;
+            result.reason = reason_msg;
+            return result;
+        };
+
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            armed_local = armed;
+        }
+
+        if (armed_local) {
+            return reject("could not change params", "ARMED: parameter changes blocked");
+        }
+
         for (const auto &param: params){
+            if (param.get_name() == "Ts") {
+                if (param.get_type() == rclcpp::ParameterType::PARAMETER_DOUBLE &&
+                    param.as_double() >= 100.0 && param.as_double() <= 1000.0) {
+                    RCLCPP_INFO(this->get_logger(), "changed param value");
+                    Ts = param.as_double()/1000.0;
+                    if (timer_) {
+                        timer_->cancel();
+                    }
+                    timer_ = this->create_wall_timer(
+                        std::chrono::milliseconds(int(Ts*1000.0)),
+                        std::bind(&MpcLlcRtNode::calculateLowLevelController, this),
+                        cb_group_obs_);
+                    N_r = static_cast<int>(T_mlc / Ts);
+                    need_precompile = true;
+                }
+                else {
+                    return reject("could not change param Ts", "Ts: double in [100,1000] ms");
+                }
+            }
+
+            if (param.get_name() == "T_mlc") {
+                if (param.get_type() == rclcpp::ParameterType::PARAMETER_DOUBLE &&
+                    param.as_double() >= 100.0 && param.as_double() <= 1000.0) {
+                    RCLCPP_INFO(this->get_logger(), "changed param value");
+                    T_mlc = param.as_double()/1000.0;
+                    N_r = static_cast<int>(T_mlc / Ts);
+                } else {
+                    return reject("could not change param T_mlc", "T_mlc: double in [100,1000] ms");
+                }
+            }
+
             if (param.get_name() == "N_p") {
-                if (param.as_int() > 1 && param.as_int() < 40) {
+                if (param.get_type() == rclcpp::ParameterType::PARAMETER_INTEGER &&
+                    param.as_int() >= 2 && param.as_int() <= 40) {
                     RCLCPP_INFO(this->get_logger(), "changed param value");
                     N_p = param.as_int();
-                    Precompile();
+                    need_precompile = true;
                 } else {
-                    RCLCPP_INFO(this->get_logger(), "could not change param value, should be between 1-40");
-                    result.successful = false;
-                    result.reason = "Value out of range";
-                    return result;
+                    return reject("could not change param N_p", "N_p: integer in [2,40]");
                 }
             }
+
             if (param.get_name() == "Q") {
-                if (param.as_double_array().size() == 4) {
+                if (param.get_type() == rclcpp::ParameterType::PARAMETER_DOUBLE_ARRAY &&
+                    param.as_double_array().size() == 4) {
                     RCLCPP_INFO(this->get_logger(), "changed param value");
                     Q_ = param.as_double_array();
-                    Precompile();
+                    need_precompile = true;
                 } else {
-                    RCLCPP_INFO(this->get_logger(), "could not change param value, Q must have 4 elements");
-                    result.successful = false;
-                    result.reason = "Invalid Q size";
-                    return result;
+                    return reject("could not change param Q", "Q: double array with 4 elements");
                 }
             }
+
             if (param.get_name() == "R") {
-                if (param.as_double_array().size() == 2) {
+                if (param.get_type() == rclcpp::ParameterType::PARAMETER_DOUBLE_ARRAY &&
+                    param.as_double_array().size() == 2) {
                     RCLCPP_INFO(this->get_logger(), "changed param value");
                     R_ = param.as_double_array();
-                    Precompile();
+                    need_precompile = true;
                 } else {
-                    RCLCPP_INFO(this->get_logger(), "could not change param value, R must have 2 elements");
-                    result.successful = false;
-                    result.reason = "Invalid R size";
-                    return result;
+                    return reject("could not change param R", "R: double array with 2 elements");
                 }
             }
+
             if (param.get_name() == "Rd") {
-                if (param.as_double_array().size() == 2) {
+                if (param.get_type() == rclcpp::ParameterType::PARAMETER_DOUBLE_ARRAY &&
+                    param.as_double_array().size() == 2) {
                     RCLCPP_INFO(this->get_logger(), "changed param value");
                     Rd_ = param.as_double_array();
-                    Precompile();
+                    need_precompile = true;
                 } else {
-                    RCLCPP_INFO(this->get_logger(), "could not change param value, Rd must have 2 elements");
-                    result.successful = false;
-                    result.reason = "Invalid Rd size";
-                    return result;
+                    return reject("could not change param Rd", "Rd: double array with 2 elements");
                 }
             }
+
             if (param.get_name() == "Delta_mean_min") {
                 if (param.get_type() == rclcpp::ParameterType::PARAMETER_DOUBLE &&
                     param.as_double() >= -1.0 && param.as_double() < 0.0) {
+                    RCLCPP_INFO(this->get_logger(), "changed param value");
                     Delta_mean_min_ = param.as_double();
-                    Precompile();
+                    need_precompile = true;
                 } else {
-                    RCLCPP_WARN(this->get_logger(), "Invalid value for 'Delta_mean_min'");
-                    result.successful = false;
-                    result.reason = "Value out of range";
-                    return result;
+                    return reject("could not change param Delta_mean_min", "Delta_mean_min: double in [-1.0,0.0)");
                 }
-            } 
+            }
+
             if (param.get_name() == "Delta_diff_min") {
                 if (param.get_type() == rclcpp::ParameterType::PARAMETER_DOUBLE &&
                     param.as_double() >= -2.0 && param.as_double() < 0.0) {
+                    RCLCPP_INFO(this->get_logger(), "changed param value");
                     Delta_diff_min_ = param.as_double();
-                    Precompile();
+                    need_precompile = true;
                 } else {
-                    RCLCPP_WARN(this->get_logger(), "Invalid value for 'Delta_diff_min'");
-                    result.successful = false;
-                    result.reason = "Value out of range";
-                    return result;
+                    return reject("could not change param Delta_diff_min", "Delta_diff_min: double in [-2.0,0.0)");
                 }
-            } 
+            }
+
             if (param.get_name() == "Delta_mean_max") {
                 if (param.get_type() == rclcpp::ParameterType::PARAMETER_DOUBLE &&
                     param.as_double() > 0.0 && param.as_double() <= 1.0) {
+                    RCLCPP_INFO(this->get_logger(), "changed param value");
                     Delta_mean_max_ = param.as_double();
-                    Precompile();
+                    need_precompile = true;
                 } else {
-                    RCLCPP_WARN(this->get_logger(), "Invalid value for 'Delta_mean_max'");
-                    result.successful = false;
-                    result.reason = "Value out of range";
-                    return result;
+                    return reject("could not change param Delta_mean_max", "Delta_mean_max: double in (0.0,1.0]");
                 }
             }
+
             if (param.get_name() == "Delta_diff_max") {
                 if (param.get_type() == rclcpp::ParameterType::PARAMETER_DOUBLE &&
                     param.as_double() > 0.0 && param.as_double() <= 2.0) {
+                    RCLCPP_INFO(this->get_logger(), "changed param value");
                     Delta_diff_max_ = param.as_double();
-                    Precompile();
+                    need_precompile = true;
                 } else {
-                    RCLCPP_WARN(this->get_logger(), "Invalid value for 'Delta_diff_max'");
-                    result.successful = false;
-                    result.reason = "Value out of range";
-                    return result;
+                    return reject("could not change param Delta_diff_max", "Delta_diff_max: double in (0.0,2.0]");
                 }
             }
         }
+
+        if (need_precompile) {
+            Precompile();
+        }
+
         result.successful = true;
         result.reason = "Success";
         return result;
@@ -517,6 +574,13 @@ private:
     void Precompile(){
         RCLCPP_INFO(this->get_logger(), "Initializing Acados solver with N = %i and Ts = %f", N_p, Ts);
         acados_solver_->init(N_p, Ts);
+
+        x_values_map["u"]    = std::vector<double>{0.0};
+        x_values_map["v"]    = std::vector<double>{0.0};
+        x_values_map["r"]    = std::vector<double>{0.0};
+        x_values_map["psi"]  = std::vector<double>{0.0};
+        x_values_map["mean"] = std::vector<double>{0.0};
+        x_values_map["diff"] = std::vector<double>{0.0};
 
         p_values_map["Xu"] = Xu;
         p_values_map["Xv"] = Xv;
@@ -556,11 +620,7 @@ private:
         Eigen::VectorXd h_max(5);
         h_max << 1.0 - Dz_up, 1e9, 1.0 - Dz_up, 1e9, 1e9;
 
-        u_hist.clear();
-        u_hist.shrink_to_fit();
-        acados::ValueMap u_def;
-        u_def["d_mean"] = {0.001/Ts};
-        u_def["d_diff"] = std::vector{0.0};
+        u_hist.resize(static_cast<size_t>(N_p));   // crea N_p elementos
 
         for (int idx = 0; idx <= N_p; idx++) {
             if (idx>0){
@@ -570,98 +630,40 @@ private:
             } if (idx < N_p){
                 acados_solver_->set_control_bounds(idx, idxbu, lbu, ubu);
                 acados::utils::set_cost_W(*acados_solver_, idx, W);
-                u_hist.emplace_back(u_def);    
             }  if (idx>0 && idx <N_p){
                 acados::utils::set_const_h_min(*acados_solver_, idx, h_min);
                 acados::utils::set_const_h_max(*acados_solver_, idx, h_max);
             }
         }
+    }
 
-        /*
-        for (int idx = 0; idx < N_p; idx++) {
-            acados_solver_->set_control_bounds(idx, idxbu, lbu, ubu);
-        }
-
-        for (int idx = 1; idx <= N_p; idx++) {
-            acados_solver_->set_state_bounds(idx, idxbx, lbx, ubx);
-        }
-
-        for (int idx = 1; idx < N_p; idx++) {
-            acados_solver_->set_state_bounds(idx, idxbx, lbx, ubx);
-            acados::utils::set_cost_W(*acados_solver_, idx, W);
-        }
-
-        for (int idx = 0; idx < N_p; idx++) {
-            acados::utils::set_cost_W(*acados_solver_, idx, W);
-        }
-        acados::utils::set_cost_W(*acados_solver_, N_p, We);
-
-        for (int j = 1; j < N_p; j++){
-            acados::utils::set_const_h_min(*acados_solver_, j, h_min);
-            acados::utils::set_const_h_max(*acados_solver_, j, h_max);
-        }
-
+    void init_hist(){
+        acados::ValueMap u_def;
+        u_def["d_mean"] = {0.001 / Ts};
+        u_def["d_diff"] = std::vector{0.0};
         for (int k = 0; k < N_p; ++k) {
-            u_hist.emplace_back(u_def); 
-        }    */  
-
-        /*std::cout << "Getting problem dimensions:" << std::endl;
-        std::cout << "   nx = " << acados_solver_->nx() << std::endl;
-        std::cout << "   nz = " << acados_solver_->nz() << std::endl;
-        std::cout << "   np = " << acados_solver_->np() << std::endl;
-        std::cout << "   nu = " << acados_solver_->nu() << std::endl;
-        std::cout << "   N  = " << acados_solver_->N() << std::endl;
-        std::cout << "   Ts = " << acados_solver_->Ts() << std::endl;
-        std::cout << "   Sampling intervals = ";
-        print_vector(acados_solver_->sampling_intervals());
-        std::cout << std::endl << std::endl;
-
-        std::cout << "Retrieve index mappings : " << std::endl;
-        std::cout << "   index map x = "; print_map(acados_solver_->x_index_map());
-        std::cout << "   index map z = "; print_map(acados_solver_->z_index_map());
-        std::cout << "   index map p = "; print_map(acados_solver_->p_index_map());
-        std::cout << "   index map u = "; print_map(acados_solver_->u_index_map());*/
+            u_hist[k] = u_def; 
+        }
     }
-
-    /*template<class T>
-    void print_vector(std::vector<T> const & input)
-    {
-    std::cout << "[ ";
-    for (auto const & i : input) {
-        std::cout << i << " ";
-    }
-    std::cout << "]";
-    }
-
-    template<class T>
-    void print_map(std::unordered_map<std::string, std::vector<T>> const & map)
-    {
-    std::cout << "{ ";
-    for (const auto & [key, value] : map) {
-        std::cout << key << " = ";
-        print_vector(value);
-        std::cout << ", ";
-    }
-    std::cout << " }\n";
-    }*/
-
 
     bool armed = false, flag_ref = false, is_first_itr_= true, flag_iter = true;
-    float u_hat = 0.0, v_hat = 0, psi_hat = 0, r_hat = 0, sig_u = 0, sig_v = 0, sig_r = 0;
+    double u_hat = 0.0, v_hat = 0, psi_hat = 0, r_hat = 0, sig_u = 0, sig_v = 0, sig_r = 0;
 
-    std::vector<Eigen::VectorXd> y_refs_;
-
-    float mean_ant = 0.0, diff_ant = 0.0, d_mean_ant= 0.0, d_diff_ant=0.0;
-    int count=0, count_faild = 0;
+    double mean_ant = 0.0, diff_ant = 0.0, d_mean_ant= 0.0, d_diff_ant=0.0;
+    int count=0;
     //------Params-------//
-    float Ts;  
+    float Ts, T_mlc;  
 
     int N_p, N_r;
     double u_max_, u_min_, v_max_, v_min_, r_max_, r_min_, Delta_mean_min_, Delta_diff_min_, Delta_mean_max_, Delta_diff_max_;
-    float Dz_up, Dz_down;  
+    double Dz_up, Dz_down;  
 
     std::vector<double> Xu, Xv, Xr;
     std::vector<double> Q_, R_, Rd_;
+
+    std::vector<Refsize> y_refs_;
+    Eigen::VectorXd yref_buf_{8};
+    Eigen::VectorXd yref_e_buf_{6};
 
     std::vector<acados::ValueMap> u_hist;
 
@@ -684,5 +686,6 @@ private:
     /// Acados solver
     std::unique_ptr<acados::AcadosSolver> acados_solver_;
     acados::ValueMap p_values_map;
+    acados::ValueMap x_values_map;
 
 };

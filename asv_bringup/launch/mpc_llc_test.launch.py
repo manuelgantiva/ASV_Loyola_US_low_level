@@ -172,15 +172,6 @@ def generate_launch_description():
         ]
     )
 
-    imu_fix_node = Node(
-        package="asv_comunication",
-        executable="imu_fix",
-        namespace= namespace_comunication,
-        parameters = [
-            {'my_id': my_namespace}
-        ]
-    )
-
     imu_ext_node = Node (
         package= "asv_comunication",
         executable= "imu_driver.py",
@@ -325,7 +316,7 @@ def generate_launch_description():
     ################################################################### 
     nodes.append(Mavros_launch)
     # nodes.append(neighbor_robot_state_publisher_node)
-    nodes.append(own_robot_state_publisher_node)
+    # nodes.append(own_robot_state_publisher_node)
 
     ###################################################################
     ##--------------------Comunication Nodes-------------------------##
@@ -334,7 +325,6 @@ def generate_launch_description():
     nodes.append(ref_llc_node)
     # nodes.append(ref_mlc_node)
     # nodes.append(apm_llc_node)
-    # nodes.append(imu_fix_node)
     nodes.append(imu_ext_node)
     nodes.append(record)
 
@@ -352,7 +342,7 @@ def generate_launch_description():
     ###################################################################
     ##-----------------------Control Nodes---------------------------##
     ################################################################### 
-    nodes.append(asv_tf_broadcast_node)
+    # nodes.append(asv_tf_broadcast_node)
     nodes.append(pwm_mapper_node)
     nodes.append(mpc_llc_rt_node)
     # nodes.append(ifac_llc_node)

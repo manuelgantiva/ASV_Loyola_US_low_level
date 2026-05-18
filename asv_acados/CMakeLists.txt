@@ -15,9 +15,10 @@ find_package(pluginlib REQUIRED)
 
 find_package(Eigen3 REQUIRED)
 find_package(rclcpp REQUIRED)
-find_package(geometry_msgs REQUIRED)      # msgs and srv to teleop_key and Local gps
-find_package(asv_interfaces REQUIRED)      # msgs and srv to teleop_key and Local gps
-find_package(mavros_msgs REQUIRED)      # msgs and srv to teleop_key and Local gps
+find_package(geometry_msgs REQUIRED)      # msgs and srv 
+find_package(asv_interfaces REQUIRED)      # msgs and srv 
+find_package(mavros_msgs REQUIRED)      # msgs and srv 
+find_package(asv_library REQUIRED)      # msgs and srv 
 
 include_directories(include)
 
@@ -107,13 +108,16 @@ add_executable(mpc_llc_rt src/mpc_llc_rt.cpp)
 ament_target_dependencies(mpc_llc_rt PUBLIC rclcpp mavros_msgs geometry_msgs asv_interfaces pluginlib acados_solver_base)
 
 add_executable(mpc_mlc_pf_rt src/mpc_mlc_pf_rt.cpp)
-ament_target_dependencies(mpc_mlc_pf_rt PUBLIC rclcpp mavros_msgs geometry_msgs asv_interfaces pluginlib acados_solver_base)
+ament_target_dependencies(mpc_mlc_pf_rt PUBLIC rclcpp mavros_msgs geometry_msgs asv_interfaces pluginlib acados_solver_base asv_library)
 
 add_executable(mpc_mlc_pf_mod_rt src/mpc_mlc_pf_mod_rt.cpp)
 ament_target_dependencies(mpc_mlc_pf_mod_rt PUBLIC rclcpp mavros_msgs geometry_msgs asv_interfaces pluginlib acados_solver_base)
 
 add_executable(mpc_mlc_pf_coor_rt src/mpc_mlc_pf_coor_rt.cpp)
 ament_target_dependencies(mpc_mlc_pf_coor_rt PUBLIC rclcpp mavros_msgs geometry_msgs asv_interfaces pluginlib acados_solver_base)
+
+add_executable(iblosmp_mlc_pf src/iblosmp_mlc_pf.cpp)
+ament_target_dependencies(iblosmp_mlc_pf PUBLIC rclcpp mavros_msgs geometry_msgs asv_interfaces pluginlib acados_solver_base asv_library)
 
 #-----------------------------------------------------
 #   Tests
@@ -135,6 +139,7 @@ install(TARGETS
   mpc_mlc_pf_rt
   mpc_mlc_pf_mod_rt
   mpc_mlc_pf_coor_rt
+  iblosmp_mlc_pf
   DESTINATION lib/${PROJECT_NAME})
 
 # Install plugins

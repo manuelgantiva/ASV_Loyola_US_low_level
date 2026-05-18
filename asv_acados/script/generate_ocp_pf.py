@@ -36,13 +36,14 @@ def export_asv_pf_ocp():
     # set dimensions
     nx = model.x.rows()
     nu = model.u.rows()
-    ny = nx + nu
+    nz = model.z.rows()
+    ny = nx + nu + nz
     ny_e = nx
 
     ocp.solver_options.N_horizon = N
     ocp.solver_options.tf = N * Ts  
 
-    Q = np.diag([100.0, 100.0, 0.0, 0.0, 0.0, 10.0, 0.0, 0.0])       # penalización estados
+    Q = np.diag([100.0, 100.0, 0.0, 0.0, 0.0, 10.0, 0.0, 0.0, 0.0, 0.0])       # penalización estados
     R = np.diag([0.0, 0.0, 0.0])               # penalización control
     Qe = np.diag([100.0, 100.0, 0.0, 0.0, 0.0, 10.0, 0.0, 0.0])
 
@@ -54,6 +55,8 @@ def export_asv_pf_ocp():
 
     Vx = np.zeros((ny, nx))
     Vx[:nx, :nx] = np.eye(nx)
+    Vx[0, 0] = 0.0
+    Vx[1, 1] = 0.0
     ocp.cost.Vx = Vx
 
     Vu = np.zeros((ny, nu))
@@ -62,12 +65,19 @@ def export_asv_pf_ocp():
     Vu[10, 2] = 1.0
     ocp.cost.Vu = Vu
 
+    Vz = np.zeros((ny, nz))
+    Vz[0, 0] = 1.0
+    Vz[1, 1] = 1.0
+    ocp.cost.Vz = Vz
+
     Vx_e = np.zeros((ny_e, nx))
     Vx_e[:nx, :nx] = np.eye(nx)
+    Vx_e[0, 0] = 0.0
+    Vx_e[1, 1] = 0.0
     ocp.cost.Vx_e = Vx_e
 
     # set initial references
-    ocp.cost.yref = np.array([0, 0, 0, 0, 0, 0.5, 0, 0, 0, 0, 0])
+    ocp.cost.yref = np.array([0, 0, 0, 0, 0, 0.5, 0, 0, 0, 0, 0, 0, 0])
     ocp.cost.yref_e = np.array([0, 0, 0, 0, 0, 0.5, 0, 0])
 
     ocp.parameter_values = np.zeros((model_ac.p.shape[0],))
@@ -99,7 +109,7 @@ def export_asv_pf_ocp():
     ocp.solver_options.qp_solver = "PARTIAL_CONDENSING_HPIPM"
     ocp.solver_options.nlp_solver_type = "SQP_RTI"
     ocp.solver_options.hessian_approx = "GAUSS_NEWTON"
-    ocp.solver_options.integrator_type = "ERK"
+    ocp.solver_options.integrator_type = "IRK"
     # ocp.solver_options.sim_method_num_stages = 1
     # ocp.solver_options.sim_method_num_steps = 1
     

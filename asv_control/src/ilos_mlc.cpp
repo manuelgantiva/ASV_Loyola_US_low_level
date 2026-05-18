@@ -6,7 +6,7 @@
 #include "asv_interfaces/msg/reference_llc.hpp"
 
 #include <cmath>
-#include <thread>
+#include <algorithm>
 // #include "asv_library/curvas_sim.h"
 #include "asv_library/curvas_alamillo.h"
 
@@ -16,38 +16,38 @@ using std::placeholders::_1;
 
 // Declaración de contantes
 
-class WangMlcNode : public rclcpp::Node
+class IlosMlcNode : public rclcpp::Node
 {
 public:
-    WangMlcNode() : Node("wang_mlc")
+    IlosMlcNode() : Node("ilos_mlc")
     {     
         std::string my_id; 
         this-> declare_parameter("my_id", "ASV0");
         
         //---------Parámetros del LLC-------------------//
         this-> declare_parameter("Ts", 100.0);
-        this-> declare_parameter("delta_SGLOS", 8.0);
+        this-> declare_parameter("delta_LOS", 8.0);
         this-> declare_parameter("k_u_tar", 2.0);
-        this-> declare_parameter("taud", 15.0); 
-        this-> declare_parameter("path_d", 0); 
-        this-> declare_parameter("flag", true);
-        this-> declare_parameter("u_max", 1.2); 
-        this-> declare_parameter("SLOS_on", true); 
+        this-> declare_parameter("k_b", 0.01);
+        this-> declare_parameter("Beta_c", 0.8);
+        this-> declare_parameter("taud", 15.0); // Taud = #*Ts Est es #
+        this-> declare_parameter("path_d", 0); // path_d = #Path deseado #
         this->declare_parameter<double>("r_ref_max", 0.6);
         this->declare_parameter<double>("r_ref_min", -0.6);
+        this->declare_parameter("beta_bar_dot_max", 0.01);
 
         my_id = (this->get_parameter("my_id").as_string());    
         Ts = this->get_parameter("Ts").as_double()/1000.0;
-        delta_SGLOS = this->get_parameter("delta_SGLOS").as_double();
+        delta_LOS = this->get_parameter("delta_LOS").as_double();
         k_u_tar = this->get_parameter("k_u_tar").as_double();
+        k_b = this->get_parameter("k_b").as_double();
+        Beta_c = this->get_parameter("Beta_c").as_double();
         taud = this->get_parameter("taud").as_double();
         path_d  = this->get_parameter("path_d").as_int();
-        flag  = this->get_parameter("flag").as_bool();
-        u_max = this->get_parameter("u_max").as_double();
         this->get_parameter("r_ref_max", r_ref_max_);
         this->get_parameter("r_ref_min", r_ref_min_);
-        bool SLOS_on = this->get_parameter("SLOS_on").as_bool();
-        LOS = static_cast<double>(SLOS_on);
+
+        beta_bar_dot_max = this->get_parameter("beta_bar_dot_max").as_double();
 
         memory_psi.fill(0.0f);
 
@@ -57,31 +57,31 @@ public:
         double denom = Ts * (taud + 1.0);
         a = (taud * Ts) / denom;
         b = 1.0 / denom;
-
         w = 0.0;
+
         cb_group_sensors_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
         cb_group_obs_ = this->get_node_base_interface()->get_default_callback_group();
         auto options_sensors_ = rclcpp::SubscriptionOptions();
         options_sensors_.callback_group=cb_group_sensors_;
 
-        params_callback_handle_ = this->add_on_set_parameters_callback(std::bind(&WangMlcNode::param_callback, this, _1));
+        params_callback_handle_ = this->add_on_set_parameters_callback(std::bind(&IlosMlcNode::param_callback, this, _1));
 
         subscriber_states_obs_ = this-> create_subscription<asv_interfaces::msg::StateObserver>(
-            "/" + my_id + "/observer/state_observer",rclcpp::SensorDataQoS(), std::bind(&WangMlcNode::callbackStates,
+            "/" + my_id + "/observer/state_observer",rclcpp::SensorDataQoS(), std::bind(&IlosMlcNode::callbackStates,
             this, std::placeholders::_1), options_sensors_);
         subscriber_references_ = this-> create_subscription<std_msgs::msg::Float64>(
-            "/" + my_id + "/control/reference_mlc", 1, std::bind(&WangMlcNode::callbackVelReference,
+            "/" + my_id + "/control/reference_mlc", 1, std::bind(&IlosMlcNode::callbackVelReference,
             this, std::placeholders::_1), options_sensors_);
         subscriber_state = this-> create_subscription<mavros_msgs::msg::State>("/" + my_id + "/mavros/state",1,
-                std::bind(&WangMlcNode::callbackStateData, this, std::placeholders::_1), options_sensors_);
+                std::bind(&IlosMlcNode::callbackStateData, this, std::placeholders::_1), options_sensors_);
         publisher_llc = this-> create_publisher<asv_interfaces::msg::ReferenceLlc>("/" + my_id + "/control/reference_llc",1);
         publisher_error = this-> create_publisher<geometry_msgs::msg::Vector3>("/" + my_id + "/control/error_mlc",1);
         publisher_los_state = this-> create_publisher<geometry_msgs::msg::Vector3>("/" + my_id + "/control/los_state_mlc",1);
 
         timer_ = this -> create_wall_timer(std::chrono::milliseconds(int(Ts*1000.0)),
-                std::bind(&WangMlcNode::calculateMidLevelController, this), cb_group_obs_);
+                std::bind(&IlosMlcNode::calculateMidLevelController, this), cb_group_obs_);
 
-        RCLCPP_INFO(this->get_logger(), "Mid Level Controller Wang Node in %s has been started.", my_id.c_str());
+        RCLCPP_INFO(this->get_logger(), "Mid Level Controller ILOS Node in %s has been started.", my_id.c_str());
     	
     }
 
@@ -99,6 +99,8 @@ private:
             count=0;
             w=0.0;
             laps=0;
+            beta_bar=0;
+            v_bar_ff=0;
         }else{
             if(count > 4){
                 //auto start = std::chrono::high_resolution_clock::now();
@@ -107,51 +109,68 @@ private:
 
                 double x_hat_i;
                 double y_hat_i;
+                double u_hat_i;
                 double v_hat_i;
                 double psi_hat_i;
                 double u_d_i;
                 double xe, ye;
                 double xp_i, yp_i;
-                double dxp_i, dyp_i;
-                double psip_i;
+                double phip_i;
+                double dphip_i;
+                double Fp_i;
                 {
                     std::lock_guard<std::mutex> lock(mutex_);
                     x_hat_i = x_hat;
                     y_hat_i = y_hat;
-                    v_hat_i=v_hat;
+                    u_hat_i = u_hat;
+                    v_hat_i = v_hat;
                     psi_hat_i=psi_hat;
                     u_d_i=u_d;
                 }
                 Target p_i = currentTarget(w);
                 xp_i=p_i.xp;
                 yp_i=p_i.yp;
-                dxp_i=p_i.dxp;
-                dyp_i=p_i.dyp;
-                psip_i = atan2(dyp_i, dxp_i);
+                phip_i = p_i.phip;
+                dphip_i = p_i.dphip;
+                Fp_i = p_i.f_c;
 
                 psi_hat_i = normalizeAngle(psi_hat_i);
 
-                xe = (x_hat_i - xp_i)*cos(psip_i) + (y_hat_i - yp_i)*sin(psip_i);
-                ye = -1*(x_hat_i - xp_i)*sin(psip_i) + (y_hat_i - yp_i)*cos(psip_i);
+                double beta_hat_i = atan2(v_hat_i,u_hat_i);
+                double chi_hat =  psi_hat_i + beta_hat_i;
+
+                xe = (x_hat_i - xp_i)*cos(phip_i) + (y_hat_i - yp_i)*sin(phip_i);
+                ye = -1*(x_hat_i - xp_i)*sin(phip_i) + (y_hat_i - yp_i)*cos(phip_i);
 
                 msg_e.x = xe;
                 msg_e.y = ye;
                 msg_e.z = w;
 
-                double k1_i = u_d_i / delta_SGLOS;
-                double u_ref = k1_i * std::sqrt(delta_SGLOS*delta_SGLOS + ye*ye*LOS);
-                double b_ref = 0.0;
-                if(flag){
-                    b_ref = atan2(v_hat_i, u_ref);
-                }else{
-                    b_ref = -1*atan2(v_hat_i, u_ref);
-                }
-                double psi_ref = psip_i - b_ref - atan2(ye, delta_SGLOS);
-                double U_ref = std::sqrt(u_ref*u_ref + v_hat_i*v_hat_i);
-                double u_tar = k_u_tar*xe + U_ref*cos(psi_hat_i-psip_i+b_ref);
-                double w_dot = u_tar / (std::sqrt(dxp_i*dxp_i + dyp_i*dyp_i));
+                double u_ref = u_d_i;
+                double U_hat = std::sqrt(u_hat_i*u_hat_i + v_hat_i*v_hat_i);
+                double u_tar = k_u_tar*xe + U_hat*cos(chi_hat-phip_i);
+                u_tar = std::clamp(u_tar, 0.0, 3.0);
+                double w_dot = u_tar / Fp_i;
 
-                msg_los.x = b_ref;
+                double chi_d = phip_i - std::atan2(ye, delta_LOS);
+
+                const double chi_e = std::atan2(std::sin(chi_hat - chi_d), std::cos(chi_hat - chi_d));
+                double beta_bar_dot = k_b * chi_e;
+                beta_bar_dot = std::clamp(beta_bar_dot, -beta_bar_dot_max, beta_bar_dot_max);
+                beta_bar += beta_bar_dot * Ts;
+                // RCLCPP_INFO(this->get_logger(), "dot: %.5f and beta %.5f", beta_bar_dot, beta_bar);
+
+                const double chi_d_dot = dphip_i * u_tar / Fp_i;
+                const double dot_v_bar_ff = -u_d_i * chi_d_dot - Beta_c * v_bar_ff;
+                v_bar_ff += dot_v_bar_ff * Ts;
+                const double beta_ff = std::atan2(v_bar_ff, u_d_i);
+
+                const double beta_est = beta_bar + beta_ff;
+                double psi_ref = chi_d - beta_est;
+
+                msg_los.x = beta_bar;
+                msg_los.y = beta_ff;
+                msg_los.z = beta_bar_dot;
 
                 w += Ts*w_dot;
                 // Corrijo el angulo de referencia teniendo en cuenta las vueltas sobre la trayectoria
@@ -178,10 +197,6 @@ private:
                     r_ref = r_ref_max_;
                 }else if(r_ref < r_ref_min_){
                     r_ref = r_ref_min_;
-                }
-
-                if(u_ref > u_max){
-                    u_ref = u_max;
                 }
 
                 msg_ref.references[0].x = u_ref;
@@ -214,6 +229,7 @@ private:
             std::lock_guard<std::mutex> lock(mutex_);
             x_hat = msg->point.x;
             y_hat = msg->point.y;
+            u_hat = msg->velocity.x;
             v_hat = msg->velocity.y;
             psi_hat = msg->point.z;
         }
@@ -281,6 +297,7 @@ private:
         return result;
     }
         
+
     double normalizeAngle(double angle)    {
         const double twoPi = 2.0 * M_PI;
         angle = std::fmod(angle, twoPi);
@@ -299,37 +316,69 @@ private:
             result.reason = reason_msg;
             return result;
         };
-
         {
             std::lock_guard<std::mutex> lock(mutex_);
             armed_local = armed;
         }
-
         if (armed_local) {
             return reject("could not change params", "ARMED: parameter changes blocked");
         }
 
         for (const auto &param : params) {
-            if (param.get_name() == "delta_SGLOS") {
+            if (param.get_name() == "delta_LOS") {
                 if (param.get_type() == rclcpp::ParameterType::PARAMETER_DOUBLE &&
-                    param.as_double() >= 0.0 && param.as_double() < 100.0) {
+                    param.as_double() > 0.0 && param.as_double() < 100.0) {
                     RCLCPP_INFO(this->get_logger(), "changed param value");
-                    delta_SGLOS = param.as_double();
+                    delta_LOS = param.as_double();
                 } else {
-                    return reject("could not change param delta_SGLOS",
-                                "delta_SGLOS: double in [0,100)");
+                    return reject("could not change param delta_LOS",
+                                "delta_LOS: double in (0,100)");
                 }
             }
             if (param.get_name() == "k_u_tar") {
                 if (param.get_type() == rclcpp::ParameterType::PARAMETER_DOUBLE &&
-                    param.as_double() >= 0.0 && param.as_double() < 100.0) {
+                    param.as_double() > 0.0 && param.as_double() < 100.0) {
                     RCLCPP_INFO(this->get_logger(), "changed param value");
                     k_u_tar = param.as_double();
                 } else {
                     return reject("could not change param k_u_tar",
-                                "k_u_tar: double in [0,100)");
+                                "k_u_tar: double in (0,100)");
                 }
             }
+            if (param.get_name() == "k_b") {
+                if (param.get_type() == rclcpp::ParameterType::PARAMETER_DOUBLE &&
+                    std::isfinite(param.as_double()) &&
+                    param.as_double() >= 0.0) {
+                    RCLCPP_INFO(this->get_logger(), "changed param value");
+                    k_b = param.as_double();
+                } else {
+                    return reject("could not change param k_b",
+                                "k_b: finite double >= 0");
+                }
+            }
+            if (param.get_name() == "Beta_c") {
+                if (param.get_type() == rclcpp::ParameterType::PARAMETER_DOUBLE &&
+                    std::isfinite(param.as_double()) &&
+                    param.as_double() > 0.0) {
+                    RCLCPP_INFO(this->get_logger(), "changed param value");
+                    Beta_c = param.as_double();
+                } else {
+                    return reject("could not change param Beta_c",
+                                "Beta_c: finite double > 0");
+                }
+            }
+            if (param.get_name() == "beta_bar_dot_max") {
+                if (param.get_type() == rclcpp::ParameterType::PARAMETER_DOUBLE &&
+                    std::isfinite(param.as_double()) &&
+                    param.as_double() > 0.0) {
+                    RCLCPP_INFO(this->get_logger(), "changed param value");
+                    beta_bar_dot_max = param.as_double();
+                } else {
+                    return reject("could not change param beta_bar_dot_max",
+                                "beta_bar_dot_max: finite double > 0");
+                }
+            }
+
             if (param.get_name() == "taud") {
                 if (param.get_type() == rclcpp::ParameterType::PARAMETER_DOUBLE &&
                     param.as_double() >= 0.0 && param.as_double() < 500.0) {
@@ -342,6 +391,7 @@ private:
                                 "taud: double in [0,500)");
                 }
             }
+
             if (param.get_name() == "path_d") {
                 if (param.get_type() == rclcpp::ParameterType::PARAMETER_INTEGER &&
                     param.as_int() >= 0 && param.as_int() <= 5) {
@@ -352,25 +402,7 @@ private:
                                 "path_d: integer in [0,5]");
                 }
             }
-            if (param.get_name() == "flag") {
-                if (param.get_type() == rclcpp::ParameterType::PARAMETER_BOOL) {
-                    RCLCPP_INFO(this->get_logger(), "changed param value");
-                    flag = param.as_bool();
-                } else {
-                    return reject("could not change param flag",
-                                "flag: bool");
-                }
-            }
-            if (param.get_name() == "u_max") {
-                if (param.get_type() == rclcpp::ParameterType::PARAMETER_DOUBLE &&
-                    param.as_double() >= 0.0 && param.as_double() <= 2.0) {
-                    RCLCPP_INFO(this->get_logger(), "changed param value");
-                    u_max = param.as_double();
-                } else {
-                    return reject("could not change param u_max",
-                                "u_max: double in [0,2.0]");
-                }
-            }
+
             if (param.get_name() == "Ts") {
                 if (param.get_type() == rclcpp::ParameterType::PARAMETER_DOUBLE &&
                     param.as_double() > 0.0 && param.as_double() < 1000.0) {
@@ -386,23 +418,14 @@ private:
 
                     timer_ = this->create_wall_timer(
                         std::chrono::milliseconds(int(Ts * 1000.0)),
-                        std::bind(&WangMlcNode::calculateMidLevelController, this),
+                        std::bind(&IlosMlcNode::calculateMidLevelController, this),
                         cb_group_obs_);
                 } else {
                     return reject("could not change param Ts",
                                 "Ts: double in (0,1000) ms");
                 }
             }
-            if (param.get_name() == "SLOS_on") {
-                if (param.get_type() == rclcpp::ParameterType::PARAMETER_BOOL) {
-                    RCLCPP_INFO(this->get_logger(), "changed param value");
-                    bool SLOS_on = param.as_bool();
-                    LOS = static_cast<double>(SLOS_on);
-                } else {
-                    return reject("could not change param SLOS_on",
-                                "SLOS_on: bool");
-                }
-            }
+
             if (param.get_name() == "r_ref_max") {
                 if (param.get_type() == rclcpp::ParameterType::PARAMETER_DOUBLE &&
                     param.as_double() > 0.0 && param.as_double() <= 0.6) {
@@ -413,6 +436,7 @@ private:
                                 "r_ref_max: double in (0.0,0.6]");
                 }
             }
+
             if (param.get_name() == "r_ref_min") {
                 if (param.get_type() == rclcpp::ParameterType::PARAMETER_DOUBLE &&
                     param.as_double() >= -0.6 && param.as_double() < 0.0) {
@@ -424,28 +448,29 @@ private:
                 }
             }
         }
+
         result.successful = true;
         result.reason = "Success";
         return result;
     }
 
-    bool armed = false, armed_act=false, flag;
+    bool armed = false, armed_act=false;
     double u_hat = 0, psi_hat = 0, r_hat = 0, v_hat = 0, x_hat = 0, y_hat = 0, u_d = 0, w=0.0, psi_ant;
     int count=0, laps=0;
+    double  beta_bar=0, v_bar_ff=0, Beta_c;
     //------Params-------//
     float Ts;  
     /*Parámetros del controlador SGLOS*/
-    double delta_SGLOS; /*Ganancia delta SGLOS*/
+    double delta_LOS; /*Ganancia delta SGLOS*/
     double k_u_tar; /*Ganancia de la velocidad de surge target*/
-
-    double u_max; /*velocidad maxima de referencia*/
-    double LOS; /*velocidad maxima de referencia*/
+    double k_b; /*Ganancia de la velocidad de surge target*/
     
     double taud; /*Constante tau del filtro derivativo*/
     double a ,b; /*Constantes del filtro derivativo*/
-    double r_ref_max_, r_ref_min_;
 
     int path_d; /*Variable para elegir path*/
+    double r_ref_max_, r_ref_min_;
+    double beta_bar_dot_max;
 
     std::array<double, 2> memory_psi{};
     asv_interfaces::msg::ReferenceLlc msg_ref;
@@ -469,7 +494,7 @@ private:
 int main(int argc, char **argv)
 {
     rclcpp::init(argc, argv);
-    auto node = std::make_shared<WangMlcNode>();
+    auto node = std::make_shared<IlosMlcNode>();
     rclcpp::executors::MultiThreadedExecutor executor;
     executor.add_node(node);
     executor.spin();

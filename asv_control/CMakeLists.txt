@@ -41,9 +41,11 @@ ament_target_dependencies(ifac_llc rclcpp geometry_msgs mavros_msgs asv_interfac
 add_executable(wang_mlc src/wang_mlc.cpp)
 ament_target_dependencies(wang_mlc rclcpp geometry_msgs mavros_msgs asv_interfaces std_msgs asv_library)
 
-# add_executable(mpc_mlc_pf src/mpc_mlc_pf.cpp)
-# ament_target_dependencies(mpc_mlc_pf rclcpp geometry_msgs mavros_msgs asv_interfaces)
-# target_link_libraries(mpc_mlc_pf casadi::casadi)
+add_executable(ilos_mlc src/ilos_mlc.cpp)
+ament_target_dependencies(ilos_mlc rclcpp geometry_msgs mavros_msgs asv_interfaces std_msgs asv_library)
+
+add_executable(iblos_mlc src/iblos_mlc.cpp)
+ament_target_dependencies(iblos_mlc rclcpp geometry_msgs mavros_msgs asv_interfaces std_msgs asv_library)
 
 # Install Targets
 install(TARGETS
@@ -52,6 +54,8 @@ install(TARGETS
   asv_tf2_broadcaster
   ifac_llc
   wang_mlc
+  ilos_mlc
+  iblos_mlc
 DESTINATION lib/${PROJECT_NAME})
 
 # Install Scripts python

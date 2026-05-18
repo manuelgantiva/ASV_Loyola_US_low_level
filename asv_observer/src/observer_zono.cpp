@@ -291,9 +291,9 @@ private:
                 msg.velocity.x=min_p[2];
                 msg.velocity.y=min_p[3];
                 msg.velocity.z=min_r[1];
-                msg.disturbances.x=min_p[4] + Sigmas(0);
-                msg.disturbances.y=min_p[5] + Sigmas(1);
-                msg.disturbances.z=min_r[2] + Sigmas(2);
+                msg.disturbances.x=min_p[4] + pub_sig*Sigmas(0);
+                msg.disturbances.y=min_p[5] + pub_sig*Sigmas(1);
+                msg.disturbances.z=min_r[2] + pub_sig*Sigmas(2);
                 publisher_state_min->publish(msg);
 
                 msg.point.x=max_p[0];
@@ -302,9 +302,9 @@ private:
                 msg.velocity.x=max_p[2];
                 msg.velocity.y=max_p[3];
                 msg.velocity.z=max_r[1];
-                msg.disturbances.x=max_p[4] + Sigmas(0);
-                msg.disturbances.y=max_p[5] + Sigmas(1);
-                msg.disturbances.z=max_r[2] + Sigmas(2);
+                msg.disturbances.x=max_p[4] + pub_sig*Sigmas(0);
+                msg.disturbances.y=max_p[5] + pub_sig*Sigmas(1);
+                msg.disturbances.z=max_r[2] + pub_sig*Sigmas(2);
                 publisher_state_max->publish(msg);
 
                 auto msg_obs = geometry_msgs::msg::PoseStamped();
@@ -540,10 +540,6 @@ private:
             if (param.get_name() == "Sig_on"){
                 RCLCPP_INFO(this->get_logger(), "changed param value");
                 Sig_on = this->get_parameter("Sig_on").as_bool();
-            }
-            if (param.get_name() == "Pub_sig"){
-                RCLCPP_INFO(this->get_logger(), "changed param value");
-                pub_sig = static_cast<float>(this->get_parameter("Pub_sig").as_bool());
             }
         }
         result.successful = true;

@@ -172,36 +172,9 @@ def generate_launch_description():
         ]
     )
 
-    imu_fix_node = Node(
-        package="asv_comunication",
-        executable="imu_fix",
-        namespace= namespace_comunication,
-        parameters = [
-            {'my_id': my_namespace}
-        ]
-    )
-
     imu_ext_node = Node (
         package= "asv_comunication",
         executable= "imu_driver.py",
-        namespace= namespace_comunication,
-        parameters = [
-            {'my_id': my_namespace}
-        ]
-    )
-
-    mlc_target_node = Node(
-        package="asv_comunication",
-        executable="mlc_target",
-        namespace= namespace_comunication,
-        parameters = [
-            {'my_id': my_namespace}
-        ]
-    )
-
-    mlc_mod_target_node = Node(
-        package="asv_comunication",
-        executable="mlc_mod_target",
         namespace= namespace_comunication,
         parameters = [
             {'my_id': my_namespace}
@@ -277,34 +250,30 @@ def generate_launch_description():
                 config],
     )
 
-    mpc_mlc_pf_rt_node = Node(
+    ilos_mlc_node = Node(
+        package="asv_control",
+        executable="ilos_mlc",
+        namespace= namespace_control,
+        parameters = [{'my_id': my_namespace},
+                config],
+    )
+
+    iblos_mlc_node = Node(
+        package="asv_control",
+        executable="iblos_mlc",
+        namespace= namespace_control,
+        parameters = [{'my_id': my_namespace},
+                config],
+    )
+
+    iblosmp_mlc_pf_node = Node(
         package="asv_acados",
-        executable="mpc_mlc_pf_rt",
-        name="mpc_mlc_pf",
+        executable="iblosmp_mlc_pf",
+        name="iblosmp_mlc",
         namespace= namespace_control,
         parameters = [{'my_id': my_namespace},
             config]
     )
-
-    mpc_mlc_pf_mod_rt_node = Node(
-        package="asv_acados",
-        executable="mpc_mlc_pf_mod_rt",
-        name="mpc_mlc_pf_mod",
-        namespace= namespace_control,
-        parameters = [{'my_id': my_namespace},
-            config]
-    )
-
-    mpc_mlc_pf_coor_rt_node = Node(
-        package="asv_acados",
-        executable="mpc_mlc_pf_coor_rt",
-        name="mpc_mlc_pf_coor",
-        namespace= namespace_control,
-        parameters = [{'my_id': my_namespace},
-            config]
-    )
-
-
 
     ###################################################################
     ## -----------------------Observer Nodes--------------------------##
@@ -366,11 +335,22 @@ def generate_launch_description():
                  PythonExpression(["'/ASV' + str(", my_id, ") + '/observer/state_observer'"]))
         ]
     )
+    
+    ukf_multi_rate_node = Node(
+        package="asv_observer",
+        executable="ukf_multi_rate_node",
+        name="ukf_multi_rate_node",
+        namespace=namespace_observer,
+        parameters=[
+            {'my_id': my_namespace},
+            config
+        ],
+    )
 
     ###################################################################
     ##-------------------------ASVs Nodes----------------------------##
     ################################################################### 
-    # nodes.append(Mavros_launch)
+    nodes.append(Mavros_launch)
     # nodes.append(neighbor_robot_state_publisher_node)
     # nodes.append(own_robot_state_publisher_node)
 
@@ -379,15 +359,16 @@ def generate_launch_description():
     ################################################################### 
     nodes.append(rc_handler_node)
     # nodes.append(ref_llc_node)
-    nodes.append(ref_mlc_node)
+    # nodes.append(ref_mlc_node)
     # nodes.append(apm_llc_node)
+<<<<<<< HEAD:asv_bringup/launch/control_test.launch.py
     # nodes.append(imu_fix_node)
-    # nodes.append(imu_ext_node)
+=======
+>>>>>>> fleet/code-cleanup:asv_bringup/launch/los_pf_test.launch.py
+    nodes.append(imu_ext_node)
     nodes.append(record)
 
     # nodes.append(transceiver_xbee_node)
-    # nodes.append(mlc_target_node)
-    # nodes.append(mlc_mod_target_node)
     
     ###################################################################
     ##-----------------------Observer Nodes--------------------------##
@@ -397,22 +378,32 @@ def generate_launch_description():
     # nodes.append(observer_bejarano)
     # nodes.append(observer_liu)
     nodes.append(observer_zono)
-
+    nodes.append(ukf_multi_rate_node)
+    
     ###################################################################
     ##-----------------------Control Nodes---------------------------##
     ################################################################### 
-    nodes.append(asv_tf_broadcast_node)
-    nodes.append(pwm_mapper_node)
+    # nodes.append(asv_tf_broadcast_node)
+<<<<<<< HEAD:asv_bringup/launch/control_test.launch.py
+    # nodes.append(pwm_mapper_node)
     # nodes.append(ifac_llc_node)
-    nodes.append(mpc_llc_rt_node)
+    # nodes.append(mpc_llc_rt_node)
     # nodes.append(mux_llc_node)
     # nodes.append(wang_mlc_node)
     # nodes.append(mpc_mlc_pf_rt_node)
-    # nodes.append(mpc_mlc_pf_mod_rt_node)
-    nodes.append(mpc_mlc_pf_coor_rt_node)
+    
+    
+=======
+    nodes.append(pwm_mapper_node)
+    nodes.append(mpc_llc_rt_node)
+    # nodes.append(ifac_llc_node)
+    # nodes.append(mux_llc_node)
+    # nodes.append(wang_mlc_node)
+    # nodes.append(ilos_mlc_node)
+    # nodes.append(iblos_mlc_node)
+    nodes.append(iblosmp_mlc_pf_node)
 
-    
-    
+>>>>>>> fleet/code-cleanup:asv_bringup/launch/los_pf_test.launch.py
     
     return LaunchDescription(
         [arg_my_id, arg_rec, param_id,
