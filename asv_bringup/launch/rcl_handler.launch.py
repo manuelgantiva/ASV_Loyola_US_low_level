@@ -324,7 +324,7 @@ def generate_launch_description():
     ###################################################################
     ##-------------------------ASVs Nodes----------------------------##
     ################################################################### 
-    # nodes.append(Mavros_launch)
+    nodes.append(Mavros_launch)
     # nodes.append(neighbor_robot_state_publisher_node)
     # nodes.append(own_robot_state_publisher_node)
 
@@ -344,10 +344,10 @@ def generate_launch_description():
     ##-----------------------Observer Nodes--------------------------##
     ################################################################### 
     # nodes.append(mux_obs_node)
-    # nodes.append(observer_core)
+    nodes.append(observer_core)
     # nodes.append(observer_bejarano)
     # nodes.append(observer_liu)
-    # nodes.append(observer_zono)
+    nodes.append(observer_zono)
     # nodes.append(ukf_multi_rate_node)
 
     ###################################################################
