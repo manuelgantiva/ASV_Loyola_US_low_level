@@ -348,7 +348,7 @@ def generate_launch_description():
     # nodes.append(observer_bejarano)
     # nodes.append(observer_liu)
     nodes.append(observer_zono)
-    # nodes.append(ukf_multi_rate_node)
+    nodes.append(ukf_multi_rate_node)
 
     ###################################################################
     ##-----------------------Control Nodes---------------------------##
