@@ -147,7 +147,7 @@ public:
                 std::bind(&BagRecordNode::callbackWPred, this, std::placeholders::_1));
         subscriber_observer_state_ukf = this-> create_subscription<asv_interfaces::msg::StateObserver>("/" + name_id + "/observer/state_observer_ukf",1,
                 std::bind(&BagRecordNode::callbackObserverStateUkf, this, std::placeholders::_1));
-        subscriber_state_estimate_ukf = this->create_subscription<std_msgs::msg::Float64MultiArray>("/" + name_id + "/observer/state_ukf",rclcpp::SensorDataQoS(),
+        subscriber_state_estimate_ukf = this->create_subscription<std_msgs::msg::Float64MultiArray>("/" + name_id + "/observer/state_ukf",1,
                 std::bind(&BagRecordNode::callbackStateUkf,this,std::placeholders::_1));
 
     	RCLCPP_INFO(this->get_logger(), "Bag Record Node has been started.");
