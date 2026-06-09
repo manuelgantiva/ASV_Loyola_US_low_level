@@ -320,7 +320,12 @@ public:
       "/" + my_id_ + "/observer/state_observer_ukf",
       rclcpp::SensorDataQoS());
 
-
+    // Full-fusion estimate, published ONLY on cycles where a low-rate packet
+    // was incorporated -> effective rate = packet arrival rate (~10 Hz). Used for Controllers that want the best possible state estimate and can handle lower update rates.
+    publisher_state_estimate_lowrate_ = create_publisher<asv_interfaces::msg::StateObserver>(
+      "/" + my_id_ + "/observer/state_observer_ukf_lowrate",
+      rclcpp::SensorDataQoS());
+    
     // Full estimated state vector
     publisher_full_state_ = create_publisher<std_msgs::msg::Float64MultiArray>(
       "/" + my_id_ + "/observer/state_ukf",
@@ -928,6 +933,13 @@ private:
     // ------------------------------------------------------------------------
     x_posterior_ = x_hat_;
 
+    // Publish the full-fusion estimate ONLY on cycles where the low-rate packet
+    // was actually fused. x_posterior_ here is the state just corrected with
+    // [x y psi ax ay r], before the next prediction runs.
+    if (low_rate_update_this_cycle_ && observer_cycle_.valid) {
+      publishLowRateStateEstimate(imu_local);
+    }
+
 
     // ------------------------------------------------------------------------
     // 3) PREDICT ONE STEP USING HELD delta_* INPUTS
@@ -1360,6 +1372,36 @@ private:
       x_posterior_(IDX_PSI), x_posterior_(IDX_R));
   }
 
+  /*
+  ============================================================================
+  PUBLISH FULL-FUSION STATE (LOW-RATE TOPIC)
+  ============================================================================
+  Published only when the full low-rate packet was incorporated this cycle.
+  Stamped with the IMU time of that cycle so each sample lines up exactly
+  with the matching 100 Hz sample when comparing offline.
+  */
+  void publishLowRateStateEstimate(const ImuData & imu_local)
+  {
+    asv_interfaces::msg::StateObserver obs_msg;
+
+    obs_msg.header.stamp = imu_local.stamp;
+    obs_msg.header.frame_id = my_id_;
+
+    obs_msg.point.x = x_posterior_(IDX_X);
+    obs_msg.point.y = x_posterior_(IDX_Y);
+    obs_msg.point.z = x_posterior_(IDX_PSI);
+
+    obs_msg.velocity.x = x_posterior_(IDX_U);
+    obs_msg.velocity.y = x_posterior_(IDX_V);
+    obs_msg.velocity.z = x_posterior_(IDX_R);
+
+    obs_msg.disturbances.x = x_posterior_(IDX_SEU);
+    obs_msg.disturbances.y = x_posterior_(IDX_SEV);
+    obs_msg.disturbances.z = x_posterior_(IDX_SER);
+
+    publisher_state_estimate_lowrate_->publish(obs_msg);
+  }
+
 
 private:
   /*
@@ -1445,6 +1487,7 @@ private:
 
   rclcpp::Publisher<asv_interfaces::msg::StateObserver>::SharedPtr publisher_state_estimate_;
   rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr publisher_full_state_;
+  rclcpp::Publisher<asv_interfaces::msg::StateObserver>::SharedPtr publisher_state_estimate_lowrate_;
 };
 
 
