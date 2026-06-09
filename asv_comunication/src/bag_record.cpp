@@ -145,10 +145,14 @@ public:
                 std::bind(&BagRecordNode::callbackAccelerationExt, this, std::placeholders::_1));
         subscriber_w_pred = this-> create_subscription<std_msgs::msg::Float32MultiArray>("/" + name_id + "/control/w_pred",1,
                 std::bind(&BagRecordNode::callbackWPred, this, std::placeholders::_1));
-        subscriber_observer_state_ukf = this-> create_subscription<asv_interfaces::msg::StateObserver>("/" + name_id + "/observer/state_observer_ukf",1,
-                std::bind(&BagRecordNode::callbackObserverStateUkf, this, std::placeholders::_1));
-        subscriber_state_estimate_ukf = this->create_subscription<std_msgs::msg::Float64MultiArray>("/" + name_id + "/observer/state_ukf",1,
-                std::bind(&BagRecordNode::callbackStateUkf,this,std::placeholders::_1));
+        subscriber_observer_state_ukf = this-> create_subscription<asv_interfaces::msg::StateObserver>("/" + name_id + "/observer/state_observer_ukf",
+                rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackObserverStateUkf, this, std::placeholders::_1));
+                
+        subscriber_state_estimate_ukf = this->create_subscription<std_msgs::msg::Float64MultiArray>("/" + name_id + "/observer/state_ukf",
+                rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackStateUkf,this,std::placeholders::_1));
+
+        subscriber_observer_state_ukf = this-> create_subscription<asv_interfaces::msg::StateObserver>("/" + name_id + "/observer/state_observer_ukf_lowrate",
+                rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackObserverStateUkfLowrate, this, std::placeholders::_1));
 
     	RCLCPP_INFO(this->get_logger(), "Bag Record Node has been started.");
     }
@@ -303,6 +307,18 @@ private:
         if(armed==true){
             rclcpp::Time time_stamp = this->now();
             writer_->write(msg, "/" + name_id + "/observer/state_ukf", "std_msgs/msg/Float64MultiArray", time_stamp);
+        }
+    }
+
+    // Adding a separate callback for the low-rate UKF output, which is published only when a low-rate packet is incorporated. 
+    // This allows us to compare the high-rate UKF output (which is published at IMU rate) with the low-rate one, and see the effect of incorporating the low-rate measurements on the state estimate. 
+    // The low-rate UKF output is expected to have better accuracy but lower update rate, while the high-rate one may be noisier but more responsive. 
+    // By recording both, we can analyze the trade-offs and benefits of each approach in post-processing.
+    void callbackObserverStateUkfLowrate(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
+    {
+        if(armed==true){
+            rclcpp::Time time_stamp = this->now();
+            writer_->write(msg, "/" + name_id + "/observer/state_observer_ukf_lowrate", "asv_interfaces/msg/StateObserver", time_stamp);
         }
     }
 
@@ -579,6 +595,7 @@ private:
     rclcpp::Subscription<std_msgs::msg::Float32MultiArray>::SharedPtr subscriber_w_pred;
     rclcpp::Subscription<asv_interfaces::msg::StateObserver>::SharedPtr subscriber_observer_state_ukf;
     rclcpp::Subscription<std_msgs::msg::Float64MultiArray>::SharedPtr subscriber_state_estimate_ukf;
+    rclcpp::Subscription<asv_interfaces::msg::StateObserver>::SharedPtr subscriber_observer_state_ukf_lowrate;
 };
 
 int main(int argc, char **argv)
