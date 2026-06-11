@@ -1050,7 +1050,7 @@ private:
 
     const double sigma_v =
       Xv_.at(0) * v * std::abs(v) +
-      Xv_.at(1) * v * std::abs(r) +
+      Xv_.at(1) * u * std::abs(r) +
       Xv_.at(2) * r * std::abs(v) +
       Xv_.at(3) * r * std::abs(r) +
       Xv_.at(4) * u * v +
@@ -1153,10 +1153,12 @@ private:
     computeInputGainAndDisturbances(x, Gm, sigma_m);
 
 
-    const double ax_model = Gm(0) + sigma_m(0) + x(IDX_SEU) - x(IDX_R) * x(IDX_V) + x(IDX_BAX);
-    const double ay_model = Gm(1) + sigma_m(1) + x(IDX_SEV) + x(IDX_R) * x(IDX_U) + x(IDX_BAY);
+    // const double ax_model = Gm(0) + sigma_m(0) + x(IDX_SEU) - x(IDX_R) * x(IDX_V) + x(IDX_BAX);
+    // const double ay_model = Gm(1) + sigma_m(1) + x(IDX_SEV) + x(IDX_R) * x(IDX_U) + x(IDX_BAY);
+    // const double r_model  = x(IDX_R) + x(IDX_BGR);
+    const double ax_model = Gm(0) + sigma_m(0) + x(IDX_SEU) + x(IDX_BAX);
+    const double ay_model = Gm(1) + sigma_m(1) + x(IDX_SEV) + x(IDX_BAY);
     const double r_model  = x(IDX_R) + x(IDX_BGR);
-
 
     if (use_full) {
       Eigen::VectorXd z(NZ_FULL);
@@ -1218,7 +1220,7 @@ private:
 
 
     // Add process noise
-    P_pred += Q_;
+    P_pred += Q_ * dt_;
 
 
     // Numerical symmetry protection
