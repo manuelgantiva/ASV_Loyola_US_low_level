@@ -396,7 +396,8 @@ private:
     // Navigation measurements
     double x = 0.0;
     double y = 0.0;
-    double psi = 0.0;
+    double psi = 0.0;     // wrapped heading used inside the UKF
+    double psi_raw = 0.0; // continuous heading used only for final publishing
     double r_low = 0.0;
 
 
@@ -485,6 +486,16 @@ private:
     return std::atan2(std::sin(a), std::cos(a));
   }
 
+  /*
+  ============================================================================
+  HELPER: Double WRAP ANGLE to Publish heading continuously
+  ============================================================================
+  */
+  static double unwrapAngleNear(double wrapped_angle, double reference_angle)
+  {
+    static constexpr double TWO_PI = 2.0 * M_PI;
+    return wrapped_angle + TWO_PI * std::round((reference_angle - wrapped_angle) / TWO_PI);
+  }
 
   /*
   ============================================================================
@@ -685,7 +696,9 @@ private:
 
     observer_latest_.x           = static_cast<double>(msg->data[0]);
     observer_latest_.y           = static_cast<double>(msg->data[1]);
-    observer_latest_.psi         = wrapAngle(static_cast<double>(msg->data[2]));
+    // observer_latest_.psi         = wrapAngle(static_cast<double>(msg->data[2]));
+    observer_latest_.psi_raw     = static_cast<double>(msg->data[2]);
+    observer_latest_.psi         = wrapAngle(observer_latest_.psi_raw);
     observer_latest_.r_low       = static_cast<double>(msg->data[3]);
     observer_latest_.delta_diff  = static_cast<double>(msg->data[4]);
     observer_latest_.delta_mean  = static_cast<double>(msg->data[5]);
@@ -933,12 +946,19 @@ private:
     // ------------------------------------------------------------------------
     x_posterior_ = x_hat_;
 
-    // Publish the full-fusion estimate ONLY on cycles where the low-rate packet
+ 
+
+    // build the the continous heading only
+    updateContinuousPsi();
+
+       // Publish the full-fusion estimate ONLY on cycles where the low-rate packet
     // was actually fused. x_posterior_ here is the state just corrected with
     // [x y psi ax ay r], before the next prediction runs.
     if (low_rate_update_this_cycle_ && observer_cycle_.valid) {
       publishLowRateStateEstimate(imu_local);
     }
+
+
 
 
     // ------------------------------------------------------------------------
@@ -1323,6 +1343,35 @@ private:
     P_ = 0.5 * (P_ + P_.transpose());
   }
 
+  /*
+  ============================================================================
+  Update continous heading for publishing, to avoid jumps in psi when wrapping around.
+  This is only used for publishing, not for the filter itself.  
+  ============================================================================
+  */
+ void updateContinuousPsi()
+  {
+    const double psi_wrapped = x_posterior_(IDX_PSI);
+    double reference;
+    if (!psi_publish_initialized_) {
+      if(observer_cycle_.valid) {
+        reference = observer_cycle_.psi;
+      } else {
+        reference = psi_wrapped;
+      }
+    }
+    else {
+        reference = psi_publis_continous_;
+      }
+
+    // if this cycle used a freash low-rate packet,  use the raw continous heading as the branch
+    if (low_rate_update_this_cycle_ && observer_cycle_.valid)
+    {
+      reference = observer_cycle_.psi_raw;
+    }
+    psi_publis_continous_ = unwrapAngleNear(psi_wrapped, reference);
+    psi_publish_initialized_ = true;
+  }
 
   /*
   ============================================================================
@@ -1340,6 +1389,7 @@ private:
     for (int i = 0; i < NX; ++i) {
       full_msg.data[static_cast<std::size_t>(i)] = x_posterior_(i);
     }
+    full_msg.data[static_cast<std::size_t>(IDX_PSI)] = psi_publis_continous_;
     publisher_full_state_->publish(full_msg);
 
 
@@ -1351,7 +1401,8 @@ private:
 
     obs_msg.point.x = x_posterior_(IDX_X);
     obs_msg.point.y = x_posterior_(IDX_Y);
-    obs_msg.point.z = x_posterior_(IDX_PSI);
+    // obs_msg.point.z = x_posterior_(IDX_PSI);
+    obs_msg.point.z = psi_publis_continous_;
 
 
     obs_msg.velocity.x = x_posterior_(IDX_U);
@@ -1369,9 +1420,9 @@ private:
 
     RCLCPP_INFO_THROTTLE(
       get_logger(), *get_clock(), 1000,
-      "Publishing state estimate: x=%.2f, y=%.2f, psi=%.2f, r=%.2f",
+      "Publishing state estimate: x=%.2f, y=%.2f, psi_continuous=%.2f, psi_wrapped=%.2f, r=%.2f",
       x_posterior_(IDX_X), x_posterior_(IDX_Y),
-      x_posterior_(IDX_PSI), x_posterior_(IDX_R));
+      psi_publis_continous_, x_posterior_(IDX_PSI), x_posterior_(IDX_R));
   }
 
   /*
@@ -1391,7 +1442,8 @@ private:
 
     obs_msg.point.x = x_posterior_(IDX_X);
     obs_msg.point.y = x_posterior_(IDX_Y);
-    obs_msg.point.z = x_posterior_(IDX_PSI);
+    // obs_msg.point.z = x_posterior_(IDX_PSI);
+    obs_msg.point.z = psi_publis_continous_;
 
     obs_msg.velocity.x = x_posterior_(IDX_U);
     obs_msg.velocity.y = x_posterior_(IDX_V);
@@ -1448,8 +1500,9 @@ private:
   Eigen::MatrixXd P_init_;       // initial covariance
   Eigen::MatrixXd Q_;            // process noise covariance
   Eigen::MatrixXd R_full_;       // full measurement covariance
-
-
+  double psi_publis_continous_ = 0.0;  // continuous psi for publishing, to avoid jumps
+  bool psi_publish_initialized_ = false;
+ 
   /*
   ============================================================================
   FLAGS
