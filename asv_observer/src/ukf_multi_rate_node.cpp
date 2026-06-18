@@ -272,6 +272,32 @@ public:
     Q_      = vectorToDiagonalMatrix(Q_diag, NX);
     R_full_ = vectorToDiagonalMatrix(R_diag, NZ_FULL);
 
+    // adding the rclcpp warn sterm to see wether the filter is recieving the Q an R matrices correctly or not
+    RCLCPP_WARN_STREAM(
+      get_logger(),
+      "Q parameter: " << Eigen::Map<const Eigen::VectorXd>(
+        Q_diag.data(), static_cast<Eigen::Index>(Q_diag.size())).transpose());
+
+    RCLCPP_WARN_STREAM(
+      get_logger(),
+      "R parameter: " << Eigen::Map<const Eigen::VectorXd>(
+        R_diag.data(), static_cast<Eigen::Index>(R_diag.size())).transpose());
+
+    RCLCPP_WARN_STREAM(
+      get_logger(),
+      "Internal Q diagonal: " << Q_.diagonal().transpose());
+
+    RCLCPP_WARN_STREAM(
+      get_logger(),
+      "Internal R diagonal: " << R_full_.diagonal().transpose());
+
+      RCLCPP_WARN_STREAM(
+      get_logger(),
+      "Effective Q-step diagonal: "
+        << (Q_ * dt_).diagonal().transpose());
+
+
+
 
     alpha_ = get_parameter("alpha").as_double();
     beta_  = get_parameter("beta").as_double();
