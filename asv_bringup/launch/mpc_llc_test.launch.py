@@ -304,11 +304,29 @@ def generate_launch_description():
         parameters=[
             {'my_id': my_namespace},
             config
+        ]
+        #,
+        #remappings=[
+         #   (PythonExpression(["'/ASV' + str(", my_id, ") + '/observer/state_observer_zono'"]),
+        #       PythonExpression(["'/ASV' + str(", my_id, ") + '/observer/state_observer'"]))
+        #]
+    )
+
+
+    ukf_multi_rate_node = Node(
+        package="asv_observer",
+        executable="ukf_multi_rate_node",
+        name="ukf_multi_rate_node",
+        namespace=namespace_observer,
+        parameters=[
+            {'my_id': my_namespace},
+            config
         ],
         remappings=[
-            (PythonExpression(["'/ASV' + str(", my_id, ") + '/observer/state_observer_zono'"]),
+            (PythonExpression(["'/ASV' + str(", my_id, ") + '/observer/state_observer_ukf_lowrate'"]),
                  PythonExpression(["'/ASV' + str(", my_id, ") + '/observer/state_observer'"]))
         ]
+
     )
 
     ###################################################################
@@ -338,6 +356,8 @@ def generate_launch_description():
     # nodes.append(observer_bejarano)
     # nodes.append(observer_liu)
     nodes.append(observer_zono)
+    nodes.append(ukf_multi_rate_node)
+
 
     ###################################################################
     ##-----------------------Control Nodes---------------------------##
