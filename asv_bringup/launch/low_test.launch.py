@@ -314,7 +314,7 @@ def generate_launch_description():
     ukf_multi_rate_node = Node(
         package="asv_observer",
         executable="ukf_multi_rate_node",
-        name="ukf_multi_rate",
+        name="ukf_multi_rate_node",
         namespace=namespace_observer,
         parameters=[
             {'my_id': my_namespace},
