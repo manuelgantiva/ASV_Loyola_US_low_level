@@ -1,1 +1,0 @@
-acados_solver_base;pluginlib;rclcpp;rclpy;mavros_msgs;geometry_msgs;asv_interfaces;asv_library;acados_solver_plugins;ament_lint_auto;ament_lint_common;ament_copyright
