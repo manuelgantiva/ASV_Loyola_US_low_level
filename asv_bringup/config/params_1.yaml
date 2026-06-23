@@ -67,7 +67,8 @@ ASV1:
 
 
         # R: [ 1.2,1.2,0.001218,0.02,0.012,0.02]   # The values of the Stationary
-        R: [ 0.2,0.2,0.001218,0.02,0.012,0.02]     # Path Following to be more sensetive to GPS 
+        # R: [ 0.2,0.2,0.001218,0.02,0.012,0.02]     # Path Following to be more sensetive to GPS
+        R: [ 0.2,0.2,0.001218,0.2,0.012,0.02]     # Staying put
         alpha: 0.001 
         beta: 2.0
         kappa: -2.0
