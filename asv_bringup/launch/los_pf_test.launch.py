@@ -335,17 +335,6 @@ def generate_launch_description():
                  PythonExpression(["'/ASV' + str(", my_id, ") + '/observer/state_observer'"]))
         ]
     )
-    
-    ukf_multi_rate_node = Node(
-        package="asv_observer",
-        executable="ukf_multi_rate_node",
-        name="ukf_multi_rate_node",
-        namespace=namespace_observer,
-        parameters=[
-            {'my_id': my_namespace},
-            config
-        ],
-    )
 
     ###################################################################
     ##-------------------------ASVs Nodes----------------------------##
@@ -359,12 +348,8 @@ def generate_launch_description():
     ################################################################### 
     nodes.append(rc_handler_node)
     # nodes.append(ref_llc_node)
-    # nodes.append(ref_mlc_node)
+    nodes.append(ref_mlc_node)
     # nodes.append(apm_llc_node)
-<<<<<<< HEAD:asv_bringup/launch/control_test.launch.py
-    # nodes.append(imu_fix_node)
-=======
->>>>>>> fleet/code-cleanup:asv_bringup/launch/los_pf_test.launch.py
     nodes.append(imu_ext_node)
     nodes.append(record)
 
@@ -378,22 +363,11 @@ def generate_launch_description():
     # nodes.append(observer_bejarano)
     # nodes.append(observer_liu)
     nodes.append(observer_zono)
-    nodes.append(ukf_multi_rate_node)
-    
+
     ###################################################################
     ##-----------------------Control Nodes---------------------------##
     ################################################################### 
     # nodes.append(asv_tf_broadcast_node)
-<<<<<<< HEAD:asv_bringup/launch/control_test.launch.py
-    # nodes.append(pwm_mapper_node)
-    # nodes.append(ifac_llc_node)
-    # nodes.append(mpc_llc_rt_node)
-    # nodes.append(mux_llc_node)
-    # nodes.append(wang_mlc_node)
-    # nodes.append(mpc_mlc_pf_rt_node)
-    
-    
-=======
     nodes.append(pwm_mapper_node)
     nodes.append(mpc_llc_rt_node)
     # nodes.append(ifac_llc_node)
@@ -403,7 +377,6 @@ def generate_launch_description():
     # nodes.append(iblos_mlc_node)
     nodes.append(iblosmp_mlc_pf_node)
 
->>>>>>> fleet/code-cleanup:asv_bringup/launch/los_pf_test.launch.py
     
     return LaunchDescription(
         [arg_my_id, arg_rec, param_id,
