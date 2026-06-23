@@ -1,0 +1,9 @@
+<library path="asv_acados">
+  <class name="asv_acados/PfAsvAcadosSolver"
+         type="asv_acados::PfAsvAcadosSolver"
+         base_class_type="acados::AcadosSolver">
+    <description>
+      This solver contains the Path Following ASV model.
+    </description>
+  </class>
+</library>

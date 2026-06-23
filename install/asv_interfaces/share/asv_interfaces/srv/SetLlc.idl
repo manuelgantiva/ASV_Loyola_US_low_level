@@ -1,0 +1,30 @@
+// generated from rosidl_adapter/resource/srv.idl.em
+// with input from asv_interfaces/srv/SetLlc.srv
+// generated code does not contain a copyright notice
+
+
+module asv_interfaces {
+  module srv {
+    module SetLlc_Request_Constants {
+      @verbatim (language="comment", text=
+        "basic LLC_MODE")
+      const uint8 LLC_APM = 1;
+      const uint8 LLC_IFAC = 2;
+      const uint8 LLC_MPC = 3;
+    };
+    @verbatim (language="comment", text=
+      "set LLC" "\n"
+      "this is a service used to set the the state observer" "\n"
+      "If you want to embed it in another message.")
+    struct SetLlc_Request {
+      @verbatim (language="comment", text=
+        "filled by LLC_MODE enum value")
+      uint8 llc_mode;
+    };
+    struct SetLlc_Response {
+      @verbatim (language="comment", text=
+        "Mode correctly and SET_ESO are sent")
+      boolean success;
+    };
+  };
+};

@@ -1,0 +1,30 @@
+// generated from rosidl_adapter/resource/srv.idl.em
+// with input from asv_interfaces/srv/SetObs.srv
+// generated code does not contain a copyright notice
+
+
+module asv_interfaces {
+  module srv {
+    module SetObs_Request_Constants {
+      @verbatim (language="comment", text=
+        "basic ESO_MODE")
+      const uint8 ESO_BEJARANO = 1;
+      const uint8 ESO_LIU = 2;
+      const uint8 ESO_ZONO = 3;
+    };
+    @verbatim (language="comment", text=
+      "set ESO" "\n"
+      "this is a service used to set the the state observer" "\n"
+      "If you want to embed it in another message.")
+    struct SetObs_Request {
+      @verbatim (language="comment", text=
+        "filled by ESO_MODE enum value")
+      uint8 eso_mode;
+    };
+    struct SetObs_Response {
+      @verbatim (language="comment", text=
+        "Mode correctly and SET_ESO are sent")
+      boolean success;
+    };
+  };
+};

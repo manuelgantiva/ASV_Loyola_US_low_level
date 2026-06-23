@@ -1,0 +1,12 @@
+# set LLC
+# this is a service used to set the the state observer
+# If you want to embed it in another message.
+
+# basic LLC_MODE
+uint8 LLC_APM	    = 1
+uint8 LLC_IFAC	    = 2
+uint8 LLC_MPC		= 3
+
+uint8 llc_mode		# filled by LLC_MODE enum value
+---
+bool success		# Mode correctly and SET_ESO are sent
