@@ -332,7 +332,7 @@ def generate_launch_description():
     ###################################################################
     ##-------------------------ASVs Nodes----------------------------##
     ################################################################### 
-    # nodes.append(Mavros_launch)
+    nodes.append(Mavros_launch)
     # nodes.append(neighbor_robot_state_publisher_node)
     # nodes.append(own_robot_state_publisher_node)
 
