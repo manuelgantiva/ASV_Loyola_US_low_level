@@ -2084,7 +2084,7 @@ private:
   rclcpp::Publisher<asv_interfaces::msg::StateObserver>::SharedPtr publisher_state_estimate_;
   rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr publisher_full_state_;
   rclcpp::Publisher<asv_interfaces::msg::StateObserver>::SharedPtr publisher_state_estimate_lowrate_;
-  rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtrparameter_callback_handle_;
+  rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr parameter_callback_handle_;
 };
 
 
