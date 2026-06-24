@@ -836,17 +836,16 @@ private:
     // Therefore NX + kappa must be positive.
     if ((static_cast<double>(NX) + new_kappa) <= 0.0) {
       result.reason =
-        "Invalid UKF parameters: NX + kappa must be greater than zero";
+        "'kappa' is invalid: NX + kappa must be greater than zero. "
+        "For NX=12, kappa must be greater than -12.";
       return result;
     }
 
-    const double new_lambda =
-      new_alpha * new_alpha *
-      (static_cast<double>(NX) + new_kappa) -
-      static_cast<double>(NX);
+    const double new_lambda = new_alpha * new_alpha * (static_cast<double>(NX) + new_kappa) - static_cast<double>(NX);
 
-    if (!std::isfinite(new_lambda) ||
-        (static_cast<double>(NX) + new_lambda) <= 0.0)
+    const double new_scaling = static_cast<double>(NX) + new_lambda;
+
+    if (!std::isfinite(new_lambda) || !std::isfinite(new_scaling) || new_scaling <= 0.0)
     {
       result.reason =
         "Invalid alpha/kappa combination: NX + lambda must be positive";
@@ -961,11 +960,12 @@ private:
 
       RCLCPP_WARN_STREAM(
         get_logger(),
-        "Runtime UKF weights updated:"
+        "UKF scaling updated:"
           << " alpha=" << alpha_
           << " beta=" << beta_
           << " kappa=" << kappa_
           << " lambda=" << lambda_
+          << " NX+lambda=" << (static_cast<double>(NX) + lambda_)
           << " gamma=" << gamma_
           << " Wm0=" << Wm_(0)
           << " Wc0=" << Wc_(0));
