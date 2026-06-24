@@ -45,7 +45,7 @@ ament_target_dependencies(observer_core rclcpp std_msgs sensor_msgs mavros_msgs 
 
 # Adding executable of the multi_rate, I am not sure about this yet ---> ukf ament_target_dependencies(ukf_multi_rate_node rclcpp std_msgs sensor_msgs mavros_msgs asv_interfaces geometry_msgs nav_msgs)
 add_executable(ukf_multi_rate_node src/ukf_multi_rate_node.cpp)
-ament_target_dependencies(ukf_multi_rate_node rclcpp std_msgs sensor_msgs asv_interfaces mavros_msgs tf2)
+ament_target_dependencies(ukf_multi_rate_node rclcpp std_msgs sensor_msgs asv_interfaces mavros_msgs rcl_interfaces tf2)
 
 # Install Targets
 install(TARGETS

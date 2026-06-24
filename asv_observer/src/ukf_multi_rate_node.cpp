@@ -4,6 +4,7 @@
 #include "std_msgs/msg/float32_multi_array.hpp" // observer/data_sensores
 #include "std_msgs/msg/float64_multi_array.hpp" // UKF output state vector
 #include "asv_interfaces/msg/state_observer.hpp" // Custom state observer message
+#include "rcl_interfaces/msg/set_parameters_result.hpp" // Parameter change callback result
 
 
 #include <tf2/LinearMath/Quaternion.h>          // Quaternion utilities
@@ -357,7 +358,8 @@ public:
       "/" + my_id_ + "/observer/state_ukf",
       rclcpp::SensorDataQoS());
 
-
+    parameter_callback_handle_ = this->add_on_set_parameters_callback(std::bind(&UnscentedKalmanFilter::onParametersChanged,this,std::placeholders::_1));
+    
     RCLCPP_INFO(get_logger(), "UKF started for vehicle: %s", my_id_.c_str());
     RCLCPP_INFO(get_logger(), "IMU dt = %.6f s", dt_);
     RCLCPP_INFO(get_logger(), "observer/data_sensores is assumed low-rate");
@@ -479,6 +481,500 @@ private:
     return std::vector<double>(n, 1.0);
   }
 
+
+  /*
+  ===============================================================================
+  PARAMETER VALIDATION HELPERS
+  ===============================================================================
+  */
+  static bool vectorIsFinite(const std::vector<double> & values)
+  {
+    return std::all_of(
+      values.begin(),
+      values.end(),
+      [](double value)
+      {
+        return std::isfinite(value);
+      });
+  }
+
+
+  static bool vectorIsNonNegative(const std::vector<double> & values)
+  {
+    return std::all_of(
+      values.begin(),
+      values.end(),
+      [](double value)
+      {
+        return std::isfinite(value) && value >= 0.0;
+      });
+  }
+
+
+  static bool vectorIsStrictlyPositive(const std::vector<double> & values)
+  {
+    return std::all_of(
+      values.begin(),
+      values.end(),
+      [](double value)
+      {
+        return std::isfinite(value) && value > 0.0;
+      });
+  }
+    /*
+  ===============================================================================
+  RUNTIME PARAMETER CALLBACK
+  ===============================================================================
+
+  Parameters handled at runtime:
+
+    Ts, gravity,
+    Xu, Xv, Xr,
+    P_init, Q, R,
+    alpha, beta, kappa
+
+  The callback first creates candidate values and validates the entire request.
+  Only after everything is valid are the internal UKF variables changed.
+  */
+  rcl_interfaces::msg::SetParametersResult onParametersChanged(
+    const std::vector<rclcpp::Parameter> & parameters)
+  {
+    rcl_interfaces::msg::SetParametersResult result;
+    result.successful = false;
+    result.reason = "Parameter validation failed";
+
+    // --------------------------------------------------------------------------
+    // Candidate values
+    // --------------------------------------------------------------------------
+    double new_Ts_ms   = Ts_ms_;
+    double new_gravity = gravity_;
+
+    std::vector<double> new_Xu = Xu_;
+    std::vector<double> new_Xv = Xv_;
+    std::vector<double> new_Xr = Xr_;
+
+    Eigen::MatrixXd new_P_init = P_init_;
+    Eigen::MatrixXd new_Q      = Q_;
+    Eigen::MatrixXd new_R      = R_full_;
+
+    double new_alpha = alpha_;
+    double new_beta  = beta_;
+    double new_kappa = kappa_;
+
+    // Keep track of which values were requested.
+    bool change_Ts       = false;
+    bool change_gravity  = false;
+    bool change_Xu       = false;
+    bool change_Xv       = false;
+    bool change_Xr       = false;
+    bool change_P_init   = false;
+    bool change_Q        = false;
+    bool change_R        = false;
+    bool change_alpha    = false;
+    bool change_beta     = false;
+    bool change_kappa    = false;
+
+    // --------------------------------------------------------------------------
+    // Read and validate parameter types, sizes, and individual values
+    // --------------------------------------------------------------------------
+    for (const auto & parameter : parameters) {
+      const std::string & name = parameter.get_name();
+
+      // my_id cannot safely be changed because all topics were already created.
+      if (name == "my_id") {
+        result.reason =
+          "Parameter 'my_id' cannot be changed at runtime because publishers "
+          "and subscribers have already been created.";
+        return result;
+      }
+
+      if (name == "Ts") {
+        if (parameter.get_type() !=
+            rclcpp::ParameterType::PARAMETER_DOUBLE)
+        {
+          result.reason = "'Ts' must be a double, for example 10.0";
+          return result;
+        }
+
+        new_Ts_ms = parameter.as_double();
+
+        if (!std::isfinite(new_Ts_ms) || new_Ts_ms <= 0.0) {
+          result.reason = "'Ts' must be finite and greater than zero";
+          return result;
+        }
+
+        change_Ts = true;
+      }
+
+      else if (name == "gravity") {
+        if (parameter.get_type() !=
+            rclcpp::ParameterType::PARAMETER_DOUBLE)
+        {
+          result.reason = "'gravity' must be a double";
+          return result;
+        }
+
+        new_gravity = parameter.as_double();
+
+        if (!std::isfinite(new_gravity) || new_gravity <= 0.0) {
+          result.reason = "'gravity' must be finite and greater than zero";
+          return result;
+        }
+
+        change_gravity = true;
+      }
+
+      else if (name == "Xu") {
+        if (parameter.get_type() !=
+            rclcpp::ParameterType::PARAMETER_DOUBLE_ARRAY)
+        {
+          result.reason = "'Xu' must be a double array";
+          return result;
+        }
+
+        new_Xu = parameter.as_double_array();
+
+        if (new_Xu.size() != 6) {
+          result.reason = "'Xu' must contain exactly 6 values";
+          return result;
+        }
+
+        if (!vectorIsFinite(new_Xu)) {
+          result.reason = "Every value in 'Xu' must be finite";
+          return result;
+        }
+
+        change_Xu = true;
+      }
+
+      else if (name == "Xv") {
+        if (parameter.get_type() !=
+            rclcpp::ParameterType::PARAMETER_DOUBLE_ARRAY)
+        {
+          result.reason = "'Xv' must be a double array";
+          return result;
+        }
+
+        new_Xv = parameter.as_double_array();
+
+        if (new_Xv.size() != 12) {
+          result.reason = "'Xv' must contain exactly 12 values";
+          return result;
+        }
+
+        if (!vectorIsFinite(new_Xv)) {
+          result.reason = "Every value in 'Xv' must be finite";
+          return result;
+        }
+
+        change_Xv = true;
+      }
+
+      else if (name == "Xr") {
+        if (parameter.get_type() !=
+            rclcpp::ParameterType::PARAMETER_DOUBLE_ARRAY)
+        {
+          result.reason = "'Xr' must be a double array";
+          return result;
+        }
+
+        new_Xr = parameter.as_double_array();
+
+        if (new_Xr.size() != 12) {
+          result.reason = "'Xr' must contain exactly 12 values";
+          return result;
+        }
+
+        if (!vectorIsFinite(new_Xr)) {
+          result.reason = "Every value in 'Xr' must be finite";
+          return result;
+        }
+
+        change_Xr = true;
+      }
+
+      else if (name == "P_init") {
+        if (parameter.get_type() !=
+            rclcpp::ParameterType::PARAMETER_DOUBLE_ARRAY)
+        {
+          result.reason = "'P_init' must be a double array";
+          return result;
+        }
+
+        const std::vector<double> values =
+          parameter.as_double_array();
+
+        if (values.size() != NX) {
+          result.reason = "'P_init' must contain exactly 12 values";
+          return result;
+        }
+
+        if (!vectorIsNonNegative(values)) {
+          result.reason =
+            "Every value in 'P_init' must be finite and nonnegative";
+          return result;
+        }
+
+        new_P_init = vectorToDiagonalMatrix(values, NX);
+        change_P_init = true;
+      }
+
+      else if (name == "Q") {
+        if (parameter.get_type() !=
+            rclcpp::ParameterType::PARAMETER_DOUBLE_ARRAY)
+        {
+          result.reason = "'Q' must be a double array";
+          return result;
+        }
+
+        const std::vector<double> values =
+          parameter.as_double_array();
+
+        if (values.size() != NX) {
+          result.reason = "'Q' must contain exactly 12 values";
+          return result;
+        }
+
+        if (!vectorIsNonNegative(values)) {
+          result.reason =
+            "Every value in 'Q' must be finite and nonnegative";
+          return result;
+        }
+
+        new_Q = vectorToDiagonalMatrix(values, NX);
+        change_Q = true;
+      }
+
+      else if (name == "R") {
+        if (parameter.get_type() !=
+            rclcpp::ParameterType::PARAMETER_DOUBLE_ARRAY)
+        {
+          result.reason = "'R' must be a double array";
+          return result;
+        }
+
+        const std::vector<double> values =
+          parameter.as_double_array();
+
+        if (values.size() != NZ_FULL) {
+          result.reason =
+            "'R' must contain exactly 6 values: [x,y,psi,ax,ay,r]";
+          return result;
+        }
+
+        if (!vectorIsStrictlyPositive(values)) {
+          result.reason =
+            "Every value in 'R' must be finite and greater than zero";
+          return result;
+        }
+
+        new_R = vectorToDiagonalMatrix(values, NZ_FULL);
+        change_R = true;
+      }
+
+      else if (name == "alpha") {
+        if (parameter.get_type() !=
+            rclcpp::ParameterType::PARAMETER_DOUBLE)
+        {
+          result.reason = "'alpha' must be a double";
+          return result;
+        }
+
+        new_alpha = parameter.as_double();
+
+        if (!std::isfinite(new_alpha) || new_alpha <= 0.0) {
+          result.reason = "'alpha' must be finite and greater than zero";
+          return result;
+        }
+
+        change_alpha = true;
+      }
+
+      else if (name == "beta") {
+        if (parameter.get_type() !=
+            rclcpp::ParameterType::PARAMETER_DOUBLE)
+        {
+          result.reason = "'beta' must be a double";
+          return result;
+        }
+
+        new_beta = parameter.as_double();
+
+        if (!std::isfinite(new_beta) || new_beta < 0.0) {
+          result.reason = "'beta' must be finite and nonnegative";
+          return result;
+        }
+
+        change_beta = true;
+      }
+
+      else if (name == "kappa") {
+        if (parameter.get_type() !=
+            rclcpp::ParameterType::PARAMETER_DOUBLE)
+        {
+          result.reason = "'kappa' must be a double";
+          return result;
+        }
+
+        new_kappa = parameter.as_double();
+
+        if (!std::isfinite(new_kappa)) {
+          result.reason = "'kappa' must be finite";
+          return result;
+        }
+
+        change_kappa = true;
+      }
+    }
+
+    // --------------------------------------------------------------------------
+    // Validate the combined UKF sigma-point parameters
+    // --------------------------------------------------------------------------
+    //
+    // NX + lambda = alpha^2 * (NX + kappa)
+    //
+    // Therefore NX + kappa must be positive.
+    if ((static_cast<double>(NX) + new_kappa) <= 0.0) {
+      result.reason =
+        "Invalid UKF parameters: NX + kappa must be greater than zero";
+      return result;
+    }
+
+    const double new_lambda =
+      new_alpha * new_alpha *
+      (static_cast<double>(NX) + new_kappa) -
+      static_cast<double>(NX);
+
+    if (!std::isfinite(new_lambda) ||
+        (static_cast<double>(NX) + new_lambda) <= 0.0)
+    {
+      result.reason =
+        "Invalid alpha/kappa combination: NX + lambda must be positive";
+      return result;
+    }
+
+    // --------------------------------------------------------------------------
+    // Apply all validated changes
+    // --------------------------------------------------------------------------
+    if (change_Ts) {
+      Ts_ms_ = new_Ts_ms;
+      dt_ = Ts_ms_ / 1000.0;
+
+      RCLCPP_WARN(
+        get_logger(),
+        "Runtime Ts updated: Ts=%.6f ms, dt=%.9f s",
+        Ts_ms_, dt_);
+    }
+
+    if (change_gravity) {
+      gravity_ = new_gravity;
+
+      RCLCPP_WARN(
+        get_logger(),
+        "Runtime gravity updated: %.9f m/s^2",
+        gravity_);
+    }
+
+    if (change_Xu) {
+      Xu_ = new_Xu;
+
+      RCLCPP_WARN_STREAM(
+        get_logger(),
+        "Runtime Xu updated: "
+          << Eigen::Map<const Eigen::VectorXd>(
+              Xu_.data(),
+              static_cast<Eigen::Index>(Xu_.size())).transpose());
+    }
+
+    if (change_Xv) {
+      Xv_ = new_Xv;
+
+      RCLCPP_WARN_STREAM(
+        get_logger(),
+        "Runtime Xv updated: "
+          << Eigen::Map<const Eigen::VectorXd>(
+              Xv_.data(),
+              static_cast<Eigen::Index>(Xv_.size())).transpose());
+    }
+
+    if (change_Xr) {
+      Xr_ = new_Xr;
+
+      RCLCPP_WARN_STREAM(
+        get_logger(),
+        "Runtime Xr updated: "
+          << Eigen::Map<const Eigen::VectorXd>(
+              Xr_.data(),
+              static_cast<Eigen::Index>(Xr_.size())).transpose());
+    }
+
+    if (change_P_init) {
+      P_init_ = new_P_init;
+
+      /*
+      P_init controls filter initialization.
+
+      Do not reset the covariance of a filter that is currently operating.
+      When the filter is not initialized, update P_ immediately.
+      Otherwise, the new P_init is used after disarm/rearm or another reset.
+      */
+      if (!initialized_) {
+        P_ = P_init_;
+      }
+
+      RCLCPP_WARN_STREAM(
+        get_logger(),
+        "Runtime P_init updated: "
+          << P_init_.diagonal().transpose()
+          << (initialized_
+                ? " — will be applied at the next UKF initialization"
+                : " — applied immediately because UKF is not initialized"));
+    }
+
+    if (change_Q) {
+      Q_ = new_Q;
+
+      RCLCPP_WARN_STREAM(
+        get_logger(),
+        "Runtime Q updated: "
+          << Q_.diagonal().transpose()
+          << " | effective Q*dt: "
+          << (Q_ * dt_).diagonal().transpose());
+    }
+
+    if (change_R) {
+      R_full_ = new_R;
+
+      RCLCPP_WARN_STREAM(
+        get_logger(),
+        "Runtime R updated: "
+          << R_full_.diagonal().transpose()
+          << " | order=[x y psi ax ay r]");
+    }
+
+    if (change_alpha || change_beta || change_kappa) {
+      alpha_ = new_alpha;
+      beta_  = new_beta;
+      kappa_ = new_kappa;
+
+      computeUnscentedWeights();
+
+      RCLCPP_WARN_STREAM(
+        get_logger(),
+        "Runtime UKF weights updated:"
+          << " alpha=" << alpha_
+          << " beta=" << beta_
+          << " kappa=" << kappa_
+          << " lambda=" << lambda_
+          << " gamma=" << gamma_
+          << " Wm0=" << Wm_(0)
+          << " Wc0=" << Wc_(0));
+    }
+
+    result.successful = true;
+    result.reason = "Runtime UKF parameters updated successfully";
+    return result;
+  }
 
   /*
   ============================================================================
@@ -1287,14 +1783,22 @@ private:
   {
     const int nz = static_cast<int>(z.size());
 
-
     Eigen::MatrixXd R_use;
+
     if (use_full) {
+      // [x, y, psi, ax, ay, r]
       R_use = R_full_;
     } else {
-      // IMU-only measurement noise for [ax ay r]
-      R_use = R_full_.block(3, 3, 3, 3);
+      // IMU-only: [ax, ay, r]
+      R_use = R_full_.block<3, 3>(3, 3);
     }
+
+    RCLCPP_INFO_STREAM_THROTTLE(
+      get_logger(),
+      *get_clock(),
+      1000,
+      "UKF update mode=" << (use_full ? "FULL" : "IMU_ONLY")
+        << " | R_used=" << R_use.diagonal().transpose());
 
 
     const Eigen::MatrixXd Xsig = generateSigmaPoints(x_hat_, P_);
@@ -1360,7 +1864,18 @@ private:
 
 
     // State update
-    x_hat_ = x_hat_ + K * innovation;
+    const Eigen::VectorXd correction = K * innovation;
+
+    RCLCPP_INFO_STREAM_THROTTLE(
+      get_logger(),
+      *get_clock(),
+      1000,
+      "UKF mode=" << (use_full ? "FULL" : "IMU_ONLY")
+        << " | innovation=" << innovation.transpose()
+        << " | K_norm=" << K.norm()
+        << " | correction_norm=" << correction.norm());
+
+    x_hat_ = x_hat_ + correction;
     x_hat_(IDX_PSI) = wrapAngle(x_hat_(IDX_PSI));
 
 
@@ -1569,6 +2084,7 @@ private:
   rclcpp::Publisher<asv_interfaces::msg::StateObserver>::SharedPtr publisher_state_estimate_;
   rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr publisher_full_state_;
   rclcpp::Publisher<asv_interfaces::msg::StateObserver>::SharedPtr publisher_state_estimate_lowrate_;
+  rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtrparameter_callback_handle_;
 };
 
 
