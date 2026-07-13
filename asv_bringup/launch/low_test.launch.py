@@ -335,7 +335,7 @@ def generate_launch_description():
     ###################################################################
     ##--------------------Comunication Nodes-------------------------##
     ################################################################### 
-    # nodes.append(rc_handler_node)
+    nodes.append(rc_handler_node)
     # nodes.append(ref_llc_node)
     # nodes.append(ref_mlc_node)
     # nodes.append(apm_llc_node)

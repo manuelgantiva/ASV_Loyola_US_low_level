@@ -340,10 +340,10 @@ def generate_launch_description():
     ##--------------------Comunication Nodes-------------------------##
     ################################################################### 
     nodes.append(rc_handler_node)
-    nodes.append(ref_llc_node)
+    # nodes.append(ref_llc_node)
     # nodes.append(ref_mlc_node)
     # nodes.append(apm_llc_node)
-    nodes.append(imu_ext_node)
+    # nodes.append(imu_ext_node)
     nodes.append(record)
 
     # nodes.append(transceiver_xbee_node)
@@ -363,8 +363,8 @@ def generate_launch_description():
     ##-----------------------Control Nodes---------------------------##
     ################################################################### 
     # nodes.append(asv_tf_broadcast_node)
-    nodes.append(pwm_mapper_node)
-    nodes.append(mpc_llc_rt_node)
+    # nodes.append(pwm_mapper_node)
+    # nodes.append(mpc_llc_rt_node)
     # nodes.append(ifac_llc_node)
     # nodes.append(mux_llc_node)
     #nodes.append(wang_mlc_node)

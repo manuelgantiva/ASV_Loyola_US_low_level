@@ -67,11 +67,15 @@ ASV1:
 
 
         # R: [ 1.2,1.2,0.001218,0.02,0.012,0.02]   # The values of the Stationary
-        # R: [ 0.2,0.2,0.001218,0.02,0.012,0.02]     # Path Following to be more sensetive to GPS
-        R: [ 0.2,0.2,0.001218,0.2,0.012,0.02]     # Staying put
-        alpha: 0.001 
+        R: [ 0.2,0.2,0.001218,0.02,0.012,0.02]     # Path Following to be more sensetive to GPS
+        # R: [ 0.2,0.2,0.001218,0.2,0.012,0.02]     # Staying put
+        # R: [ 0.00000000000000000000002,0.0000000000000000000000000002,0.001218,1000000000000000000000000000000000.2,10000000000000000000000000000000.012,0.02]
+        # alpha: 0.001 
+        # beta: 2.0
+        # kappa: -2.0
+        alpha: 0.3
         beta: 2.0
-        kappa: -2.0
+        kappa: 0.0
 
   control:
     ifac_llc:
