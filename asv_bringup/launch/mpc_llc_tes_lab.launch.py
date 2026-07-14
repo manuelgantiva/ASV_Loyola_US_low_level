@@ -329,6 +329,22 @@ def generate_launch_description():
 
     )
 
+    multi_rate_ukf_unarm = Node(
+        package="asv_observer",
+        executable="multi_rate_ukf_unarm",
+        name="multi_rate_ukf_unarm",
+        namespace=namespace_observer,
+        parameters=[
+            {'my_id': my_namespace},
+            config
+        ]
+        #,
+        #remappings=[
+        #    (PythonExpression(["'/ASV' + str(", my_id, ") + '/observer/state_observer_ukf_lowrate_unarmed'"]),
+        #     PythonExpression(["'/ASV' + str(", my_id, ") + '/observer/state_observer_unarmed'"]))
+        #]
+    )
+
     ###################################################################
     ##-------------------------ASVs Nodes----------------------------##
     ################################################################### 
@@ -357,7 +373,7 @@ def generate_launch_description():
     # nodes.append(observer_liu)
     nodes.append(observer_zono)
     nodes.append(ukf_multi_rate_node)
-
+    nodes.append(multi_rate_ukf_unarm)
 
     ###################################################################
     ##-----------------------Control Nodes---------------------------##

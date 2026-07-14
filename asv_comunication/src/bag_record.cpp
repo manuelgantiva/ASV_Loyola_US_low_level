@@ -150,9 +150,15 @@ public:
                 
         subscriber_state_estimate_ukf = this->create_subscription<std_msgs::msg::Float64MultiArray>("/" + name_id + "/observer/state_ukf",
                 rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackStateUkf,this,std::placeholders::_1));
-
         subscriber_observer_state_ukf_lowrate = this-> create_subscription<asv_interfaces::msg::StateObserver>("/" + name_id + "/observer/state_observer_ukf_lowrate",
                 rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackObserverStateUkfLowrate, this, std::placeholders::_1));
+
+        subscriber_state_estimate_ukf_unarmed = this->create_subscription<std_msgs::msg::Float64MultiArray>("/" + name_id + "/observer/state_ukf_unarmed",
+                rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackStateUkfUnarmed,this,std::placeholders::_1));
+        subscriber_observer_state_ukf_unarmed = this-> create_subscription<asv_interfaces::msg::StateObserver>("/" + name_id + "/observer/state_observer_ukf_unarmed",
+                rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackObserverStateUkfUnarmed, this, std::placeholders::_1));
+        subscriber_state_estimate_ukf_lowrate = this->create_subscription<asv_interfaces::msg::StateObserver>("/" + name_id + "/observer/state_observer_ukf_lowrate_unarmed",
+                rclcpp::SensorDataQoS(), std::bind(&BagRecordNode::callbackStateUkfLowrateUnarmed,this,std::placeholders::_1));
 
     	RCLCPP_INFO(this->get_logger(), "Bag Record Node has been started.");
     }
@@ -319,6 +325,30 @@ private:
         if(armed==true){
             rclcpp::Time time_stamp = this->now();
             writer_->write(msg, "/" + name_id + "/observer/state_observer_ukf_lowrate", "asv_interfaces/msg/StateObserver", time_stamp);
+        }
+    }
+
+    void callbackObserverStateUkfUnarmed(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
+    {
+        if(armed==true){
+            rclcpp::Time time_stamp = this->now();
+            writer_->write(msg, "/" + name_id + "/observer/state_observer_ukf_unarmed", "asv_interfaces/msg/StateObserver", time_stamp);
+        }
+    }
+
+    void callbackStateUkfUnarmed(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
+    {
+        if(armed==true){
+            rclcpp::Time time_stamp = this->now();
+            writer_->write(msg, "/" + name_id + "/observer/state_ukf_unarmed", "std_msgs/msg/Float64MultiArray", time_stamp);
+        }
+    }
+
+    void callbackStateUkfLowrateUnarmed(const std::shared_ptr<rclcpp::SerializedMessage> msg) 
+    {
+        if(armed==true){
+            rclcpp::Time time_stamp = this->now();
+            writer_->write(msg, "/" + name_id + "/observer/state_observer_ukf_lowrate_unarmed", "asv_interfaces/msg/StateObserver", time_stamp);
         }
     }
 
@@ -596,6 +626,9 @@ private:
     rclcpp::Subscription<asv_interfaces::msg::StateObserver>::SharedPtr subscriber_observer_state_ukf;
     rclcpp::Subscription<std_msgs::msg::Float64MultiArray>::SharedPtr subscriber_state_estimate_ukf;
     rclcpp::Subscription<asv_interfaces::msg::StateObserver>::SharedPtr subscriber_observer_state_ukf_lowrate;
+    rclcpp::Subscription<std_msgs::msg::Float64MultiArray>::SharedPtr subscriber_state_estimate_ukf_unarmed;
+    rclcpp::Subscription<asv_interfaces::msg::StateObserver>::SharedPtr subscriber_observer_state_ukf_unarmed;
+    rclcpp::Subscription<asv_interfaces::msg::StateObserver>::SharedPtr subscriber_state_estimate_ukf_lowrate;
 };
 
 int main(int argc, char **argv)
