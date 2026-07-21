@@ -361,6 +361,21 @@ public:
     publisher_full_state_ = create_publisher<std_msgs::msg::Float64MultiArray>(
       "/" + my_id_ + "/observer/state_ukf_unarmed",
       rclcpp::SensorDataQoS());
+    
+    /*
+    // Publish the UKF prediction before applying the current correction.
+    publisher_state_prediction_ =
+      create_publisher<asv_interfaces::msg::StateObserver>(
+        "/" + my_id_ +
+          "/observer/state_observer_ukf_prediction_unarmed",
+        rclcpp::SensorDataQoS());
+    */
+
+    // Publish the IMU after applying sign conventions and gravity compensation.
+    publisher_imu_compensated_ =
+        create_publisher<sensor_msgs::msg::Imu>(
+          "/" + my_id_ + "/observer/imu_compensated_unarmed",
+          rclcpp::SensorDataQoS());
 
     parameter_callback_handle_ = this->add_on_set_parameters_callback(std::bind(&UnscentedKalmanFilter::onParametersChanged,this,std::placeholders::_1));
     
@@ -1324,6 +1339,10 @@ private:
       return;
     }
 
+    // Publish the compensated IMU immediately after compensation.
+    // This publisher also works during the UKF startup delay.
+    publishCompensatedImu(*msg, imu_local);
+
 
     RCLCPP_INFO_THROTTLE(
       get_logger(), *get_clock(), 1000,
@@ -1929,6 +1948,52 @@ private:
     psi_publish_initialized_ = true;
   }
 
+
+void publishCompensatedImu(const sensor_msgs::msg::Imu & raw_msg , const ImuData & imu_local)
+  {
+    sensor_msgs::msg::Imu compensated_msg;
+
+    // Preserve the original timestamp and frame.
+    compensated_msg.header = raw_msg.header;
+
+    // Orientation using the sign conventions applied by this node.
+    tf2::Quaternion q_compensated;
+
+    q_compensated.setRPY(
+      imu_local.roll,
+      imu_local.pitch,
+      imu_local.yaw);
+
+    q_compensated.normalize();
+
+    compensated_msg.orientation.x = q_compensated.x();
+    compensated_msg.orientation.y = q_compensated.y();
+    compensated_msg.orientation.z = q_compensated.z();
+    compensated_msg.orientation.w = q_compensated.w();
+
+    // Angular velocity.
+    compensated_msg.angular_velocity.x =
+      raw_msg.angular_velocity.x;
+
+    compensated_msg.angular_velocity.y =
+      raw_msg.angular_velocity.y;
+
+    compensated_msg.angular_velocity.z =
+      imu_local.r_body;
+
+    // Gravity-compensated linear acceleration.
+    compensated_msg.linear_acceleration.x =
+      imu_local.ax_body;
+
+    compensated_msg.linear_acceleration.y =
+      imu_local.ay_body;
+
+    // compensated_msg.linear_acceleration.z =
+    //  imu_local.az_body;
+
+    publisher_imu_compensated_->publish(compensated_msg);
+  }
+
   /*
   ============================================================================
   PUBLISH STATE
@@ -2105,6 +2170,7 @@ private:
   rclcpp::Publisher<asv_interfaces::msg::StateObserver>::SharedPtr publisher_state_estimate_;
   rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr publisher_full_state_;
   rclcpp::Publisher<asv_interfaces::msg::StateObserver>::SharedPtr publisher_state_estimate_lowrate_;
+  rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr publisher_imu_compensated_;
   rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr parameter_callback_handle_;
 };
 
