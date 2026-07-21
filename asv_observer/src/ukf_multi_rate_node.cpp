@@ -376,7 +376,7 @@ private:
   static constexpr int NX      = 12; // Number of states
   static constexpr int NZ_FULL = 6;  // Full measurement: [x y psi ax ay r]
   static constexpr int NZ_IMU  = 3;  // IMU-only measurement: [ax ay r]
-
+  
 
   /*
   ============================================================================
