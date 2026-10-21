@@ -45,7 +45,8 @@ ament_target_dependencies(apm_llc rclcpp geometry_msgs mavros_msgs asv_interface
 add_executable(imu_fix src/imu_fix.cpp)
 ament_target_dependencies(imu_fix rclcpp std_msgs geometry_msgs sensor_msgs mavros_msgs)
 
-
+add_executable(ref_scenarios src/ref_scenarios.cpp)
+ament_target_dependencies(ref_scenarios rclcpp std_msgs mavros_msgs geometry_msgs asv_interfaces)
 
 # Install Targets
 install(TARGETS
@@ -55,6 +56,7 @@ install(TARGETS
   ref_mlc
   apm_llc
   imu_fix
+  ref_scenarios
 DESTINATION lib/${PROJECT_NAME})
 
 # Install Scripts python

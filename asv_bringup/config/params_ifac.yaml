@@ -44,9 +44,9 @@ ASV1:
     ifac_llc:
       ros__parameters:
         Ts: 100.0         #ms
-        ku: 0.3
-        kpsi: 0.3
-        kr: 0.8
+        ku: 0.4
+        kpsi: 0.4
+        kr: 0.9
         taud: 200
         Sat: 0.3
         delta_pwm: 200

@@ -251,7 +251,7 @@ def generate_launch_description():
     ##-----------------------Observer Nodes--------------------------##
     ################################################################### 
     nodes.append(observer_core)
-    # nodes.append(observer_bejarano)
+    nodes.append(observer_bejarano)
     # nodes.append(observer_liu)
     nodes.append(observer_zono)
 

@@ -333,8 +333,16 @@ private:
     {
         const auto &refs = msg->references;
         const auto &vec = refs[0];
-        float u_dot = derivationFilter(vec.x, memory_u, a, b);
-        float r_dot = derivationFilter(vec.y, memory_r, a, b);
+        float u_dot;
+        float r_dot;
+        if (refs.size() >= 3) {
+            // Derivada central de 5 puntos: x[k-2], x[k-1] (pasadas) y refs[1], refs[2] (futuras)
+            u_dot = derivative5Points(vec.x, refs[1].x, refs[2].x, memory_u);
+            r_dot = derivative5Points(vec.y, refs[1].y, refs[2].y, memory_r);
+        } else {
+            u_dot = derivationFilter(vec.x, memory_u, a, b);
+            r_dot = derivationFilter(vec.y, memory_r, a, b);
+        }
         {
             std::lock_guard<std::mutex> lock(mutex_);
             u_ref = vec.x;
@@ -359,6 +367,17 @@ private:
 
         return output;
     }  
+
+    // Derivada central de 5 puntos: (x[k-2] - 8x[k-1] + 8x[k+1] - x[k+2]) / (12 Ts)
+    // memory[2] = x[k-1], memory[3] = x[k-2] (memory[0] y memory[1] los usa derivationFilter)
+    float derivative5Points(float x_k, float x_k1, float x_k2, std::vector<float>& memory){
+        float output = (memory[3] - 8.0f * memory[2] + 8.0f * x_k1 - x_k2) / (12.0f * Ts);
+        // Actualizar memoria para la próxima iteración
+        memory[3] = memory[2];
+        memory[2] = x_k;
+
+        return output;
+    }
 
     void callbackStateData(const mavros_msgs::msg::State::SharedPtr msg)
     {

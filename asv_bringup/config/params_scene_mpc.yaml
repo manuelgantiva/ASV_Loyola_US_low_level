@@ -1,0 +1,95 @@
+ASV1:
+  observer:
+    observer_zono:
+      ros__parameters:
+        Ts: 100.0         #ms
+        Max_n_psi: 0.05
+        Max_n_r: 0.01
+        Max_n_p: 0.2
+        Max_w_r: 0.03
+        Max_w_p: 0.09
+        q: 300
+        met: 1
+        Wr_di: [1.0, 100.0, 1.0]
+        Wp_di: [1.0, 1.0, 100.0, 100.0, 1.0, 1.0] 
+        Sig_on: True
+        Pub_sig: False       # Publicar Modelas y Estimadas True o solo Estimadas False 
+        Xu: [-0.43339, -0.17045, -0.19241, 0.24955, 0.04492, 0.61079]
+        Xv: [0.73622, -0.01373, 0.11022,  0.01553, -0.30762, -0.07875, -0.15763,  0.11109, 0.10155, 0.05417, -0.07715, -0.29490]
+        Xr: [-1.00367, -0.34716, 0.56472, -0.26974, 0.49736, -0.36516, 0.36447, -0.35465, -0.50555, -0.26967, 0.38407, 1.46815]
+    observer_core:
+      ros__parameters:
+        Ts: 100.0         #ms
+        Dz_up: 0.09
+        Dz_down: -0.07
+  control:
+    mpc_llc:
+      ros__parameters:
+        Ts: 100.0         #ms
+        N_p: 30
+        T_mlc: 100.0      #ms #Periodo MLC
+        Q: [5.0, 0.0, 50.0, 10.0] 
+        R: [0.0, 0.0]
+        Rd: [20.0, 5.0]
+        u_max: 2.0
+        u_min: -0.5
+        v_max: 1.5
+        v_min: -1.5
+        r_max: 1.0
+        r_min: -1.0
+        Delta_mean_min: -0.5
+        Delta_diff_min: -0.5
+        Delta_mean_max: 1.0
+        Delta_diff_max: 1.0
+        Xu: [-0.43339, -0.17045, -0.19241, 0.24955, 0.04492, 0.61079]
+        Xv: [0.73622, -0.01373, 0.11022,  0.01553, -0.30762, -0.07875, -0.15763,  0.11109, 0.10155, 0.05417, -0.07715, -0.29490]
+        Xr: [-1.00367, -0.34716, 0.56472, -0.26974, 0.49736, -0.36516, 0.36447, -0.35465, -0.50555, -0.26967, 0.38407, 1.46815]
+        Dz_up: 0.09
+        Dz_down: -0.07
+  comunication:
+    ref_scenarios:
+      ros__parameters:   
+        scenario: 1        # escenario a ejecutar (1..5)
+        Ts: 100.0          # periodo de muestreo [ms]
+        N_ref: 30          # muestras por ventana (actual + 29 futuras)
+        u_fin: 0.25        # cierre [m/s]
+        r_fin: 0.0         # cierre [rad/s]
+        # Escenario 1: escalón en surge
+        u_min1: 0.3
+        u_max1: 1.0
+        t_ini1: 15.0
+        t_alto1: 30.0
+        t_fin1: 15.0
+        # Escenario 2: rampa en surge
+        u_min2: 0.3
+        u_max2: 1.0
+        t_ini2: 5.0
+        t_rampa2: 25.0
+        t_alto2: 5.0
+        t_fin2: 5.0
+        # Escenario 3: escalones en yaw
+        u_cte3: 0.5
+        r_max3: 0.25
+        t_ini3: 5.0
+        t_escalon3: 20.0
+        t_cero3: 15.0
+        t_fin3: 10.0
+        s3: 1              # sentido del primer giro (+1 / -1)
+        # Escenario 4: rampas en yaw
+        u_cte4: 0.5
+        r_max4: 0.25
+        t_ini4: 5.0
+        t_rampa4: 15.0
+        t_hold4: 5.0
+        t_fin4: 5.0
+        s4: 1
+        # Escenario 5: senos simultáneos
+        u_min5: 0.5
+        u_max5: 0.8
+        T_u5: 10.0
+        r_amp5: 0.1
+        T_r5: 6.0
+        t_ini5: 5.0
+        t_senos5: 45.0
+        s5: 1
+
